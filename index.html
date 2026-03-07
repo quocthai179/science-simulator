@@ -37,6 +37,11 @@
         <button class="nav-btn" data-sim="lissajous">Lissajous Curves</button>
         <button class="nav-btn" data-sim="blackbody">Blackbody Radiation</button>
         <button class="nav-btn" data-sim="collision">Elastic Collisions</button>
+        <button class="nav-btn" data-sim="mitosis">Cell Division</button>
+        <button class="nav-btn" data-sim="predprey">Predator-Prey</button>
+        <button class="nav-btn" data-sim="selection">Natural Selection</button>
+        <button class="nav-btn" data-sim="neuron">Action Potential</button>
+        <button class="nav-btn" data-sim="enzyme">Enzyme Kinetics</button>
     </nav>
 
     <main>
@@ -464,6 +469,101 @@
             <div class="btn-row">
                 <button id="btn-coll-start">Start</button>
                 <button id="btn-coll-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cell Division (Mitosis) Controls -->
+        <div class="controls hidden" id="ctrl-mitosis">
+            <h3>Cell Division (Mitosis)</h3>
+            <p class="ctrl-hint">Watch a cell progress through the stages of mitosis.</p>
+            <label>Speed: <span id="val-mitoSpeed">1.0</span>x
+                <input type="range" id="mitoSpeed" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-mito-start">Start Division</button>
+                <button id="btn-mito-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Predator-Prey Controls -->
+        <div class="controls hidden" id="ctrl-predprey">
+            <h3>Predator-Prey (Lotka-Volterra)</h3>
+            <label>Prey Birth Rate (&alpha;): <span id="val-alpha">1.1</span>
+                <input type="range" id="alpha" min="0.2" max="3.0" value="1.1" step="0.1">
+            </label>
+            <label>Predation Rate (&beta;): <span id="val-beta">0.4</span>
+                <input type="range" id="beta" min="0.1" max="1.5" value="0.4" step="0.05">
+            </label>
+            <label>Predator Death Rate (&gamma;): <span id="val-gamma">0.4</span>
+                <input type="range" id="gamma" min="0.1" max="1.5" value="0.4" step="0.05">
+            </label>
+            <label>Reproduction Rate (&delta;): <span id="val-delta">0.1</span>
+                <input type="range" id="delta" min="0.02" max="0.5" value="0.1" step="0.02">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pp-toggle">Pause</button>
+                <button id="btn-pp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Natural Selection Controls -->
+        <div class="controls hidden" id="ctrl-selection">
+            <h3>Natural Selection</h3>
+            <p class="ctrl-hint">Organisms with favorable traits survive and reproduce more. Watch evolution in action!</p>
+            <label>Mutation Rate: <span id="val-mutRate">0.05</span>
+                <input type="range" id="mutRate" min="0.01" max="0.20" value="0.05" step="0.01">
+            </label>
+            <label>Selection Pressure: <span id="val-selPress">0.5</span>
+                <input type="range" id="selPress" min="0.1" max="1.0" value="0.5" step="0.05">
+            </label>
+            <label>Environment
+                <select id="selEnv">
+                    <option value="dark">Dark Background</option>
+                    <option value="light">Light Background</option>
+                    <option value="mixed">Patchy</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-sel-toggle">Pause</button>
+                <button id="btn-sel-reset">Reset</button>
+            </div>
+            <div id="sel-stats"></div>
+        </div>
+
+        <!-- Neuron Action Potential Controls -->
+        <div class="controls hidden" id="ctrl-neuron">
+            <h3>Neuron Action Potential</h3>
+            <p class="ctrl-hint">Stimulate a neuron and watch the action potential propagate along the axon.</p>
+            <label>Stimulus Strength: <span id="val-stimulus">1.0</span>x
+                <input type="range" id="stimulus" min="0.2" max="2.0" value="1.0" step="0.1">
+            </label>
+            <label>Threshold: <span id="val-threshold">-55</span> mV
+                <input type="range" id="threshold" min="-65" max="-40" value="-55">
+            </label>
+            <div class="btn-row">
+                <button id="btn-neuron-fire">Fire!</button>
+                <button id="btn-neuron-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Enzyme Kinetics Controls -->
+        <div class="controls hidden" id="ctrl-enzyme">
+            <h3>Enzyme Kinetics (Michaelis-Menten)</h3>
+            <label>V_max: <span id="val-vmax">100</span>
+                <input type="range" id="vmax" min="20" max="200" value="100">
+            </label>
+            <label>K_m: <span id="val-km">50</span>
+                <input type="range" id="km" min="5" max="200" value="50">
+            </label>
+            <label>Substrate [S]: <span id="val-substrate">80</span>
+                <input type="range" id="substrate" min="1" max="300" value="80">
+            </label>
+            <label>Show Lineweaver-Burk
+                <input type="checkbox" id="showLB">
+            </label>
+            <div class="btn-row">
+                <button id="btn-enz-animate">Animate</button>
+                <button id="btn-enz-reset">Reset</button>
             </div>
         </div>
 

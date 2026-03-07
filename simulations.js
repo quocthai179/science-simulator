@@ -52,6 +52,11 @@
             case "lissajous":   initLissajous();    break;
             case "blackbody":   initBlackbody();    break;
             case "collision":   initCollision();    break;
+            case "mitosis":     initMitosis();      break;
+            case "predprey":    initPredPrey();     break;
+            case "selection":   initSelection();    break;
+            case "neuron":      initNeuron();       break;
+            case "enzyme":      initEnzyme();       break;
         }
     }
 
@@ -3872,6 +3877,1102 @@
         drawCollision();
     });
     document.getElementById("btn-coll-reset").addEventListener("click", initCollision);
+
+    // ═══════════════════════════════════════════════════════
+    // 25. CELL DIVISION (MITOSIS)
+    // ═══════════════════════════════════════════════════════
+    let mitoState = {};
+
+    const mitoPhases = [
+        { name: "Interphase", color: "#4caf50", desc: "Cell grows, DNA replicates. Chromatin is loose and diffuse." },
+        { name: "Prophase", color: "#ff9800", desc: "Chromatin condenses into visible chromosomes. Spindle fibers begin to form." },
+        { name: "Metaphase", color: "#f44336", desc: "Chromosomes align at the cell's equator (metaphase plate)." },
+        { name: "Anaphase", color: "#9c27b0", desc: "Sister chromatids separate and move to opposite poles." },
+        { name: "Telophase", color: "#2196f3", desc: "Nuclear envelopes reform. Chromosomes decondense." },
+        { name: "Cytokinesis", color: "#00bcd4", desc: "Cell membrane pinches inward, dividing into two daughter cells." }
+    ];
+
+    function initMitosis() {
+        mitoState = { phase: 0, progress: 0, running: false };
+        drawMitosis();
+    }
+
+    function drawMitosis() {
+        const W = canvas.width, H = canvas.height;
+        const speed = +document.getElementById("mitoSpeed").value;
+        ctx.clearRect(0, 0, W, H);
+
+        const cx = W / 2, cy = H / 2 - 20;
+        const phase = mitoState.phase;
+        const p = mitoState.progress; // 0 to 1 within phase
+
+        if (mitoState.running) {
+            mitoState.progress += 0.003 * speed;
+            if (mitoState.progress >= 1) {
+                mitoState.progress = 0;
+                mitoState.phase++;
+                if (mitoState.phase >= mitoPhases.length) {
+                    mitoState.phase = mitoPhases.length - 1;
+                    mitoState.progress = 1;
+                    mitoState.running = false;
+                }
+            }
+        }
+
+        // Cell membrane
+        if (phase < 5) {
+            // Single cell
+            const wobble = phase >= 4 ? Math.sin(p * Math.PI) * 8 : 0;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, 140 + wobble, 120 - wobble * 0.3, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(200, 230, 200, 0.12)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(76, 175, 80, 0.6)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else {
+            // Cytokinesis - pinching
+            const pinch = p * 70;
+            // Left daughter
+            ctx.beginPath();
+            ctx.ellipse(cx - 40 - pinch * 0.5, cy, 100 - pinch * 0.3, 110, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(200, 230, 200, 0.12)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0, 188, 212, 0.6)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            // Right daughter
+            ctx.beginPath();
+            ctx.ellipse(cx + 40 + pinch * 0.5, cy, 100 - pinch * 0.3, 110, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(200, 230, 200, 0.12)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0, 188, 212, 0.6)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // Nuclear envelope
+        if (phase === 0 || phase >= 4) {
+            const envAlpha = phase === 0 ? 0.5 : (phase === 4 ? p * 0.5 : 0.5);
+            if (phase < 5) {
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 60, 50, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(156, 39, 176, ${envAlpha})`;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else {
+                // Two nuclei in daughter cells
+                const pinch = p * 70;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.ellipse(cx - 40 - pinch * 0.5, cy, 35, 30, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(156, 39, 176, 0.5)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.ellipse(cx + 40 + pinch * 0.5, cy, 35, 30, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        // Chromosomes
+        const numChrom = 4;
+        if (phase === 0) {
+            // Interphase: diffuse chromatin
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                const r = 15 + Math.random() * 30;
+                ctx.beginPath();
+                ctx.arc(cx + r * Math.cos(angle), cy + r * Math.sin(angle), 2, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(33, 150, 243, 0.4)";
+                ctx.fill();
+            }
+        } else if (phase === 1) {
+            // Prophase: condensing chromosomes
+            const condense = p;
+            for (let i = 0; i < numChrom; i++) {
+                const angle = (i / numChrom) * Math.PI * 2 + 0.3;
+                const r = 30 * (1 - condense * 0.3);
+                const chX = cx + r * Math.cos(angle);
+                const chY = cy + r * Math.sin(angle);
+                // X-shaped chromosome
+                const sz = 8 + condense * 10;
+                ctx.lineWidth = 2 + condense * 2;
+                ctx.strokeStyle = `hsl(${200 + i * 40}, 70%, 55%)`;
+                ctx.beginPath();
+                ctx.moveTo(chX - sz, chY - sz); ctx.lineTo(chX + sz, chY + sz);
+                ctx.moveTo(chX + sz, chY - sz); ctx.lineTo(chX - sz, chY + sz);
+                ctx.stroke();
+            }
+            // Spindle fibers forming
+            if (p > 0.5) {
+                const fAlpha = (p - 0.5) * 2;
+                ctx.strokeStyle = `rgba(255, 235, 59, ${fAlpha * 0.3})`;
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 6; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 130, cy);
+                    ctx.lineTo(cx + (i - 3) * 15, cy);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx + 130, cy);
+                    ctx.lineTo(cx + (i - 3) * 15, cy);
+                    ctx.stroke();
+                }
+            }
+        } else if (phase === 2) {
+            // Metaphase: aligned at equator
+            for (let i = 0; i < numChrom; i++) {
+                const chY = cy - 30 + i * 20;
+                const sz = 12;
+                ctx.lineWidth = 3.5;
+                ctx.strokeStyle = `hsl(${200 + i * 40}, 70%, 55%)`;
+                ctx.beginPath();
+                ctx.moveTo(cx - sz, chY - sz); ctx.lineTo(cx + sz, chY + sz);
+                ctx.moveTo(cx + sz, chY - sz); ctx.lineTo(cx - sz, chY + sz);
+                ctx.stroke();
+            }
+            // Spindle fibers
+            ctx.strokeStyle = "rgba(255, 235, 59, 0.3)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < numChrom; i++) {
+                const chY = cy - 30 + i * 20;
+                ctx.beginPath(); ctx.moveTo(cx - 130, cy); ctx.lineTo(cx, chY); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx + 130, cy); ctx.lineTo(cx, chY); ctx.stroke();
+            }
+            // Metaphase plate
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(cx, cy - 60); ctx.lineTo(cx, cy + 60);
+            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+            ctx.setLineDash([]);
+        } else if (phase === 3) {
+            // Anaphase: separating
+            const sep = p * 80;
+            for (let i = 0; i < numChrom; i++) {
+                const chY = cy - 20 + i * 15;
+                const sz = 8;
+                // Left set
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = `hsl(${200 + i * 40}, 70%, 55%)`;
+                ctx.beginPath();
+                ctx.moveTo(cx - sep - sz, chY - sz); ctx.lineTo(cx - sep, chY);
+                ctx.moveTo(cx - sep + sz, chY - sz); ctx.lineTo(cx - sep, chY);
+                ctx.stroke();
+                // Right set
+                ctx.beginPath();
+                ctx.moveTo(cx + sep - sz, chY - sz); ctx.lineTo(cx + sep, chY);
+                ctx.moveTo(cx + sep + sz, chY - sz); ctx.lineTo(cx + sep, chY);
+                ctx.stroke();
+            }
+            // Spindle fibers pulling
+            ctx.strokeStyle = "rgba(255, 235, 59, 0.2)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < numChrom; i++) {
+                const chY = cy - 20 + i * 15;
+                ctx.beginPath(); ctx.moveTo(cx - 130, cy); ctx.lineTo(cx - sep, chY); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx + 130, cy); ctx.lineTo(cx + sep, chY); ctx.stroke();
+            }
+        } else if (phase >= 4) {
+            // Telophase / Cytokinesis: chromosomes at poles
+            const offset = phase === 5 ? 40 + p * 70 : 80;
+            for (let i = 0; i < numChrom; i++) {
+                const chY = cy - 15 + i * 10;
+                const sz = 6;
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = `hsl(${200 + i * 40}, 60%, 50%)`;
+                // Left cluster
+                ctx.beginPath();
+                ctx.moveTo(cx - offset - sz, chY - sz); ctx.lineTo(cx - offset, chY);
+                ctx.moveTo(cx - offset + sz, chY - sz); ctx.lineTo(cx - offset, chY);
+                ctx.stroke();
+                // Right cluster
+                ctx.beginPath();
+                ctx.moveTo(cx + offset - sz, chY - sz); ctx.lineTo(cx + offset, chY);
+                ctx.moveTo(cx + offset + sz, chY - sz); ctx.lineTo(cx + offset, chY);
+                ctx.stroke();
+            }
+        }
+
+        // Centrioles at poles (prophase onwards)
+        if (phase >= 1 && phase <= 3) {
+            ctx.fillStyle = "#ffeb3b";
+            ctx.beginPath(); ctx.arc(cx - 130, cy, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + 130, cy, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#aab"; ctx.font = "9px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Centriole", cx - 130, cy + 15);
+            ctx.fillText("Centriole", cx + 130, cy + 15);
+        }
+
+        // Phase timeline at bottom
+        const tlY = H - 70, tlH = 35;
+        const phaseW = (W - 100) / mitoPhases.length;
+        for (let i = 0; i < mitoPhases.length; i++) {
+            const px = 50 + i * phaseW;
+            const isActive = i === phase;
+            ctx.fillStyle = isActive ? mitoPhases[i].color : "rgba(255,255,255,0.05)";
+            if (isActive) ctx.globalAlpha = 0.7;
+            ctx.fillRect(px, tlY, phaseW - 4, tlH);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = isActive ? mitoPhases[i].color : "#333";
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.strokeRect(px, tlY, phaseW - 4, tlH);
+            ctx.fillStyle = isActive ? "#fff" : "#667";
+            ctx.font = isActive ? "bold 10px sans-serif" : "10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(mitoPhases[i].name, px + (phaseW - 4) / 2, tlY + 14);
+            // Progress bar within active phase
+            if (isActive) {
+                ctx.fillStyle = "rgba(255,255,255,0.3)";
+                ctx.fillRect(px + 2, tlY + tlH - 6, (phaseW - 8) * mitoState.progress, 4);
+            }
+        }
+
+        // Phase description
+        const phaseInfo = mitoPhases[phase];
+        ctx.fillStyle = phaseInfo.color;
+        ctx.font = "bold 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(phaseInfo.name, cx, 28);
+        ctx.fillStyle = "#ccc";
+        ctx.font = "13px sans-serif";
+        ctx.fillText(phaseInfo.desc, cx, 50);
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:${phaseInfo.color}">Mitosis</b><br>` +
+            `Phase: ${phaseInfo.name}<br>` +
+            `Progress: ${(mitoState.progress * 100).toFixed(0)}%<br>` +
+            `Stage ${phase + 1}/${mitoPhases.length}`;
+
+        if (mitoState.running) {
+            animId = requestAnimationFrame(drawMitosis);
+        }
+    }
+
+    bindSlider("mitoSpeed", "val-mitoSpeed");
+    document.getElementById("btn-mito-start").addEventListener("click", () => {
+        mitoState = { phase: 0, progress: 0, running: true };
+        drawMitosis();
+    });
+    document.getElementById("btn-mito-reset").addEventListener("click", initMitosis);
+
+    // ═══════════════════════════════════════════════════════
+    // 26. PREDATOR-PREY (LOTKA-VOLTERRA)
+    // ═══════════════════════════════════════════════════════
+    let ppState = {};
+
+    function initPredPrey() {
+        ppState = { t: 0, prey: 40, pred: 9, running: true, history: [] };
+        document.getElementById("btn-pp-toggle").textContent = "Pause";
+        drawPredPrey();
+    }
+
+    function drawPredPrey() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const alpha = +document.getElementById("alpha").value;
+        const beta = +document.getElementById("beta").value;
+        const gamma = +document.getElementById("gamma").value;
+        const delta = +document.getElementById("delta").value;
+        const dt = 0.01;
+
+        if (ppState.running) {
+            // Runge-Kutta would be better, but Euler is simpler and sufficient for viz
+            for (let i = 0; i < 5; i++) {
+                const dPrey = (alpha * ppState.prey - beta * ppState.prey * ppState.pred) * dt;
+                const dPred = (delta * ppState.prey * ppState.pred - gamma * ppState.pred) * dt;
+                ppState.prey = Math.max(0.1, ppState.prey + dPrey);
+                ppState.pred = Math.max(0.1, ppState.pred + dPred);
+                ppState.t += dt;
+            }
+            ppState.history.push({ t: ppState.t, prey: ppState.prey, pred: ppState.pred });
+            if (ppState.history.length > 800) ppState.history.shift();
+        }
+
+        // Population vs Time graph
+        const gx = 60, gy = 30, gw = W - 120, gh = 200;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Population vs Time", gx + 8, gy - 6);
+
+        if (ppState.history.length > 2) {
+            let maxPop = 1;
+            ppState.history.forEach(h => { maxPop = Math.max(maxPop, h.prey, h.pred); });
+            const tMin = ppState.history[0].t;
+            const tMax = ppState.history[ppState.history.length - 1].t;
+            const tRange = Math.max(0.1, tMax - tMin);
+
+            // Prey curve
+            ctx.beginPath();
+            ppState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw;
+                const py = gy + gh - (h.prey / maxPop) * gh * 0.9;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2; ctx.stroke();
+
+            // Predator curve
+            ctx.beginPath();
+            ppState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw;
+                const py = gy + gh - (h.pred / maxPop) * gh * 0.9;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ef5350"; ctx.lineWidth = 2; ctx.stroke();
+        }
+
+        // Legend
+        ctx.fillStyle = "#66bb6a"; ctx.font = "11px sans-serif";
+        ctx.fillText(`Prey: ${ppState.prey.toFixed(1)}`, gx + gw - 150, gy + 18);
+        ctx.fillStyle = "#ef5350";
+        ctx.fillText(`Predators: ${ppState.pred.toFixed(1)}`, gx + gw - 150, gy + 34);
+
+        // Phase portrait (Prey vs Predator)
+        const px2 = 60, py2 = 260, pw2 = (W - 120) / 2 - 10, ph2 = 220;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(px2, py2, pw2, ph2);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(px2, py2, pw2, ph2);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif";
+        ctx.fillText("Phase Portrait (Prey vs Pred)", px2 + 8, py2 - 6);
+        ctx.fillStyle = "#667"; ctx.font = "9px sans-serif";
+        ctx.fillText("Prey \u2192", px2 + pw2 / 2, py2 + ph2 + 12);
+        ctx.save(); ctx.translate(px2 - 8, py2 + ph2 / 2); ctx.rotate(-Math.PI / 2);
+        ctx.fillText("Predator \u2192", 0, 0); ctx.restore();
+
+        if (ppState.history.length > 2) {
+            let maxPrey = 1, maxPred = 1;
+            ppState.history.forEach(h => { maxPrey = Math.max(maxPrey, h.prey); maxPred = Math.max(maxPred, h.pred); });
+
+            ctx.beginPath();
+            ppState.history.forEach((h, i) => {
+                const x = px2 + (h.prey / maxPrey) * pw2 * 0.9 + 5;
+                const y = py2 + ph2 - (h.pred / maxPred) * ph2 * 0.9 - 5;
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = "rgba(171, 71, 188, 0.6)"; ctx.lineWidth = 1.5; ctx.stroke();
+
+            // Current point
+            const last = ppState.history[ppState.history.length - 1];
+            const lx = px2 + (last.prey / maxPrey) * pw2 * 0.9 + 5;
+            const ly = py2 + ph2 - (last.pred / maxPred) * ph2 * 0.9 - 5;
+            ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff"; ctx.fill();
+        }
+
+        // Ecosystem visualization
+        const ex = px2 + pw2 + 20, ey = py2, ew = pw2, eh = ph2;
+        ctx.fillStyle = "rgba(20, 50, 20, 0.5)";
+        ctx.fillRect(ex, ey, ew, eh);
+        ctx.strokeStyle = "#2a4a2a"; ctx.strokeRect(ex, ey, ew, eh);
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Ecosystem View", ex + 8, ey - 6);
+
+        // Draw prey (green circles)
+        const numPreyDots = Math.min(60, Math.round(ppState.prey));
+        for (let i = 0; i < numPreyDots; i++) {
+            const dx = ex + 10 + (i % 10) * (ew - 20) / 10;
+            const dy = ey + 15 + Math.floor(i / 10) * 18;
+            ctx.beginPath(); ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#66bb6a"; ctx.fill();
+        }
+        // Draw predators (red triangles)
+        const numPredDots = Math.min(30, Math.round(ppState.pred));
+        for (let i = 0; i < numPredDots; i++) {
+            const dx = ex + 15 + (i % 8) * (ew - 30) / 8;
+            const dy = ey + eh - 20 - Math.floor(i / 8) * 22;
+            ctx.beginPath();
+            ctx.moveTo(dx, dy - 7); ctx.lineTo(dx - 6, dy + 5); ctx.lineTo(dx + 6, dy + 5);
+            ctx.closePath();
+            ctx.fillStyle = "#ef5350"; ctx.fill();
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#ab47bc">Predator-Prey</b><br>` +
+            `Prey: ${ppState.prey.toFixed(1)}<br>` +
+            `Predators: ${ppState.pred.toFixed(1)}<br>` +
+            `t: ${ppState.t.toFixed(1)}`;
+
+        if (ppState.running) {
+            animId = requestAnimationFrame(drawPredPrey);
+        }
+    }
+
+    bindSlider("alpha", "val-alpha");
+    bindSlider("beta", "val-beta");
+    bindSlider("gamma", "val-gamma");
+    bindSlider("delta", "val-delta");
+
+    document.getElementById("btn-pp-toggle").addEventListener("click", () => {
+        ppState.running = !ppState.running;
+        document.getElementById("btn-pp-toggle").textContent = ppState.running ? "Pause" : "Resume";
+        if (ppState.running) drawPredPrey();
+    });
+    document.getElementById("btn-pp-reset").addEventListener("click", initPredPrey);
+
+    // ═══════════════════════════════════════════════════════
+    // 27. NATURAL SELECTION
+    // ═══════════════════════════════════════════════════════
+    let selState = {};
+
+    function initSelection() {
+        const organisms = [];
+        for (let i = 0; i < 60; i++) {
+            organisms.push({
+                x: 40 + Math.random() * 820,
+                y: 40 + Math.random() * 400,
+                color: Math.random(), // 0=dark, 1=light
+                size: 4 + Math.random() * 4,
+                fitness: 0,
+                alive: true
+            });
+        }
+        selState = { organisms, running: true, generation: 0, t: 0, genHistory: [] };
+        document.getElementById("btn-sel-toggle").textContent = "Pause";
+        drawSelection();
+    }
+
+    function drawSelection() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const mutRate = +document.getElementById("mutRate").value;
+        const selPress = +document.getElementById("selPress").value;
+        const env = document.getElementById("selEnv").value;
+
+        // Environment background
+        if (env === "dark") {
+            ctx.fillStyle = "#1a1a2e";
+            ctx.fillRect(0, 0, W, H);
+        } else if (env === "light") {
+            ctx.fillStyle = "#c8c8a0";
+            ctx.fillRect(0, 0, W, H);
+        } else {
+            // Patchy
+            for (let px = 0; px < W; px += 60) {
+                for (let py = 0; py < H; py += 60) {
+                    const isDark = ((px / 60 + py / 60) % 2) < 1;
+                    ctx.fillStyle = isDark ? "#1a1a2e" : "#b0b090";
+                    ctx.fillRect(px, py, 60, 60);
+                }
+            }
+        }
+
+        const envBrightness = env === "dark" ? 0.1 : env === "light" ? 0.8 : 0.5;
+
+        if (selState.running) {
+            selState.t++;
+
+            // Every 120 frames = one generation
+            if (selState.t % 120 === 0) {
+                selState.generation++;
+
+                // Calculate fitness based on camouflage
+                selState.organisms.forEach(o => {
+                    if (!o.alive) return;
+                    let localBg = envBrightness;
+                    if (env === "mixed") {
+                        const gx = Math.floor(o.x / 60), gy = Math.floor(o.y / 60);
+                        localBg = ((gx + gy) % 2) < 1 ? 0.1 : 0.8;
+                    }
+                    const camouflage = 1 - Math.abs(o.color - localBg);
+                    o.fitness = camouflage;
+                });
+
+                // Selection: kill the least fit
+                const alive = selState.organisms.filter(o => o.alive);
+                alive.sort((a, b) => a.fitness - b.fitness);
+                const killCount = Math.floor(alive.length * selPress * 0.4);
+                for (let i = 0; i < killCount && i < alive.length; i++) {
+                    alive[i].alive = false;
+                }
+
+                // Reproduction: the survivors reproduce
+                const survivors = selState.organisms.filter(o => o.alive);
+                const offspring = [];
+                while (survivors.length + offspring.length < 60 && survivors.length > 0) {
+                    const parent = survivors[Math.floor(Math.random() * survivors.length)];
+                    const child = {
+                        x: 40 + Math.random() * 820,
+                        y: 40 + Math.random() * 400,
+                        color: Math.max(0, Math.min(1, parent.color + (Math.random() - 0.5) * mutRate * 2)),
+                        size: Math.max(3, Math.min(8, parent.size + (Math.random() - 0.5) * 1)),
+                        fitness: 0,
+                        alive: true
+                    };
+                    offspring.push(child);
+                }
+                selState.organisms = [...survivors, ...offspring];
+
+                // Record history
+                const avgColor = selState.organisms.reduce((s, o) => s + o.color, 0) / selState.organisms.length;
+                selState.genHistory.push({ gen: selState.generation, avgColor, pop: selState.organisms.length });
+                if (selState.genHistory.length > 100) selState.genHistory.shift();
+            }
+
+            // Move organisms slightly
+            selState.organisms.forEach(o => {
+                if (!o.alive) return;
+                o.x += (Math.random() - 0.5) * 3;
+                o.y += (Math.random() - 0.5) * 3;
+                o.x = Math.max(10, Math.min(W - 10, o.x));
+                o.y = Math.max(10, Math.min(H - 80, o.y));
+            });
+        }
+
+        // Draw organisms
+        selState.organisms.forEach(o => {
+            if (!o.alive) return;
+            const gray = Math.round(o.color * 255);
+            ctx.beginPath();
+            ctx.arc(o.x, o.y, o.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgb(${gray}, ${gray}, ${Math.round(gray * 0.8)})`;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.15)";
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        });
+
+        // Stats bar at bottom
+        const barY = H - 70, barH = 60;
+        ctx.fillStyle = "rgba(16,20,58,0.9)";
+        ctx.fillRect(0, barY, W, barH);
+
+        // Generation history mini-graph
+        if (selState.genHistory.length > 1) {
+            ctx.beginPath();
+            selState.genHistory.forEach((h, i) => {
+                const px = 20 + (i / 100) * (W / 2 - 40);
+                const py = barY + barH - 8 - h.avgColor * (barH - 16);
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+
+        ctx.fillStyle = "#ccc"; ctx.font = "12px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`Generation: ${selState.generation}`, W / 2 + 20, barY + 18);
+        const avgCol = selState.organisms.filter(o => o.alive).reduce((s, o) => s + o.color, 0) / Math.max(1, selState.organisms.filter(o => o.alive).length);
+        ctx.fillText(`Avg brightness: ${avgCol.toFixed(3)}`, W / 2 + 20, barY + 36);
+        ctx.fillText(`Population: ${selState.organisms.filter(o => o.alive).length}`, W / 2 + 20, barY + 54);
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "10px sans-serif";
+        ctx.fillText("Avg brightness over generations \u2192", 20, barY + 12);
+
+        const statsEl = document.getElementById("sel-stats");
+        if (statsEl) {
+            statsEl.innerHTML = `Gen ${selState.generation} | Pop: ${selState.organisms.filter(o => o.alive).length}`;
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Natural Selection</b><br>` +
+            `Gen: ${selState.generation}<br>` +
+            `Avg color: ${avgCol.toFixed(2)}<br>` +
+            `Env: ${env}`;
+
+        if (selState.running) {
+            animId = requestAnimationFrame(drawSelection);
+        }
+    }
+
+    bindSlider("mutRate", "val-mutRate");
+    bindSlider("selPress", "val-selPress");
+
+    document.getElementById("btn-sel-toggle").addEventListener("click", () => {
+        selState.running = !selState.running;
+        document.getElementById("btn-sel-toggle").textContent = selState.running ? "Pause" : "Resume";
+        if (selState.running) drawSelection();
+    });
+    document.getElementById("btn-sel-reset").addEventListener("click", initSelection);
+
+    // ═══════════════════════════════════════════════════════
+    // 28. NEURON ACTION POTENTIAL
+    // ═══════════════════════════════════════════════════════
+    let neuronState = {};
+
+    function initNeuron() {
+        neuronState = { firing: false, t: 0, potential: -70, history: [], axonProgress: -1 };
+        drawNeuron();
+    }
+
+    function hodgkinHuxley(t, stimMul) {
+        // Simplified action potential shape
+        const stim = stimMul;
+        if (t < 0) return -70;
+        if (t < 0.5) return -70 + (stim * 20) * t * 2; // stimulus ramp
+        if (t < 1.0) return -70 + stim * 20 + (40 + stim * 50) * (t - 0.5) * 2; // depolarization
+        if (t < 1.5) return 30 * stim; // peak
+        if (t < 2.5) return 30 * stim - (30 * stim + 80) * (t - 1.5); // repolarization
+        if (t < 3.5) return -80 + 10 * (t - 2.5); // hyperpolarization recovery
+        return -70;
+    }
+
+    function drawNeuron() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const stimStrength = +document.getElementById("stimulus").value;
+        const thresh = +document.getElementById("threshold").value;
+
+        if (neuronState.firing) {
+            neuronState.t += 0.03;
+            const stimPotential = hodgkinHuxley(neuronState.t, stimStrength);
+            neuronState.potential = stimPotential;
+            neuronState.history.push({ t: neuronState.t, v: neuronState.potential });
+
+            // Check if reached threshold
+            if (neuronState.potential > thresh && neuronState.axonProgress < 0) {
+                neuronState.axonProgress = 0;
+            }
+            if (neuronState.axonProgress >= 0) {
+                neuronState.axonProgress += 0.015;
+            }
+
+            if (neuronState.t > 4.5) {
+                neuronState.firing = false;
+            }
+        }
+
+        // ── Draw neuron anatomy ──
+        // Cell body (soma)
+        const somaX = 130, somaY = 160, somaR = 50;
+        const somaGrad = ctx.createRadialGradient(somaX - 10, somaY - 10, 5, somaX, somaY, somaR);
+        somaGrad.addColorStop(0, "rgba(156, 39, 176, 0.7)");
+        somaGrad.addColorStop(1, "rgba(74, 20, 140, 0.3)");
+        ctx.beginPath(); ctx.arc(somaX, somaY, somaR, 0, Math.PI * 2);
+        ctx.fillStyle = somaGrad; ctx.fill();
+        ctx.strokeStyle = "#ce93d8"; ctx.lineWidth = 2; ctx.stroke();
+
+        // Nucleus
+        ctx.beginPath(); ctx.arc(somaX, somaY, 18, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(233, 30, 99, 0.4)"; ctx.fill();
+        ctx.strokeStyle = "rgba(233, 30, 99, 0.6)"; ctx.lineWidth = 1; ctx.stroke();
+
+        // Dendrites
+        const dendrites = [[-60, -40], [-70, -10], [-60, 30], [-40, -55], [-35, 50]];
+        dendrites.forEach(([dx, dy]) => {
+            ctx.beginPath();
+            ctx.moveTo(somaX + dx * 0.3, somaY + dy * 0.3);
+            ctx.quadraticCurveTo(somaX + dx * 0.7, somaY + dy * 0.8, somaX + dx, somaY + dy);
+            ctx.strokeStyle = "#ba68c8"; ctx.lineWidth = 2; ctx.stroke();
+            // Branch tips
+            ctx.beginPath(); ctx.arc(somaX + dx, somaY + dy, 2, 0, Math.PI * 2);
+            ctx.fillStyle = "#ba68c8"; ctx.fill();
+        });
+
+        // Axon
+        const axonStartX = somaX + somaR, axonEndX = W - 80;
+        const axonY = 160;
+        ctx.beginPath();
+        ctx.moveTo(axonStartX, axonY);
+        ctx.lineTo(axonEndX, axonY);
+        ctx.strokeStyle = "#78909c"; ctx.lineWidth = 6; ctx.stroke();
+
+        // Myelin sheaths
+        const myelinCount = 6;
+        const myelinLen = (axonEndX - axonStartX - 60) / myelinCount;
+        for (let i = 0; i < myelinCount; i++) {
+            const mx = axonStartX + 20 + i * myelinLen;
+            ctx.fillStyle = "rgba(255, 235, 59, 0.2)";
+            ctx.beginPath();
+            ctx.ellipse(mx + myelinLen * 0.35, axonY, myelinLen * 0.35, 14, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255, 235, 59, 0.4)"; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        // Nodes of Ranvier labels
+        ctx.fillStyle = "#667"; ctx.font = "8px sans-serif"; ctx.textAlign = "center";
+        for (let i = 0; i <= myelinCount; i++) {
+            const nx = axonStartX + 20 + i * myelinLen;
+            if (i < myelinCount) ctx.fillText("Node", nx, axonY + 24);
+        }
+
+        // Action potential propagation along axon
+        if (neuronState.axonProgress >= 0) {
+            const apX = axonStartX + neuronState.axonProgress * (axonEndX - axonStartX);
+            if (apX < axonEndX) {
+                const grad = ctx.createRadialGradient(apX, axonY, 2, apX, axonY, 30);
+                grad.addColorStop(0, "rgba(255, 235, 59, 0.9)");
+                grad.addColorStop(0.5, "rgba(255, 152, 0, 0.4)");
+                grad.addColorStop(1, "rgba(255, 152, 0, 0)");
+                ctx.beginPath(); ctx.arc(apX, axonY, 30, 0, Math.PI * 2);
+                ctx.fillStyle = grad; ctx.fill();
+            }
+        }
+
+        // Axon terminal
+        for (let i = 0; i < 4; i++) {
+            const tx = axonEndX + 15 + Math.cos((-0.5 + i * 0.35) * Math.PI) * 25;
+            const ty = axonY + Math.sin((-0.5 + i * 0.35) * Math.PI) * 25;
+            ctx.beginPath();
+            ctx.moveTo(axonEndX, axonY);
+            ctx.lineTo(tx, ty);
+            ctx.strokeStyle = "#78909c"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI * 2);
+            ctx.fillStyle = neuronState.axonProgress > 0.95 ? "#ff9800" : "#546e7a";
+            ctx.fill();
+        }
+
+        // Neurotransmitter release
+        if (neuronState.axonProgress > 0.95) {
+            for (let i = 0; i < 8; i++) {
+                const ntX = axonEndX + 30 + Math.random() * 30;
+                const ntY = axonY - 20 + Math.random() * 40;
+                ctx.beginPath(); ctx.arc(ntX, ntY, 2, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 152, 0, 0.6)"; ctx.fill();
+            }
+        }
+
+        // Labels
+        ctx.fillStyle = "#ce93d8"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Soma", somaX, somaY + somaR + 16);
+        ctx.fillText("Dendrites", somaX - 50, somaY - 60);
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fillText("Myelin Sheath", (axonStartX + axonEndX) / 2, axonY - 22);
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText("Axon Terminal", axonEndX + 10, axonY + 50);
+
+        // Voltage-time graph
+        const gx = 50, gy2 = 240, gw = W - 100, gh = 230;
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(gx, gy2, gw, gh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy2, gw, gh);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Membrane Potential vs Time", gx + 8, gy2 - 6);
+
+        // Y axis: -80 to +40 mV
+        const vMin = -80, vMax = 40;
+        const vRange = vMax - vMin;
+
+        // Grid lines
+        ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1;
+        [-70, -55, 0, 30].forEach(v => {
+            const py = gy2 + gh - ((v - vMin) / vRange) * gh;
+            ctx.beginPath(); ctx.moveTo(gx, py); ctx.lineTo(gx + gw, py); ctx.stroke();
+            ctx.fillStyle = "#556"; ctx.font = "9px sans-serif"; ctx.textAlign = "right";
+            ctx.fillText(`${v}`, gx - 4, py + 4);
+        });
+
+        // Threshold line
+        const threshY = gy2 + gh - ((thresh - vMin) / vRange) * gh;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(gx, threshY); ctx.lineTo(gx + gw, threshY);
+        ctx.strokeStyle = "rgba(255, 82, 82, 0.5)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ef5350"; ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Threshold", gx + gw - 60, threshY - 4);
+
+        // Resting potential line
+        const restY = gy2 + gh - ((-70 - vMin) / vRange) * gh;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(gx, restY); ctx.lineTo(gx + gw, restY);
+        ctx.strokeStyle = "rgba(100, 200, 255, 0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#64b5f6"; ctx.fillText("Resting (-70mV)", gx + 4, restY - 4);
+
+        // Plot history
+        if (neuronState.history.length > 1) {
+            const maxT = Math.max(4.5, neuronState.history[neuronState.history.length - 1].t);
+            ctx.beginPath();
+            neuronState.history.forEach((h, i) => {
+                const px = gx + (h.t / maxT) * gw;
+                const py = gy2 + gh - ((h.v - vMin) / vRange) * gh;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2.5; ctx.stroke();
+        }
+
+        // Phase labels on graph
+        if (neuronState.history.length > 10) {
+            ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            const maxT = Math.max(4.5, neuronState.history[neuronState.history.length - 1].t);
+            const phases = [
+                { t: 0.3, label: "Stimulus", color: "#aab" },
+                { t: 1.0, label: "Depolarization", color: "#ff9800" },
+                { t: 1.5, label: "Peak", color: "#f44336" },
+                { t: 2.0, label: "Repolarization", color: "#4caf50" },
+                { t: 3.0, label: "Hyperpolarization", color: "#42a5f5" },
+                { t: 4.0, label: "Recovery", color: "#aab" }
+            ];
+            phases.forEach(p => {
+                if (neuronState.t > p.t) {
+                    ctx.fillStyle = p.color;
+                    ctx.fillText(p.label, gx + (p.t / maxT) * gw, gy2 + gh + 14);
+                }
+            });
+        }
+
+        ctx.textAlign = "start";
+
+        const fired = neuronState.potential > thresh;
+        overlay.innerHTML =
+            `<b style="color:#ce93d8">Action Potential</b><br>` +
+            `V_m: ${neuronState.potential.toFixed(1)} mV<br>` +
+            `Threshold: ${thresh} mV<br>` +
+            `${fired ? "FIRING!" : neuronState.firing ? "Stimulating..." : "Resting"}`;
+
+        if (neuronState.firing) {
+            animId = requestAnimationFrame(drawNeuron);
+        }
+    }
+
+    bindSlider("stimulus", "val-stimulus");
+    bindSlider("threshold", "val-threshold");
+
+    document.getElementById("btn-neuron-fire").addEventListener("click", () => {
+        neuronState = { firing: true, t: 0, potential: -70, history: [{ t: 0, v: -70 }], axonProgress: -1 };
+        drawNeuron();
+    });
+    document.getElementById("btn-neuron-reset").addEventListener("click", initNeuron);
+
+    // ═══════════════════════════════════════════════════════
+    // 29. ENZYME KINETICS (MICHAELIS-MENTEN)
+    // ═══════════════════════════════════════════════════════
+    let enzState = {};
+
+    function initEnzyme() {
+        enzState = { running: false, t: 0, substrates: [], products: [], enzymeActive: false };
+        drawEnzyme();
+    }
+
+    function drawEnzyme() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const Vmax = +document.getElementById("vmax").value;
+        const Km = +document.getElementById("km").value;
+        const S = +document.getElementById("substrate").value;
+        const showLB = document.getElementById("showLB").checked;
+
+        const V = (Vmax * S) / (Km + S);
+
+        // ── Main Michaelis-Menten curve ──
+        const gx = showLB ? 50 : 80, gy = 30;
+        const gw = showLB ? (W - 120) / 2 : W - 160;
+        const gh = showLB ? 220 : 280;
+
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Michaelis-Menten Kinetics", gx + 8, gy - 6);
+
+        // Axes
+        ctx.fillStyle = "#667"; ctx.font = "9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("[S] (substrate concentration)", gx + gw / 2, gy + gh + 28);
+        ctx.save(); ctx.translate(gx - 20, gy + gh / 2); ctx.rotate(-Math.PI / 2);
+        ctx.fillText("Reaction Rate (V)", 0, 0); ctx.restore();
+
+        // Vmax line
+        const vmaxY = gy + gh * 0.08;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(gx, vmaxY); ctx.lineTo(gx + gw, vmaxY);
+        ctx.strokeStyle = "rgba(244, 67, 54, 0.5)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#f44336"; ctx.font = "10px sans-serif"; ctx.textAlign = "right";
+        ctx.fillText(`V_max = ${Vmax}`, gx + gw - 4, vmaxY - 4);
+
+        // Vmax/2 line
+        const vhalfY = gy + gh * 0.08 + (gh * 0.85) / 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(gx, vhalfY); ctx.lineTo(gx + gw, vhalfY);
+        ctx.strokeStyle = "rgba(255,152,0,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ff9800"; ctx.font = "9px sans-serif";
+        ctx.fillText(`V_max/2`, gx + gw - 4, vhalfY - 4);
+
+        // Km marker
+        const kmX = gx + (Km / 300) * gw;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(kmX, gy); ctx.lineTo(kmX, gy + gh);
+        ctx.strokeStyle = "rgba(255,152,0,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ff9800"; ctx.textAlign = "center";
+        ctx.fillText(`K_m = ${Km}`, kmX, gy + gh + 14);
+
+        // M-M curve
+        ctx.beginPath();
+        for (let px = 0; px < gw; px++) {
+            const s = (px / gw) * 300;
+            const v = (Vmax * s) / (Km + s);
+            const py = gy + gh - (v / Vmax) * gh * 0.85 - gh * 0.07;
+            px === 0 ? ctx.moveTo(gx + px, py) : ctx.lineTo(gx + px, py);
+        }
+        ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2.5; ctx.stroke();
+
+        // Current point
+        const curX = gx + (S / 300) * gw;
+        const curY = gy + gh - (V / Vmax) * gh * 0.85 - gh * 0.07;
+        ctx.beginPath(); ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffeb3b"; ctx.fill();
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.stroke();
+
+        // Lineweaver-Burk plot (double reciprocal)
+        if (showLB) {
+            const lbx = gx + gw + 30, lby = gy, lbw = gw, lbh = gh;
+            ctx.fillStyle = "rgba(16,20,58,0.7)";
+            ctx.fillRect(lbx, lby, lbw, lbh);
+            ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(lbx, lby, lbw, lbh);
+
+            ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("Lineweaver-Burk Plot", lbx + 8, lby - 6);
+
+            ctx.fillStyle = "#667"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("1/[S]", lbx + lbw / 2, lby + lbh + 28);
+            ctx.save(); ctx.translate(lbx - 16, lby + lbh / 2); ctx.rotate(-Math.PI / 2);
+            ctx.fillText("1/V", 0, 0); ctx.restore();
+
+            // LB line: 1/V = (Km/Vmax)(1/S) + 1/Vmax
+            const maxInvS = 0.2; // 1/S up to 0.2
+            const slope = Km / Vmax;
+            const intercept = 1 / Vmax;
+
+            // Axes through origin area
+            const originX = lbx + lbw * 0.3, originY = lby + lbh * 0.85;
+            ctx.beginPath();
+            ctx.moveTo(lbx + 10, originY); ctx.lineTo(lbx + lbw - 10, originY);
+            ctx.moveTo(originX, lby + 10); ctx.lineTo(originX, lby + lbh - 10);
+            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+
+            // LB line
+            ctx.beginPath();
+            for (let px = 0; px < lbw; px++) {
+                const invS = -0.05 + (px / lbw) * maxInvS;
+                const invV = slope * invS + intercept;
+                const x = originX + (invS / maxInvS) * (lbw * 0.65);
+                const y = originY - (invV / (slope * maxInvS + intercept)) * (lbh * 0.7);
+                if (y > lby && y < lby + lbh) {
+                    px === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+            }
+            ctx.strokeStyle = "#42a5f5"; ctx.lineWidth = 2; ctx.stroke();
+
+            // Y-intercept = 1/Vmax
+            const yIntY = originY - (intercept / (slope * maxInvS + intercept)) * (lbh * 0.7);
+            ctx.beginPath(); ctx.arc(originX, yIntY, 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#f44336"; ctx.fill();
+            ctx.fillStyle = "#f44336"; ctx.font = "9px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("1/V_max", originX + 8, yIntY);
+
+            // X-intercept = -1/Km
+            ctx.fillStyle = "#ff9800"; ctx.textAlign = "center";
+            ctx.fillText("-1/K_m", originX - 30, originY + 14);
+
+            // Current point on LB
+            if (S > 0) {
+                const curInvS = 1 / S;
+                const curInvV = 1 / V;
+                const cpx = originX + (curInvS / maxInvS) * (lbw * 0.65);
+                const cpy = originY - (curInvV / (slope * maxInvS + intercept)) * (lbh * 0.7);
+                if (cpy > lby && cpy < lby + lbh) {
+                    ctx.beginPath(); ctx.arc(cpx, cpy, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = "#ffeb3b"; ctx.fill();
+                }
+            }
+        }
+
+        // Enzyme animation area
+        const ey = showLB ? 280 : 340, eh = showLB ? 210 : 150;
+        ctx.fillStyle = "rgba(16,20,58,0.5)";
+        ctx.fillRect(50, ey, W - 100, eh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(50, ey, W - 100, eh);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Enzyme-Substrate Interaction", 58, ey - 6);
+
+        // Enzyme (lock shape)
+        const enzX = W / 2, enzY = ey + eh / 2;
+        ctx.beginPath();
+        ctx.ellipse(enzX, enzY, 50, 35, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(76, 175, 80, 0.3)"; ctx.fill();
+        ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2; ctx.stroke();
+        // Active site notch
+        ctx.beginPath();
+        ctx.moveTo(enzX - 15, enzY - 35);
+        ctx.quadraticCurveTo(enzX, enzY - 20, enzX + 15, enzY - 35);
+        ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = "#66bb6a"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Enzyme", enzX, enzY + 50);
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "9px sans-serif";
+        ctx.fillText("Active Site", enzX, enzY - 40);
+
+        // Substrates approaching
+        if (enzState.running) {
+            enzState.t += 0.02;
+            // Animate substrate binding
+            const bindPhase = (enzState.t % 3);
+            if (bindPhase < 1) {
+                // Substrate approaching
+                const sx = enzX - 100 + bindPhase * 80;
+                const sy = enzY - 50 - (1 - bindPhase) * 20;
+                ctx.beginPath();
+                ctx.moveTo(sx, sy); ctx.lineTo(sx - 10, sy - 15); ctx.lineTo(sx + 10, sy - 15);
+                ctx.closePath();
+                ctx.fillStyle = "#ff9800"; ctx.fill();
+                ctx.fillStyle = "#ff9800"; ctx.font = "9px sans-serif";
+                ctx.fillText("Substrate", sx, sy - 20);
+            } else if (bindPhase < 2) {
+                // Bound (ES complex)
+                ctx.beginPath();
+                ctx.moveTo(enzX, enzY - 35); ctx.lineTo(enzX - 10, enzY - 50); ctx.lineTo(enzX + 10, enzY - 50);
+                ctx.closePath();
+                ctx.fillStyle = "#ff9800"; ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.font = "10px sans-serif";
+                ctx.fillText("ES Complex", enzX, enzY - 55);
+            } else {
+                // Product leaving
+                const px2 = enzX + (bindPhase - 2) * 100;
+                const py2 = enzY - 50 - (bindPhase - 2) * 20;
+                ctx.beginPath(); ctx.arc(px2, py2, 7, 0, Math.PI * 2);
+                ctx.fillStyle = "#42a5f5"; ctx.fill();
+                ctx.beginPath(); ctx.arc(px2 + 12, py2, 5, 0, Math.PI * 2);
+                ctx.fillStyle = "#42a5f5"; ctx.fill();
+                ctx.fillStyle = "#42a5f5"; ctx.font = "9px sans-serif";
+                ctx.fillText("Products", px2 + 5, py2 - 14);
+            }
+        }
+
+        // Equation
+        ctx.fillStyle = "#ccc"; ctx.font = "14px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`V = V_max \u00b7 [S] / (K_m + [S]) = ${V.toFixed(1)}`, W / 2, ey + eh + 20);
+
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Enzyme Kinetics</b><br>` +
+            `V: ${V.toFixed(1)}<br>` +
+            `V_max: ${Vmax}<br>` +
+            `K_m: ${Km}<br>` +
+            `[S]: ${S}<br>` +
+            `Efficiency: ${(V / Vmax * 100).toFixed(0)}%`;
+
+        if (enzState.running) {
+            animId = requestAnimationFrame(drawEnzyme);
+        }
+    }
+
+    bindSlider("vmax", "val-vmax", () => { if (currentSim === "enzyme") drawEnzyme(); });
+    bindSlider("km", "val-km", () => { if (currentSim === "enzyme") drawEnzyme(); });
+    bindSlider("substrate", "val-substrate", () => { if (currentSim === "enzyme") drawEnzyme(); });
+    document.getElementById("showLB").addEventListener("change", () => { if (currentSim === "enzyme") drawEnzyme(); });
+
+    document.getElementById("btn-enz-animate").addEventListener("click", () => {
+        enzState = { running: true, t: 0 };
+        drawEnzyme();
+    });
+    document.getElementById("btn-enz-reset").addEventListener("click", initEnzyme);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
