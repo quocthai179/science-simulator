@@ -57,6 +57,11 @@
             case "selection":   initSelection();    break;
             case "neuron":      initNeuron();       break;
             case "enzyme":      initEnzyme();       break;
+            case "dna":         initDNA();          break;
+            case "photosyn":    initPhotosyn();     break;
+            case "hardywein":   initHardyWein();    break;
+            case "foodweb":     initFoodWeb();      break;
+            case "membrane":    initMembrane();     break;
         }
     }
 
@@ -4973,6 +4978,1153 @@
         drawEnzyme();
     });
     document.getElementById("btn-enz-reset").addEventListener("click", initEnzyme);
+
+    // ═══════════════════════════════════════════════════════
+    // 30. DNA REPLICATION
+    // ═══════════════════════════════════════════════════════
+    let dnaState = {};
+
+    const basePairs = [
+        { left: "A", right: "T", color: "#ef5350" },
+        { left: "T", right: "A", color: "#42a5f5" },
+        { left: "G", right: "C", color: "#66bb6a" },
+        { left: "C", right: "G", color: "#ff9800" },
+        { left: "A", right: "T", color: "#ef5350" },
+        { left: "G", right: "C", color: "#66bb6a" },
+        { left: "T", right: "A", color: "#42a5f5" },
+        { left: "C", right: "G", color: "#ff9800" },
+        { left: "A", right: "T", color: "#ef5350" },
+        { left: "G", right: "C", color: "#66bb6a" },
+        { left: "T", right: "A", color: "#42a5f5" },
+        { left: "A", right: "T", color: "#ef5350" },
+        { left: "C", right: "G", color: "#ff9800" },
+        { left: "G", right: "C", color: "#66bb6a" },
+        { left: "T", right: "A", color: "#42a5f5" },
+        { left: "A", right: "T", color: "#ef5350" },
+    ];
+
+    function initDNA() {
+        dnaState = { progress: 0, running: false };
+        drawDNA();
+    }
+
+    function drawDNA() {
+        const W = canvas.width, H = canvas.height;
+        const speed = +document.getElementById("dnaSpeed").value;
+        ctx.clearRect(0, 0, W, H);
+
+        if (dnaState.running) {
+            dnaState.progress += 0.003 * speed;
+            if (dnaState.progress >= 1) {
+                dnaState.progress = 1;
+                dnaState.running = false;
+            }
+        }
+
+        const forkX = 100 + dnaState.progress * (W - 250);
+        const cy = H / 2;
+        const bpSpacing = 35;
+        const helixAmp = 40;
+
+        // Title
+        ctx.fillStyle = "#ce93d8";
+        ctx.font = "bold 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("DNA Replication Fork", W / 2, 24);
+
+        // Draw unreplicated double helix (right of fork)
+        for (let i = 0; i < basePairs.length; i++) {
+            const x = forkX + 50 + i * bpSpacing;
+            if (x > W - 20) break;
+            const phase = i * 0.5 + dnaState.progress * 3;
+            const yOff = Math.sin(phase) * helixAmp;
+            const depth = Math.cos(phase);
+
+            // Draw back strand first if behind
+            if (depth < 0) {
+                // Back backbone
+                ctx.beginPath();
+                ctx.arc(x, cy + yOff, 5, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(120, 144, 156, 0.4)";
+                ctx.fill();
+            }
+
+            // Base pair bond (horizontal rung)
+            ctx.beginPath();
+            ctx.moveTo(x, cy - Math.abs(yOff) * 0.5);
+            ctx.lineTo(x, cy + Math.abs(yOff) * 0.5);
+            ctx.strokeStyle = `rgba(255,255,255,0.15)`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Front backbone
+            ctx.beginPath();
+            ctx.arc(x, cy - yOff, 6, 0, Math.PI * 2);
+            ctx.fillStyle = basePairs[i % basePairs.length].color;
+            ctx.fill();
+
+            if (depth >= 0) {
+                ctx.beginPath();
+                ctx.arc(x, cy + yOff, 6, 0, Math.PI * 2);
+                ctx.fillStyle = basePairs[i % basePairs.length].color;
+                ctx.globalAlpha = 0.6;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            // Base letters
+            if (i < 6) {
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 8px monospace";
+                ctx.textAlign = "center";
+                ctx.fillText(basePairs[i % basePairs.length].left, x, cy - yOff + 3);
+                ctx.fillText(basePairs[i % basePairs.length].right, x, cy + yOff + 3);
+            }
+        }
+
+        // Replication fork (Y shape)
+        ctx.beginPath();
+        ctx.moveTo(forkX + 30, cy);
+        ctx.quadraticCurveTo(forkX + 10, cy - 30, forkX - 10, cy - 80);
+        ctx.strokeStyle = "#ce93d8";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(forkX + 30, cy);
+        ctx.quadraticCurveTo(forkX + 10, cy + 30, forkX - 10, cy + 80);
+        ctx.strokeStyle = "#ce93d8";
+        ctx.stroke();
+
+        // Helicase at fork
+        ctx.beginPath();
+        ctx.arc(forkX + 30, cy, 14, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 235, 59, 0.4)";
+        ctx.fill();
+        ctx.strokeStyle = "#ffeb3b";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#ffeb3b";
+        ctx.font = "8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Helicase", forkX + 30, cy + 28);
+
+        // Leading strand (top, continuous)
+        const leadEnd = forkX - 10;
+        const strandOffset = 80;
+        // Template strand (top)
+        ctx.beginPath();
+        ctx.moveTo(forkX - 10, cy - strandOffset);
+        ctx.lineTo(Math.max(40, leadEnd - dnaState.progress * 300), cy - strandOffset);
+        ctx.strokeStyle = "#ef5350";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // New leading strand
+        ctx.beginPath();
+        ctx.moveTo(forkX - 10, cy - strandOffset + 20);
+        ctx.lineTo(Math.max(60, leadEnd - dnaState.progress * 280), cy - strandOffset + 20);
+        ctx.strokeStyle = "#42a5f5";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Base pairs on leading strand
+        const numLeadBP = Math.floor(dnaState.progress * 8);
+        for (let i = 0; i < numLeadBP; i++) {
+            const bx = forkX - 20 - i * 30;
+            if (bx < 40) break;
+            ctx.beginPath();
+            ctx.moveTo(bx, cy - strandOffset + 2);
+            ctx.lineTo(bx, cy - strandOffset + 18);
+            ctx.strokeStyle = basePairs[i % basePairs.length].color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // DNA Polymerase on leading strand
+        if (dnaState.progress > 0.05) {
+            const polyX = Math.max(70, forkX - dnaState.progress * 280);
+            ctx.beginPath();
+            ctx.arc(polyX, cy - strandOffset + 10, 12, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(76, 175, 80, 0.5)";
+            ctx.fill();
+            ctx.strokeStyle = "#66bb6a";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = "#66bb6a";
+            ctx.font = "7px sans-serif";
+            ctx.fillText("Pol III", polyX, cy - strandOffset + 30);
+        }
+
+        // Lagging strand (bottom, Okazaki fragments)
+        ctx.beginPath();
+        ctx.moveTo(forkX - 10, cy + strandOffset);
+        ctx.lineTo(Math.max(40, leadEnd - dnaState.progress * 300), cy + strandOffset);
+        ctx.strokeStyle = "#ef5350";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Okazaki fragments
+        const numFragments = Math.floor(dnaState.progress * 5);
+        for (let f = 0; f < numFragments; f++) {
+            const fragStart = forkX - 30 - f * 55;
+            const fragEnd = fragStart - 40;
+            if (fragEnd < 30) break;
+            ctx.beginPath();
+            ctx.moveTo(fragStart, cy + strandOffset - 20);
+            ctx.lineTo(fragEnd, cy + strandOffset - 20);
+            ctx.strokeStyle = "#42a5f5";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Base pairs
+            for (let b = 0; b < 3; b++) {
+                const bpx = fragStart - 5 - b * 12;
+                if (bpx > fragEnd) {
+                    ctx.beginPath();
+                    ctx.moveTo(bpx, cy + strandOffset - 2);
+                    ctx.lineTo(bpx, cy + strandOffset - 18);
+                    ctx.strokeStyle = basePairs[(f * 3 + b) % basePairs.length].color;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+
+            // RNA primer at start of each fragment
+            ctx.beginPath();
+            ctx.moveTo(fragStart + 2, cy + strandOffset - 20);
+            ctx.lineTo(fragStart + 10, cy + strandOffset - 20);
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // Labels
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ef5350";
+        ctx.fillText("3'", forkX - 5, cy - strandOffset - 8);
+        ctx.fillText("5'", 25, cy - strandOffset - 8);
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText("Leading strand (continuous)", 25, cy - strandOffset + 38);
+
+        ctx.fillStyle = "#ef5350";
+        ctx.fillText("5'", forkX - 5, cy + strandOffset + 18);
+        ctx.fillText("3'", 25, cy + strandOffset + 18);
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText("Lagging strand (Okazaki fragments)", 25, cy + strandOffset - 30);
+        ctx.fillStyle = "#ff9800";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("Orange = RNA primers", 25, cy + strandOffset - 42);
+
+        // Legend
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(W - 200, H - 100, 180, 85);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.strokeRect(W - 200, H - 100, 180, 85);
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ef5350"; ctx.fillText("Template strands", W - 185, H - 82);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("New strands", W - 185, H - 66);
+        ctx.fillStyle = "#ffeb3b"; ctx.fillText("Helicase (unwinds)", W - 185, H - 50);
+        ctx.fillStyle = "#66bb6a"; ctx.fillText("DNA Polymerase III", W - 185, H - 34);
+        ctx.fillStyle = "#ff9800"; ctx.fillText("RNA Primers (Primase)", W - 185, H - 18);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ce93d8">DNA Replication</b><br>` +
+            `Progress: ${(dnaState.progress * 100).toFixed(0)}%<br>` +
+            `Direction: 5' \u2192 3'<br>` +
+            `Okazaki fragments: ${numFragments}`;
+
+        if (dnaState.running) {
+            animId = requestAnimationFrame(drawDNA);
+        }
+    }
+
+    bindSlider("dnaSpeed", "val-dnaSpeed");
+    document.getElementById("btn-dna-start").addEventListener("click", () => {
+        dnaState = { progress: 0, running: true };
+        drawDNA();
+    });
+    document.getElementById("btn-dna-reset").addEventListener("click", initDNA);
+
+    // ═══════════════════════════════════════════════════════
+    // 31. PHOTOSYNTHESIS
+    // ═══════════════════════════════════════════════════════
+    let photoState = { t: 0, running: true, atp: 0, nadph: 0, o2: 0, glucose: 0 };
+
+    function initPhotosyn() {
+        photoState = { t: 0, running: true, atp: 0, nadph: 0, o2: 0, glucose: 0, particles: [] };
+        document.getElementById("btn-photo-toggle").textContent = "Pause";
+        drawPhotosyn();
+    }
+
+    function drawPhotosyn() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const lightInt = +document.getElementById("lightInt").value;
+        const co2Level = +document.getElementById("co2").value;
+        const temp = +document.getElementById("photoTemp").value;
+
+        // Efficiency based on conditions
+        const tempEff = 1 - Math.abs(temp - 25) / 30;
+        const rate = (lightInt / 100) * (co2Level / 100) * Math.max(0.1, tempEff);
+
+        if (photoState.running) {
+            photoState.t += 0.016;
+            photoState.atp += rate * 0.05;
+            photoState.nadph += rate * 0.03;
+            photoState.o2 += rate * 0.04;
+            photoState.glucose += rate * 0.01;
+
+            // Add light photon particles
+            if (Math.random() < lightInt / 200) {
+                photoState.particles.push({
+                    x: 50 + Math.random() * 200, y: 0,
+                    vx: 0.5, vy: 2 + Math.random(),
+                    type: "photon", life: 1
+                });
+            }
+            // Add CO2 particles
+            if (Math.random() < co2Level / 500) {
+                photoState.particles.push({
+                    x: W - 50, y: 80 + Math.random() * 100,
+                    vx: -1.5, vy: (Math.random() - 0.5) * 0.5,
+                    type: "co2", life: 1
+                });
+            }
+            // Add O2 output
+            if (Math.random() < rate * 0.05) {
+                photoState.particles.push({
+                    x: 300 + Math.random() * 100, y: 80,
+                    vx: (Math.random() - 0.5) * 0.5, vy: -1.5,
+                    type: "o2", life: 1
+                });
+            }
+
+            photoState.particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.005;
+            });
+            photoState.particles = photoState.particles.filter(p => p.life > 0 && p.x > -10 && p.x < W + 10 && p.y > -10 && p.y < H + 10);
+            if (photoState.particles.length > 150) photoState.particles.splice(0, 20);
+        }
+
+        // Sun
+        const sunGrad = ctx.createRadialGradient(60, 40, 10, 60, 40, 50);
+        sunGrad.addColorStop(0, `rgba(255,235,59,${lightInt / 100})`);
+        sunGrad.addColorStop(1, "rgba(255,235,59,0)");
+        ctx.beginPath(); ctx.arc(60, 40, 50, 0, Math.PI * 2);
+        ctx.fillStyle = sunGrad; ctx.fill();
+        ctx.beginPath(); ctx.arc(60, 40, 20, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,235,59,${lightInt / 100})`; ctx.fill();
+
+        // Light rays
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 0.6 + 0.3;
+            ctx.beginPath();
+            ctx.moveTo(60 + 25 * Math.cos(angle), 40 + 25 * Math.sin(angle));
+            ctx.lineTo(60 + 70 * Math.cos(angle), 40 + 70 * Math.sin(angle));
+            ctx.strokeStyle = `rgba(255,235,59,${lightInt / 300})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Chloroplast (large ellipse)
+        const chloroX = W / 2 - 50, chloroY = H / 2 + 20;
+        ctx.beginPath();
+        ctx.ellipse(chloroX, chloroY, 250, 120, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(27, 94, 32, 0.3)";
+        ctx.fill();
+        ctx.strokeStyle = "#43a047";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Outer membrane label
+        ctx.fillStyle = "#43a047"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Chloroplast", chloroX, chloroY - 128);
+
+        // Thylakoid stack (granum)
+        const thyX = chloroX - 100, thyY = chloroY;
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath();
+            ctx.ellipse(thyX, thyY - 30 + i * 15, 60, 8, 0, 0, Math.PI * 2);
+            const glow = rate > 0.3 ? 0.3 + Math.sin(photoState.t * 3 + i) * 0.15 : 0.2;
+            ctx.fillStyle = `rgba(76, 175, 80, ${glow + 0.2})`;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(129, 199, 132, 0.6)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        ctx.fillStyle = "#81c784"; ctx.font = "10px sans-serif";
+        ctx.fillText("Thylakoid", thyX, thyY + 50);
+        ctx.fillText("(Light Reactions)", thyX, thyY + 63);
+
+        // Stroma region
+        ctx.fillStyle = "rgba(165, 214, 167, 0.15)";
+        ctx.beginPath();
+        ctx.ellipse(chloroX + 80, chloroY, 100, 80, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(165, 214, 167, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = "#a5d6a7"; ctx.font = "10px sans-serif";
+        ctx.fillText("Stroma", chloroX + 80, chloroY + 90);
+        ctx.fillText("(Calvin Cycle)", chloroX + 80, chloroY + 103);
+
+        // Calvin cycle icon
+        ctx.beginPath();
+        ctx.arc(chloroX + 80, chloroY, 35, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(165, 214, 167, ${0.3 + rate * 0.3})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Arrow on cycle
+        const cycAngle = photoState.t * 2;
+        const arrowX = chloroX + 80 + 35 * Math.cos(cycAngle);
+        const arrowY = chloroY + 35 * Math.sin(cycAngle);
+        ctx.beginPath(); ctx.arc(arrowX, arrowY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#a5d6a7"; ctx.fill();
+
+        // Arrows between light reactions and Calvin cycle
+        ctx.beginPath();
+        ctx.moveTo(thyX + 65, thyY - 15);
+        ctx.lineTo(chloroX + 30, chloroY - 20);
+        ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("ATP", (thyX + 65 + chloroX + 30) / 2, thyY - 25);
+
+        ctx.beginPath();
+        ctx.moveTo(thyX + 65, thyY + 10);
+        ctx.lineTo(chloroX + 30, chloroY + 15);
+        ctx.strokeStyle = "#ce93d8"; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = "#ce93d8";
+        ctx.fillText("NADPH", (thyX + 65 + chloroX + 30) / 2, thyY + 25);
+
+        // Draw particles
+        photoState.particles.forEach(p => {
+            ctx.globalAlpha = p.life;
+            if (p.type === "photon") {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#ffeb3b"; ctx.fill();
+            } else if (p.type === "co2") {
+                ctx.fillStyle = "#90a4ae"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center";
+                ctx.fillText("CO\u2082", p.x, p.y);
+            } else if (p.type === "o2") {
+                ctx.fillStyle = "#42a5f5"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center";
+                ctx.fillText("O\u2082", p.x, p.y);
+            }
+            ctx.globalAlpha = 1;
+        });
+
+        // Equation
+        ctx.fillStyle = "#ccc"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("6CO\u2082 + 6H\u2082O + Light \u2192 C\u2086H\u2081\u2082O\u2086 + 6O\u2082", W / 2, H - 60);
+
+        // Rate bar
+        ctx.fillStyle = "rgba(16,20,58,0.8)";
+        ctx.fillRect(W - 220, H - 100, 200, 85);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(W - 220, H - 100, 200, 85);
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`Rate: ${(rate * 100).toFixed(0)}%`, W - 210, H - 82);
+        ctx.fillStyle = "#ffeb3b"; ctx.fillText(`ATP: ${photoState.atp.toFixed(0)}`, W - 210, H - 66);
+        ctx.fillStyle = "#ce93d8"; ctx.fillText(`NADPH: ${photoState.nadph.toFixed(0)}`, W - 210, H - 50);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText(`O\u2082: ${photoState.o2.toFixed(0)}`, W - 210, H - 34);
+        ctx.fillStyle = "#66bb6a"; ctx.fillText(`Glucose: ${photoState.glucose.toFixed(1)}`, W - 210, H - 18);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Photosynthesis</b><br>` +
+            `Rate: ${(rate * 100).toFixed(0)}%<br>` +
+            `ATP: ${photoState.atp.toFixed(0)}<br>` +
+            `Glucose: ${photoState.glucose.toFixed(1)}`;
+
+        if (photoState.running) {
+            animId = requestAnimationFrame(drawPhotosyn);
+        }
+    }
+
+    bindSlider("lightInt", "val-lightInt", () => { /* live */ });
+    bindSlider("co2", "val-co2", () => { /* live */ });
+    bindSlider("photoTemp", "val-photoTemp", () => { /* live */ });
+
+    document.getElementById("btn-photo-toggle").addEventListener("click", () => {
+        photoState.running = !photoState.running;
+        document.getElementById("btn-photo-toggle").textContent = photoState.running ? "Pause" : "Resume";
+        if (photoState.running) drawPhotosyn();
+    });
+    document.getElementById("btn-photo-reset").addEventListener("click", initPhotosyn);
+
+    // ═══════════════════════════════════════════════════════
+    // 32. HARDY-WEINBERG EQUILIBRIUM
+    // ═══════════════════════════════════════════════════════
+    let hwState = {};
+
+    function initHardyWein() {
+        hwState = { history: [], done: false };
+        drawHardyWein();
+    }
+
+    function drawHardyWein() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const p = +document.getElementById("pfreq").value;
+        const q = 1 - p;
+        const popSize = +document.getElementById("hwPop").value;
+        const gens = +document.getElementById("hwGens").value;
+        const drift = document.getElementById("hwDrift").checked;
+
+        // Expected frequencies
+        const pp = p * p;
+        const pq2 = 2 * p * q;
+        const qq = q * q;
+
+        // Genotype bar chart
+        const barX = 60, barY = 40, barW = 250, barH = 200;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(barX, barY, barW, barH);
+
+        ctx.fillStyle = "#aab"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Genotype Frequencies", barX + barW / 2, barY - 8);
+
+        const genotypes = [
+            { label: "AA", freq: pp, color: "#ef5350" },
+            { label: "Aa", freq: pq2, color: "#ff9800" },
+            { label: "aa", freq: qq, color: "#42a5f5" }
+        ];
+
+        const bw = 50, gap = 30;
+        const totalW = genotypes.length * bw + (genotypes.length - 1) * gap;
+        const startX = barX + (barW - totalW) / 2;
+
+        genotypes.forEach((g, i) => {
+            const bx = startX + i * (bw + gap);
+            const bh = g.freq * (barH - 40);
+            ctx.fillStyle = g.color;
+            ctx.fillRect(bx, barY + barH - 20 - bh, bw, bh);
+            ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.strokeRect(bx, barY + barH - 20 - bh, bw, bh);
+
+            ctx.fillStyle = "#fff"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(g.label, bx + bw / 2, barY + barH - 4);
+            ctx.fillStyle = g.color; ctx.font = "11px sans-serif";
+            ctx.fillText(`${(g.freq * 100).toFixed(1)}%`, bx + bw / 2, barY + barH - 24 - bh);
+        });
+
+        // Population visualization (colored dots)
+        const popX = 350, popY = 40, popW = W - 380, popH = 200;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(popX, popY, popW, popH);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(popX, popY, popW, popH);
+
+        ctx.fillStyle = "#aab"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`Population (n=${popSize})`, popX + popW / 2, popY - 8);
+
+        const dotsPerRow = Math.ceil(Math.sqrt(popSize * popW / popH));
+        const dotSpacingX = popW / dotsPerRow;
+        const dotSpacingY = popH / Math.ceil(popSize / dotsPerRow);
+        const dotR = Math.min(dotSpacingX, dotSpacingY) * 0.35;
+
+        for (let i = 0; i < popSize; i++) {
+            const col = i % dotsPerRow;
+            const row = Math.floor(i / dotsPerRow);
+            const dx = popX + 8 + col * dotSpacingX;
+            const dy = popY + 8 + row * dotSpacingY;
+            if (dy > popY + popH - 5) break;
+
+            // Determine genotype for this individual
+            const r = i / popSize;
+            let color;
+            if (r < pp) color = "#ef5350";
+            else if (r < pp + pq2) color = "#ff9800";
+            else color = "#42a5f5";
+
+            ctx.beginPath(); ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
+            ctx.fillStyle = color; ctx.fill();
+        }
+
+        // Allele frequency over generations (simulation)
+        const gx = 50, gy2 = 280, gw2 = W - 100, gh2 = 200;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(gx, gy2, gw2, gh2);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(gx, gy2, gw2, gh2);
+
+        ctx.fillStyle = "#aab"; ctx.font = "12px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Allele Frequency Over Generations" + (drift ? " (with drift)" : " (ideal)"), gx + 8, gy2 - 8);
+
+        // Y-axis
+        ctx.fillStyle = "#556"; ctx.font = "9px sans-serif"; ctx.textAlign = "right";
+        [0, 0.25, 0.5, 0.75, 1.0].forEach(v => {
+            const py = gy2 + gh2 - v * gh2;
+            ctx.fillText(v.toFixed(2), gx - 4, py + 4);
+            ctx.beginPath(); ctx.moveTo(gx, py); ctx.lineTo(gx + gw2, py);
+            ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1; ctx.stroke();
+        });
+
+        if (hwState.history.length > 0) {
+            // p allele
+            ctx.beginPath();
+            hwState.history.forEach((h, i) => {
+                const px = gx + (i / (hwState.history.length - 1)) * gw2;
+                const py = gy2 + gh2 - h.p * gh2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ef5350"; ctx.lineWidth = 2; ctx.stroke();
+
+            // q allele
+            ctx.beginPath();
+            hwState.history.forEach((h, i) => {
+                const px = gx + (i / (hwState.history.length - 1)) * gw2;
+                const py = gy2 + gh2 - h.q * gh2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#42a5f5"; ctx.lineWidth = 2; ctx.stroke();
+
+            // Equilibrium line
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(gx, gy2 + gh2 - p * gh2);
+            ctx.lineTo(gx + gw2, gy2 + gh2 - p * gh2);
+            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Legend
+        ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#ef5350"; ctx.fillText("p (dominant allele)", gx + gw2 - 150, gy2 + 18);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("q (recessive allele)", gx + gw2 - 150, gy2 + 34);
+
+        // Equation
+        ctx.fillStyle = "#ccc"; ctx.font = "14px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`p\u00b2 + 2pq + q\u00b2 = 1  |  p = ${p.toFixed(2)}, q = ${q.toFixed(2)}`, W / 2, gy2 + gh2 + 20);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Hardy-Weinberg</b><br>` +
+            `p: ${p.toFixed(2)} | q: ${q.toFixed(2)}<br>` +
+            `AA: ${(pp * 100).toFixed(1)}%<br>` +
+            `Aa: ${(pq2 * 100).toFixed(1)}%<br>` +
+            `aa: ${(qq * 100).toFixed(1)}%`;
+    }
+
+    bindSlider("pfreq", "val-pfreq", () => { if (currentSim === "hardywein") { hwState.history = []; drawHardyWein(); } });
+    bindSlider("hwPop", "val-hwPop", () => { if (currentSim === "hardywein") drawHardyWein(); });
+    bindSlider("hwGens", "val-hwGens");
+
+    document.getElementById("btn-hw-run").addEventListener("click", () => {
+        const p0 = +document.getElementById("pfreq").value;
+        const popSize = +document.getElementById("hwPop").value;
+        const gens = +document.getElementById("hwGens").value;
+        const drift = document.getElementById("hwDrift").checked;
+
+        hwState.history = [{ p: p0, q: 1 - p0 }];
+        let curP = p0;
+
+        for (let g = 0; g < gens; g++) {
+            if (drift) {
+                // Simulate genetic drift via binomial sampling
+                let pCount = 0;
+                for (let i = 0; i < popSize * 2; i++) {
+                    if (Math.random() < curP) pCount++;
+                }
+                curP = pCount / (popSize * 2);
+            }
+            // Without drift, p stays constant (HW equilibrium)
+            hwState.history.push({ p: curP, q: 1 - curP });
+        }
+        drawHardyWein();
+    });
+    document.getElementById("btn-hw-reset").addEventListener("click", initHardyWein);
+
+    // ═══════════════════════════════════════════════════════
+    // 33. FOOD WEB / ENERGY FLOW
+    // ═══════════════════════════════════════════════════════
+    let fwState = { t: 0, running: false };
+
+    function initFoodWeb() {
+        fwState = { t: 0, running: false, particles: [] };
+        drawFoodWeb();
+    }
+
+    function drawFoodWeb() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const sunE = +document.getElementById("sunEnergy").value;
+        const eff = +document.getElementById("efficiency").value / 100;
+
+        const levels = [
+            { name: "Producers", sub: "Plants, Algae", energy: sunE, color: "#66bb6a", icon: "plant" },
+            { name: "Primary Consumers", sub: "Herbivores", energy: sunE * eff, color: "#42a5f5", icon: "rabbit" },
+            { name: "Secondary Consumers", sub: "Carnivores", energy: sunE * eff * eff, color: "#ff9800", icon: "fox" },
+            { name: "Tertiary Consumers", sub: "Apex Predators", energy: sunE * eff * eff * eff, color: "#ef5350", icon: "eagle" },
+            { name: "Decomposers", sub: "Bacteria, Fungi", energy: sunE * 0.15, color: "#78909c", icon: "mushroom" }
+        ];
+
+        if (fwState.running) {
+            fwState.t += 0.02;
+            // Energy flow particles
+            if (Math.random() < 0.15) {
+                const fromLevel = Math.floor(Math.random() * 3);
+                fwState.particles.push({ from: fromLevel, progress: 0 });
+            }
+            fwState.particles.forEach(p => { p.progress += 0.01; });
+            fwState.particles = fwState.particles.filter(p => p.progress < 1);
+        }
+
+        // Energy pyramid
+        const pyrX = 50, pyrY = 50, pyrW = 400, pyrH = 380;
+        const pyrLevels = 4; // excluding decomposers
+
+        ctx.fillStyle = "#aab"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Energy Pyramid", pyrX + pyrW / 2, pyrY - 10);
+
+        for (let i = 0; i < pyrLevels; i++) {
+            const level = levels[i];
+            const yPos = pyrY + pyrH - (i + 1) * (pyrH / pyrLevels);
+            const width = pyrW * (1 - i * 0.22);
+            const xPos = pyrX + (pyrW - width) / 2;
+            const height = pyrH / pyrLevels - 8;
+
+            // Bar with glow when animated
+            const glow = fwState.running ? Math.sin(fwState.t * 2 + i) * 0.1 : 0;
+            ctx.fillStyle = level.color;
+            ctx.globalAlpha = 0.5 + glow;
+            ctx.fillRect(xPos, yPos, width, height);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = level.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(xPos, yPos, width, height);
+
+            // Label
+            ctx.fillStyle = "#fff"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(level.name, pyrX + pyrW / 2, yPos + height / 2 - 4);
+            ctx.fillStyle = "#ddd"; ctx.font = "10px sans-serif";
+            ctx.fillText(`${level.energy.toFixed(0)} kJ`, pyrX + pyrW / 2, yPos + height / 2 + 12);
+            ctx.fillStyle = level.color; ctx.font = "9px sans-serif";
+            ctx.fillText(level.sub, pyrX + pyrW / 2, yPos + height / 2 + 24);
+
+            // Energy transfer arrows
+            if (i < pyrLevels - 1 && fwState.running) {
+                const arrowX = xPos + width + 10;
+                ctx.beginPath();
+                ctx.moveTo(arrowX, yPos + height / 2);
+                ctx.lineTo(arrowX + 25, yPos + height / 2);
+                ctx.lineTo(arrowX + 20, yPos + height / 2 - 5);
+                ctx.moveTo(arrowX + 25, yPos + height / 2);
+                ctx.lineTo(arrowX + 20, yPos + height / 2 + 5);
+                ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255,152,0,0.6)"; ctx.font = "8px sans-serif"; ctx.textAlign = "left";
+                ctx.fillText("Heat loss", arrowX + 5, yPos + height / 2 - 10);
+                ctx.fillText(`${((1 - eff) * 100).toFixed(0)}%`, arrowX + 5, yPos + height / 2 + 20);
+            }
+        }
+
+        // Decomposer bar at bottom
+        const decY = pyrY + pyrH + 20;
+        ctx.fillStyle = levels[4].color;
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(pyrX, decY, pyrW, 30);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = levels[4].color; ctx.lineWidth = 2;
+        ctx.strokeRect(pyrX, decY, pyrW, 30);
+        ctx.fillStyle = "#fff"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`${levels[4].name} (${levels[4].sub}) — recycle nutrients`, pyrX + pyrW / 2, decY + 19);
+
+        // Arrows from all levels to decomposers
+        ctx.setLineDash([3, 3]);
+        for (let i = 0; i < pyrLevels; i++) {
+            const yPos = pyrY + pyrH - (i + 1) * (pyrH / pyrLevels) + pyrH / pyrLevels / 2;
+            ctx.beginPath();
+            ctx.moveTo(pyrX - 5, yPos);
+            ctx.quadraticCurveTo(pyrX - 20, (yPos + decY + 15) / 2, pyrX + 20, decY + 15);
+            ctx.strokeStyle = "rgba(120,144,156,0.3)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // Food chain diagram on the right
+        const chainX = pyrX + pyrW + 80, chainY = 70;
+        ctx.fillStyle = "#aab"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Food Chain", chainX + 80, chainY - 15);
+
+        const organisms = [
+            { name: "Grass", emoji: "\u{1F33F}", y: chainY + 280 },
+            { name: "Rabbit", emoji: "\u{1F407}", y: chainY + 200 },
+            { name: "Fox", emoji: "\u{1F98A}", y: chainY + 120 },
+            { name: "Eagle", emoji: "\u{1F985}", y: chainY + 40 }
+        ];
+
+        organisms.forEach((org, i) => {
+            // Circle
+            ctx.beginPath(); ctx.arc(chainX + 80, org.y, 28, 0, Math.PI * 2);
+            ctx.fillStyle = levels[i].color; ctx.globalAlpha = 0.2; ctx.fill(); ctx.globalAlpha = 1;
+            ctx.strokeStyle = levels[i].color; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.font = "24px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(org.emoji, chainX + 80, org.y + 8);
+            ctx.fillStyle = levels[i].color; ctx.font = "10px sans-serif";
+            ctx.fillText(org.name, chainX + 80, org.y + 42);
+
+            // Arrow to next level
+            if (i < organisms.length - 1) {
+                const nextY = organisms[i + 1].y;
+                ctx.beginPath();
+                ctx.moveTo(chainX + 80, org.y - 30);
+                ctx.lineTo(chainX + 80, nextY + 32);
+                ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.lineWidth = 2; ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(chainX + 80, nextY + 32);
+                ctx.lineTo(chainX + 75, nextY + 40);
+                ctx.lineTo(chainX + 85, nextY + 40);
+                ctx.closePath();
+                ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fill();
+
+                // Energy flowing particles
+                if (fwState.running) {
+                    fwState.particles.forEach(p => {
+                        if (p.from === i) {
+                            const py = org.y - 30 + (nextY + 32 - (org.y - 30)) * (1 - p.progress);
+                            ctx.beginPath(); ctx.arc(chainX + 80, py, 3, 0, Math.PI * 2);
+                            ctx.fillStyle = `rgba(255, 235, 59, ${1 - p.progress})`;
+                            ctx.fill();
+                        }
+                    });
+                }
+            }
+        });
+
+        // 10% rule callout
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(chainX - 5, chainY + 340, 170, 50);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(chainX - 5, chainY + 340, 170, 50);
+        ctx.fillStyle = "#ff9800"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`${(eff * 100).toFixed(0)}% Rule`, chainX + 80, chainY + 360);
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText(`Only ${(eff * 100).toFixed(0)}% of energy transfers`, chainX + 80, chainY + 378);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Food Web</b><br>` +
+            `Sun: ${sunE} kJ<br>` +
+            `Producers: ${levels[0].energy.toFixed(0)} kJ<br>` +
+            `Herbivores: ${levels[1].energy.toFixed(0)} kJ<br>` +
+            `Carnivores: ${levels[2].energy.toFixed(0)} kJ<br>` +
+            `Apex: ${levels[3].energy.toFixed(0)} kJ`;
+
+        if (fwState.running) {
+            animId = requestAnimationFrame(drawFoodWeb);
+        }
+    }
+
+    bindSlider("sunEnergy", "val-sunEnergy", () => { if (currentSim === "foodweb") drawFoodWeb(); });
+    bindSlider("efficiency", "val-efficiency", () => { if (currentSim === "foodweb") drawFoodWeb(); });
+
+    document.getElementById("btn-fw-animate").addEventListener("click", () => {
+        fwState.running = !fwState.running;
+        document.getElementById("btn-fw-animate").textContent = fwState.running ? "Pause" : "Animate";
+        if (fwState.running) drawFoodWeb();
+    });
+    document.getElementById("btn-fw-reset").addEventListener("click", initFoodWeb);
+
+    // ═══════════════════════════════════════════════════════
+    // 34. CELL MEMBRANE TRANSPORT
+    // ═══════════════════════════════════════════════════════
+    let memState = {};
+
+    function initMembrane() {
+        memState = {
+            t: 0, running: true, particles: [],
+            insideConc: 50, outsideConc: 50,
+            waterInside: 50, waterOutside: 50
+        };
+        resetMembraneParticles();
+        document.getElementById("btn-mem-toggle").textContent = "Pause";
+        drawMembrane();
+    }
+
+    function resetMembraneParticles() {
+        const concType = document.getElementById("extConc").value;
+        memState.particles = [];
+        // Inside particles (solute)
+        const insideCount = 30;
+        const outsideCount = concType === "hypertonic" ? 60 : concType === "hypotonic" ? 10 : 30;
+        memState.insideConc = insideCount;
+        memState.outsideConc = outsideCount;
+
+        for (let i = 0; i < insideCount; i++) {
+            memState.particles.push({
+                x: 220 + Math.random() * 260,
+                y: 100 + Math.random() * 300,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                type: "solute", side: "inside"
+            });
+        }
+        for (let i = 0; i < outsideCount; i++) {
+            memState.particles.push({
+                x: Math.random() < 0.5 ? 30 + Math.random() * 150 : 530 + Math.random() * 150,
+                y: 80 + Math.random() * 340,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                type: "solute", side: "outside"
+            });
+        }
+        // Water molecules
+        for (let i = 0; i < 20; i++) {
+            memState.particles.push({
+                x: 240 + Math.random() * 220,
+                y: 110 + Math.random() * 280,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                type: "water", side: "inside"
+            });
+        }
+        for (let i = 0; i < 20; i++) {
+            memState.particles.push({
+                x: Math.random() < 0.5 ? 40 + Math.random() * 140 : 540 + Math.random() * 140,
+                y: 90 + Math.random() * 320,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                type: "water", side: "outside"
+            });
+        }
+    }
+
+    function drawMembrane() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const concType = document.getElementById("extConc").value;
+        const transport = document.getElementById("transportType").value;
+
+        const cellLeft = 210, cellRight = 490, cellTop = 80, cellBot = 430;
+        const cellCX = (cellLeft + cellRight) / 2, cellCY = (cellTop + cellBot) / 2;
+
+        if (memState.running) {
+            memState.t += 0.016;
+
+            memState.particles.forEach(p => {
+                // Random walk
+                p.vx += (Math.random() - 0.5) * 0.3;
+                p.vy += (Math.random() - 0.5) * 0.3;
+                p.vx *= 0.97;
+                p.vy *= 0.97;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Boundary checks
+                if (p.side === "inside") {
+                    if (p.x < cellLeft + 8) { p.x = cellLeft + 8; p.vx = Math.abs(p.vx); }
+                    if (p.x > cellRight - 8) { p.x = cellRight - 8; p.vx = -Math.abs(p.vx); }
+                    if (p.y < cellTop + 8) { p.y = cellTop + 8; p.vy = Math.abs(p.vy); }
+                    if (p.y > cellBot - 8) { p.y = cellBot - 8; p.vy = -Math.abs(p.vy); }
+                } else {
+                    // Outside bounds
+                    if (p.x < 15) { p.x = 15; p.vx = Math.abs(p.vx); }
+                    if (p.x > W - 15) { p.x = W - 15; p.vx = -Math.abs(p.vx); }
+                    if (p.y < 60) { p.y = 60; p.vy = Math.abs(p.vy); }
+                    if (p.y > H - 60) { p.y = H - 60; p.vy = -Math.abs(p.vy); }
+                    // Bounce off cell membrane from outside
+                    if (p.x > cellLeft + 5 && p.x < cellRight - 5 && p.y > cellTop + 5 && p.y < cellBot - 5) {
+                        // Transport across membrane
+                        if (transport === "osmosis" && p.type === "water") {
+                            p.side = "inside";
+                        } else if (transport === "passive" && Math.random() < 0.02) {
+                            p.side = "inside";
+                        } else if (transport === "active" && Math.random() < 0.03) {
+                            p.side = "inside";
+                        } else {
+                            // Bounce
+                            const dLeft = p.x - cellLeft, dRight = cellRight - p.x;
+                            const dTop = p.y - cellTop, dBot = cellBot - p.y;
+                            const minD = Math.min(dLeft, dRight, dTop, dBot);
+                            if (minD === dLeft) { p.x = cellLeft - 2; p.vx = -Math.abs(p.vx); }
+                            else if (minD === dRight) { p.x = cellRight + 2; p.vx = Math.abs(p.vx); }
+                            else if (minD === dTop) { p.y = cellTop - 2; p.vy = -Math.abs(p.vy); }
+                            else { p.y = cellBot + 2; p.vy = Math.abs(p.vy); }
+                        }
+                    }
+                }
+
+                // Osmosis: water moves to higher solute concentration
+                if (transport === "osmosis" && p.type === "water" && p.side === "inside") {
+                    if (concType === "hypertonic" && Math.random() < 0.005) {
+                        // Water leaves cell (hypertonic: more solute outside)
+                        p.side = "outside";
+                        p.x = Math.random() < 0.5 ? cellLeft - 20 : cellRight + 20;
+                    } else if (concType === "hypotonic" && Math.random() < 0.001) {
+                        // Water stays inside mostly (hypotonic: less solute outside)
+                    }
+                }
+                if (transport === "osmosis" && p.type === "water" && p.side === "outside") {
+                    if (concType === "hypotonic" && Math.random() < 0.008) {
+                        p.side = "inside";
+                        p.x = cellLeft + 20 + Math.random() * (cellRight - cellLeft - 40);
+                        p.y = cellTop + 20 + Math.random() * (cellBot - cellTop - 40);
+                    }
+                }
+
+                // Active transport: pump solute against gradient
+                if (transport === "active" && p.type === "solute" && p.side === "outside") {
+                    if (Math.random() < 0.003) {
+                        p.side = "inside";
+                        p.x = cellLeft + 30 + Math.random() * (cellRight - cellLeft - 60);
+                        p.y = cellTop + 30 + Math.random() * (cellBot - cellTop - 60);
+                    }
+                }
+            });
+        }
+
+        // Extracellular fluid
+        ctx.fillStyle = concType === "hypertonic" ? "rgba(30, 60, 90, 0.3)" :
+                         concType === "hypotonic" ? "rgba(30, 90, 60, 0.15)" :
+                         "rgba(40, 40, 80, 0.2)";
+        ctx.fillRect(10, 55, W - 20, H - 90);
+
+        // Cell membrane (phospholipid bilayer)
+        const cellW = cellRight - cellLeft;
+        const cellH = cellBot - cellTop;
+
+        // Cell shape with slight bulge based on osmosis
+        const waterIn = memState.particles.filter(p => p.type === "water" && p.side === "inside").length;
+        const bulge = transport === "osmosis" ? (waterIn - 20) * 0.5 : 0;
+
+        ctx.beginPath();
+        ctx.ellipse(cellCX, cellCY, cellW / 2 + bulge, cellH / 2 + bulge * 0.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(200, 230, 200, 0.05)";
+        ctx.fill();
+
+        // Membrane bilayer visualization
+        const numPhospholipids = 40;
+        for (let i = 0; i < numPhospholipids; i++) {
+            const angle = (i / numPhospholipids) * Math.PI * 2;
+            const rx = cellW / 2 + bulge;
+            const ry = cellH / 2 + bulge * 0.5;
+            const mx = cellCX + rx * Math.cos(angle);
+            const my = cellCY + ry * Math.sin(angle);
+            const nx = Math.cos(angle);
+            const ny = Math.sin(angle);
+
+            // Outer head (hydrophilic)
+            ctx.beginPath(); ctx.arc(mx + nx * 3, my + ny * 3, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#42a5f5"; ctx.fill();
+            // Inner head
+            ctx.beginPath(); ctx.arc(mx - nx * 3, my - ny * 3, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#42a5f5"; ctx.fill();
+            // Tails
+            ctx.beginPath();
+            ctx.moveTo(mx + nx * 1, my + ny * 1);
+            ctx.lineTo(mx - nx * 1, my - ny * 1);
+            ctx.strokeStyle = "rgba(255, 235, 59, 0.4)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Channel proteins (gaps in membrane)
+        if (transport === "passive" || transport === "active") {
+            const channels = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+            channels.forEach(angle => {
+                const rx = cellW / 2 + bulge;
+                const ry = cellH / 2 + bulge * 0.5;
+                const cx2 = cellCX + rx * Math.cos(angle);
+                const cy2 = cellCY + ry * Math.sin(angle);
+                ctx.beginPath(); ctx.arc(cx2, cy2, 8, 0, Math.PI * 2);
+                ctx.fillStyle = transport === "active" ? "rgba(156, 39, 176, 0.5)" : "rgba(76, 175, 80, 0.4)";
+                ctx.fill();
+                ctx.strokeStyle = transport === "active" ? "#9c27b0" : "#66bb6a";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+
+        // ATP indicator for active transport
+        if (transport === "active") {
+            ctx.fillStyle = "#ffeb3b"; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("ATP", cellCX, cellTop - 15);
+            ctx.fillText("\u26a1", cellCX + 25, cellTop - 12);
+        }
+
+        // Draw particles
+        memState.particles.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.type === "solute" ? 4 : 3, 0, Math.PI * 2);
+            if (p.type === "solute") {
+                ctx.fillStyle = p.side === "inside" ? "#ff9800" : "#ef5350";
+            } else {
+                ctx.fillStyle = "rgba(100, 180, 255, 0.6)";
+            }
+            ctx.fill();
+        });
+
+        // Labels
+        ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        ctx.fillText("Intracellular", cellCX, cellCY);
+        ctx.fillText("Extracellular", 110, 75);
+        ctx.fillText("Extracellular", W - 110, 75);
+
+        // Concentration labels
+        const insideSolute = memState.particles.filter(p => p.type === "solute" && p.side === "inside").length;
+        const outsideSolute = memState.particles.filter(p => p.type === "solute" && p.side === "outside").length;
+
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(20, H - 70, W - 40, 55);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(20, H - 70, W - 40, 55);
+
+        ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#ff9800"; ctx.fillText(`Inside solute: ${insideSolute}`, 35, H - 50);
+        ctx.fillStyle = "#ef5350"; ctx.fillText(`Outside solute: ${outsideSolute}`, 200, H - 50);
+        ctx.fillStyle = "#64b5f6"; ctx.fillText(`Inside water: ${memState.particles.filter(p => p.type === "water" && p.side === "inside").length}`, 380, H - 50);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText(`Outside water: ${memState.particles.filter(p => p.type === "water" && p.side === "outside").length}`, 540, H - 50);
+
+        ctx.fillStyle = "#ccc"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+        const label = concType === "hypertonic" ? "Hypertonic (cell shrinks - crenation)" :
+                      concType === "hypotonic" ? "Hypotonic (cell swells - lysis risk)" :
+                      "Isotonic (equilibrium)";
+        ctx.fillText(`Environment: ${label}`, W / 2, H - 28);
+
+        // Legend
+        ctx.textAlign = "left"; ctx.font = "10px sans-serif";
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("\u25cf Phospholipid heads", 35, H - 78);
+        ctx.fillStyle = "#ff9800"; ctx.fillText("\u25cf Solute (inside)", 200, H - 78);
+        ctx.fillStyle = "#ef5350"; ctx.fillText("\u25cf Solute (outside)", 340, H - 78);
+        ctx.fillStyle = "#64b5f6"; ctx.fillText("\u25cf Water", 500, H - 78);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">Membrane Transport</b><br>` +
+            `Type: ${transport}<br>` +
+            `Env: ${concType}<br>` +
+            `Inside: ${insideSolute} solute<br>` +
+            `Outside: ${outsideSolute} solute`;
+
+        if (memState.running) {
+            animId = requestAnimationFrame(drawMembrane);
+        }
+    }
+
+    document.getElementById("extConc").addEventListener("change", () => {
+        if (currentSim === "membrane") { resetMembraneParticles(); }
+    });
+    document.getElementById("transportType").addEventListener("change", () => {
+        if (currentSim === "membrane") { resetMembraneParticles(); }
+    });
+
+    document.getElementById("btn-mem-toggle").addEventListener("click", () => {
+        memState.running = !memState.running;
+        document.getElementById("btn-mem-toggle").textContent = memState.running ? "Pause" : "Resume";
+        if (memState.running) drawMembrane();
+    });
+    document.getElementById("btn-mem-reset").addEventListener("click", initMembrane);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

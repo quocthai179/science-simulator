@@ -42,6 +42,11 @@
         <button class="nav-btn" data-sim="selection">Natural Selection</button>
         <button class="nav-btn" data-sim="neuron">Action Potential</button>
         <button class="nav-btn" data-sim="enzyme">Enzyme Kinetics</button>
+        <button class="nav-btn" data-sim="dna">DNA Replication</button>
+        <button class="nav-btn" data-sim="photosyn">Photosynthesis</button>
+        <button class="nav-btn" data-sim="hardywein">Hardy-Weinberg</button>
+        <button class="nav-btn" data-sim="foodweb">Food Web</button>
+        <button class="nav-btn" data-sim="membrane">Cell Membrane</button>
     </nav>
 
     <main>
@@ -564,6 +569,99 @@
             <div class="btn-row">
                 <button id="btn-enz-animate">Animate</button>
                 <button id="btn-enz-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- DNA Replication Controls -->
+        <div class="controls hidden" id="ctrl-dna">
+            <h3>DNA Replication</h3>
+            <p class="ctrl-hint">Watch the double helix unwind and replicate via leading and lagging strands.</p>
+            <label>Speed: <span id="val-dnaSpeed">1.0</span>x
+                <input type="range" id="dnaSpeed" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-dna-start">Start Replication</button>
+                <button id="btn-dna-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Photosynthesis Controls -->
+        <div class="controls hidden" id="ctrl-photosyn">
+            <h3>Photosynthesis</h3>
+            <p class="ctrl-hint">Light reactions in the thylakoid membrane produce ATP and NADPH.</p>
+            <label>Light Intensity: <span id="val-lightInt">70</span>%
+                <input type="range" id="lightInt" min="0" max="100" value="70">
+            </label>
+            <label>CO&sub2; Level: <span id="val-co2">50</span>%
+                <input type="range" id="co2" min="0" max="100" value="50">
+            </label>
+            <label>Temperature: <span id="val-photoTemp">25</span>&deg;C
+                <input type="range" id="photoTemp" min="5" max="45" value="25">
+            </label>
+            <div class="btn-row">
+                <button id="btn-photo-toggle">Pause</button>
+                <button id="btn-photo-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Hardy-Weinberg Controls -->
+        <div class="controls hidden" id="ctrl-hardywein">
+            <h3>Hardy-Weinberg Equilibrium</h3>
+            <p class="ctrl-hint">Model allele frequencies in a population. Watch genotype distributions shift.</p>
+            <label>Freq of allele p: <span id="val-pfreq">0.50</span>
+                <input type="range" id="pfreq" min="0.01" max="0.99" value="0.50" step="0.01">
+            </label>
+            <label>Population Size: <span id="val-hwPop">200</span>
+                <input type="range" id="hwPop" min="20" max="500" value="200">
+            </label>
+            <label>Generations to Simulate: <span id="val-hwGens">20</span>
+                <input type="range" id="hwGens" min="5" max="100" value="20">
+            </label>
+            <label>Genetic Drift (finite pop)
+                <input type="checkbox" id="hwDrift">
+            </label>
+            <div class="btn-row">
+                <button id="btn-hw-run">Run</button>
+                <button id="btn-hw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Food Web Controls -->
+        <div class="controls hidden" id="ctrl-foodweb">
+            <h3>Food Web / Energy Flow</h3>
+            <p class="ctrl-hint">Energy transfers between trophic levels. Only ~10% passes to the next level.</p>
+            <label>Sun Energy Input: <span id="val-sunEnergy">10000</span> kJ
+                <input type="range" id="sunEnergy" min="2000" max="20000" value="10000" step="500">
+            </label>
+            <label>Transfer Efficiency: <span id="val-efficiency">10</span>%
+                <input type="range" id="efficiency" min="5" max="25" value="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-fw-animate">Animate</button>
+                <button id="btn-fw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cell Membrane Transport Controls -->
+        <div class="controls hidden" id="ctrl-membrane">
+            <h3>Cell Membrane Transport</h3>
+            <label>External Concentration: <span id="val-extConc">High</span>
+                <select id="extConc">
+                    <option value="hypertonic">Hypertonic (High)</option>
+                    <option value="isotonic">Isotonic (Equal)</option>
+                    <option value="hypotonic">Hypotonic (Low)</option>
+                </select>
+            </label>
+            <label>Transport Type
+                <select id="transportType">
+                    <option value="osmosis">Osmosis</option>
+                    <option value="passive">Passive Diffusion</option>
+                    <option value="active">Active Transport</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-mem-toggle">Pause</button>
+                <button id="btn-mem-reset">Reset</button>
             </div>
         </div>
 
