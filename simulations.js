@@ -62,6 +62,11 @@
             case "hardywein":   initHardyWein();    break;
             case "foodweb":     initFoodWeb();      break;
             case "membrane":    initMembrane();     break;
+            case "respiration": initRespiration();  break;
+            case "magfield":    initMagField();     break;
+            case "chemeq":      initChemEq();       break;
+            case "epidemic":    initEpidemic();     break;
+            case "bernoulli":   initBernoulli();    break;
         }
     }
 
@@ -6125,6 +6130,1019 @@
         if (memState.running) drawMembrane();
     });
     document.getElementById("btn-mem-reset").addEventListener("click", initMembrane);
+
+    // ═══════════════════════════════════════════════════════
+    // 35. CELLULAR RESPIRATION
+    // ═══════════════════════════════════════════════════════
+    let respState = {};
+
+    function initRespiration() {
+        respState = { t: 0, running: false, phase: 0, progress: 0,
+            glycolysis: { atp: 0, nadh: 0, pyruvate: 0 },
+            krebs: { atp: 0, nadh: 0, fadh2: 0, co2: 0 },
+            etc: { atp: 0, h2o: 0 },
+            totalATP: 0
+        };
+        drawRespiration();
+    }
+
+    const respPhases = [
+        { name: "Glycolysis", loc: "Cytoplasm", color: "#ff9800" },
+        { name: "Pyruvate Oxidation", loc: "Mitochondrial Matrix", color: "#ff7043" },
+        { name: "Krebs Cycle", loc: "Mitochondrial Matrix", color: "#66bb6a" },
+        { name: "Electron Transport Chain", loc: "Inner Membrane", color: "#42a5f5" }
+    ];
+
+    function drawRespiration() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const glucose = +document.getElementById("glucoseIn").value;
+        const o2 = +document.getElementById("o2avail").value / 100;
+
+        if (respState.running) {
+            respState.t += 0.016;
+            respState.progress += 0.004;
+
+            if (respState.progress >= 1) {
+                respState.progress = 0;
+                respState.phase++;
+                if (respState.phase >= respPhases.length) {
+                    respState.phase = respPhases.length - 1;
+                    respState.progress = 1;
+                    respState.running = false;
+                }
+            }
+
+            // Accumulate outputs
+            const p = respState.phase;
+            if (p === 0) {
+                respState.glycolysis.atp = Math.floor(respState.progress * 2 * glucose);
+                respState.glycolysis.nadh = Math.floor(respState.progress * 2 * glucose);
+                respState.glycolysis.pyruvate = Math.floor(respState.progress * 2 * glucose);
+            } else if (p === 1) {
+                respState.glycolysis = { atp: 2 * glucose, nadh: 2 * glucose, pyruvate: 2 * glucose };
+            } else if (p === 2) {
+                respState.krebs.atp = Math.floor(respState.progress * 2 * glucose);
+                respState.krebs.nadh = Math.floor(respState.progress * 6 * glucose);
+                respState.krebs.fadh2 = Math.floor(respState.progress * 2 * glucose);
+                respState.krebs.co2 = Math.floor(respState.progress * 4 * glucose);
+            } else if (p === 3) {
+                respState.krebs = { atp: 2 * glucose, nadh: 6 * glucose, fadh2: 2 * glucose, co2: 4 * glucose };
+                respState.etc.atp = Math.floor(respState.progress * 34 * glucose * o2);
+                respState.etc.h2o = Math.floor(respState.progress * 6 * glucose * o2);
+            }
+
+            respState.totalATP = respState.glycolysis.atp + respState.krebs.atp + respState.etc.atp;
+        }
+
+        // Mitochondrion shape
+        const mx = W / 2, my = 200;
+        ctx.beginPath();
+        ctx.ellipse(mx, my, 280, 110, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(38, 50, 56, 0.4)";
+        ctx.fill();
+        ctx.strokeStyle = "#546e7a";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Inner membrane (cristae)
+        ctx.beginPath();
+        ctx.ellipse(mx, my, 230, 80, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = "#78909c";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Cristae folds
+        for (let i = 0; i < 5; i++) {
+            const cx2 = mx - 150 + i * 75;
+            ctx.beginPath();
+            ctx.moveTo(cx2, my + 60);
+            ctx.quadraticCurveTo(cx2 + 15, my + 20, cx2 + 30, my + 60);
+            ctx.strokeStyle = "rgba(120, 144, 156, 0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Labels
+        ctx.fillStyle = "#78909c"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Outer Membrane", mx, my - 115);
+        ctx.fillText("Inner Membrane", mx, my - 85);
+        ctx.fillText("Matrix", mx, my + 5);
+
+        // Stage boxes
+        const stages = [
+            { x: 40, y: 340, w: 180, h: 150, phase: 0,
+              inputs: [`${glucose} Glucose`], outputs: [`${respState.glycolysis.atp} ATP`, `${respState.glycolysis.nadh} NADH`, `${respState.glycolysis.pyruvate} Pyruvate`] },
+            { x: 240, y: 340, w: 140, h: 150, phase: 1,
+              inputs: ["Pyruvate"], outputs: ["Acetyl-CoA", "CO\u2082", "NADH"] },
+            { x: 400, y: 340, w: 180, h: 150, phase: 2,
+              inputs: ["Acetyl-CoA"], outputs: [`${respState.krebs.atp} ATP`, `${respState.krebs.nadh} NADH`, `${respState.krebs.fadh2} FADH\u2082`, `${respState.krebs.co2} CO\u2082`] },
+            { x: 610, y: 340, w: 200, h: 150, phase: 3,
+              inputs: ["NADH", "FADH\u2082", "O\u2082"], outputs: [`${respState.etc.atp} ATP`, `${respState.etc.h2o} H\u2082O`] }
+        ];
+
+        stages.forEach(s => {
+            const isActive = respState.phase === s.phase;
+            const isDone = respState.phase > s.phase;
+            ctx.fillStyle = isActive ? "rgba(16,20,58,0.9)" : "rgba(16,20,58,0.5)";
+            ctx.fillRect(s.x, s.y, s.w, s.h);
+            ctx.strokeStyle = isActive ? respPhases[s.phase].color : isDone ? "rgba(76,175,80,0.4)" : "#333";
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.strokeRect(s.x, s.y, s.w, s.h);
+
+            // Progress bar
+            if (isActive) {
+                ctx.fillStyle = respPhases[s.phase].color;
+                ctx.globalAlpha = 0.3;
+                ctx.fillRect(s.x + 1, s.y + s.h - 4, (s.w - 2) * respState.progress, 3);
+                ctx.globalAlpha = 1;
+            }
+
+            ctx.fillStyle = respPhases[s.phase].color;
+            ctx.font = "bold 11px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(respPhases[s.phase].name, s.x + s.w / 2, s.y + 18);
+
+            ctx.fillStyle = "#667"; ctx.font = "9px sans-serif";
+            ctx.fillText(respPhases[s.phase].loc, s.x + s.w / 2, s.y + 32);
+
+            // Inputs
+            ctx.fillStyle = "#ef9a9a"; ctx.font = "9px sans-serif"; ctx.textAlign = "left";
+            ctx.fillText("In:", s.x + 8, s.y + 50);
+            s.inputs.forEach((inp, i) => {
+                ctx.fillStyle = "#ef9a9a";
+                ctx.fillText(inp, s.x + 25, s.y + 50 + i * 12);
+            });
+
+            // Outputs
+            const outY = s.y + 50 + s.inputs.length * 12 + 8;
+            ctx.fillStyle = "#a5d6a7"; ctx.fillText("Out:", s.x + 8, outY);
+            s.outputs.forEach((out, i) => {
+                ctx.fillStyle = "#a5d6a7";
+                ctx.fillText(out, s.x + 25, outY + i * 12);
+            });
+
+            // Arrows between stages
+            if (s.phase < 3) {
+                ctx.beginPath();
+                ctx.moveTo(s.x + s.w + 2, s.y + s.h / 2);
+                ctx.lineTo(s.x + s.w + 15, s.y + s.h / 2);
+                ctx.strokeStyle = "rgba(255,255,255,0.2)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(s.x + s.w + 15, s.y + s.h / 2);
+                ctx.lineTo(s.x + s.w + 10, s.y + s.h / 2 - 4);
+                ctx.lineTo(s.x + s.w + 10, s.y + s.h / 2 + 4);
+                ctx.closePath();
+                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fill();
+            }
+        });
+
+        // Total ATP counter
+        const maxATP = (2 + 2 + 34) * glucose;
+        ctx.fillStyle = "rgba(16,20,58,0.9)";
+        ctx.fillRect(W / 2 - 120, my + 25, 240, 55);
+        ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2;
+        ctx.strokeRect(W / 2 - 120, my + 25, 240, 55);
+
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`Total ATP: ${respState.totalATP} / ${maxATP}`, mx, my + 50);
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText(`C\u2086H\u2081\u2082O\u2086 + 6O\u2082 \u2192 6CO\u2082 + 6H\u2082O + ATP`, mx, my + 68);
+
+        // Equation at bottom
+        ctx.fillStyle = o2 < 0.5 ? "#ff9800" : "#ccc";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(o2 < 0.5 ? "Low O\u2082: Fermentation pathway (less ATP)" : "Aerobic respiration (full ATP yield)", mx, H - 10);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Cell Respiration</b><br>` +
+            `Phase: ${respPhases[respState.phase].name}<br>` +
+            `Total ATP: ${respState.totalATP}<br>` +
+            `O\u2082: ${(o2 * 100).toFixed(0)}%`;
+
+        if (respState.running) {
+            animId = requestAnimationFrame(drawRespiration);
+        }
+    }
+
+    bindSlider("glucoseIn", "val-glucoseIn", () => { if (!respState.running) drawRespiration(); });
+    bindSlider("o2avail", "val-o2avail", () => { if (!respState.running) drawRespiration(); });
+
+    document.getElementById("btn-resp-start").addEventListener("click", () => {
+        respState = { t: 0, running: true, phase: 0, progress: 0,
+            glycolysis: { atp: 0, nadh: 0, pyruvate: 0 },
+            krebs: { atp: 0, nadh: 0, fadh2: 0, co2: 0 },
+            etc: { atp: 0, h2o: 0 }, totalATP: 0 };
+        drawRespiration();
+    });
+    document.getElementById("btn-resp-reset").addEventListener("click", initRespiration);
+
+    // ═══════════════════════════════════════════════════════
+    // 36. MAGNETIC FIELD
+    // ═══════════════════════════════════════════════════════
+
+    function initMagField() {
+        drawMagField();
+    }
+
+    function drawMagField() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const current = +document.getElementById("current").value;
+        const mode = document.getElementById("magMode").value;
+        const showCompass = document.getElementById("showCompass").checked;
+        const cx = W / 2, cy = H / 2;
+
+        if (mode === "wire") {
+            // Straight wire coming out of screen
+            ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+            ctx.fillStyle = "#78909c"; ctx.fill();
+            ctx.strokeStyle = "#b0bec5"; ctx.lineWidth = 2; ctx.stroke();
+            // Current direction dot (out of screen)
+            ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffeb3b"; ctx.fill();
+            ctx.fillStyle = "#ffeb3b"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("I (out)", cx, cy + 30);
+
+            // Concentric field lines
+            const numRings = 8;
+            for (let i = 1; i <= numRings; i++) {
+                const r = 30 + i * 28;
+                const strength = current / r * 50;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(100, 180, 255, ${Math.min(0.5, strength * 0.15)})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Direction arrows on the rings
+                for (let a = 0; a < 4; a++) {
+                    const angle = (a / 4) * Math.PI * 2;
+                    const ax = cx + r * Math.cos(angle);
+                    const ay = cy + r * Math.sin(angle);
+                    const tangent = angle + Math.PI / 2; // CCW for current out
+                    ctx.beginPath();
+                    ctx.moveTo(ax, ay);
+                    ctx.lineTo(ax + 8 * Math.cos(tangent), ay + 8 * Math.sin(tangent));
+                    ctx.lineTo(ax + 4 * Math.cos(tangent - 0.4) - 3 * Math.sin(tangent - 0.4),
+                               ay + 4 * Math.sin(tangent - 0.4) + 3 * Math.cos(tangent - 0.4));
+                    ctx.strokeStyle = `rgba(100, 180, 255, ${Math.min(0.7, strength * 0.25)})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
+            }
+
+            // Compass needles
+            if (showCompass) {
+                const gridSpacing = 50;
+                for (let gx = 40; gx < W - 40; gx += gridSpacing) {
+                    for (let gy = 40; gy < H - 40; gy += gridSpacing) {
+                        const dx = gx - cx, dy = gy - cy;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 30 || dist > 250) continue;
+                        // B field direction: tangential (CCW)
+                        const angle = Math.atan2(dy, dx) + Math.PI / 2;
+                        const strength2 = Math.min(1, current / dist * 20);
+
+                        ctx.save();
+                        ctx.translate(gx, gy);
+                        ctx.rotate(angle);
+                        // Needle
+                        ctx.beginPath();
+                        ctx.moveTo(-8, 0); ctx.lineTo(8, 0);
+                        ctx.strokeStyle = `rgba(239, 83, 80, ${strength2})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        // North tip
+                        ctx.beginPath();
+                        ctx.moveTo(8, 0); ctx.lineTo(5, -2); ctx.lineTo(5, 2); ctx.closePath();
+                        ctx.fillStyle = `rgba(239, 83, 80, ${strength2})`;
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // Right-hand rule hint
+            ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Right-Hand Rule: Thumb \u2192 Current, Fingers \u2192 B field (CCW)", cx, H - 20);
+
+        } else if (mode === "solenoid") {
+            // Solenoid (side view)
+            const solW = 400, solH = 100;
+            const solX = cx - solW / 2, solY = cy - solH / 2;
+
+            // Coils
+            const numCoils = 12;
+            for (let i = 0; i < numCoils; i++) {
+                const coilX = solX + (i + 0.5) * (solW / numCoils);
+                ctx.beginPath();
+                ctx.ellipse(coilX, cy, 8, solH / 2 + 10, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 152, 0, ${0.4 + Math.sin(i * 0.5) * 0.1})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Internal field lines (straight, parallel)
+            const numInternalLines = 5;
+            for (let i = 0; i < numInternalLines; i++) {
+                const ly = cy - solH / 3 + (i / (numInternalLines - 1)) * (solH * 2 / 3);
+                ctx.beginPath();
+                ctx.moveTo(solX - 20, ly);
+                ctx.lineTo(solX + solW + 20, ly);
+                ctx.strokeStyle = `rgba(100, 180, 255, ${0.3 + current * 0.03})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                // Arrow
+                ctx.beginPath();
+                ctx.moveTo(cx + 30, ly);
+                ctx.lineTo(cx + 22, ly - 3);
+                ctx.lineTo(cx + 22, ly + 3);
+                ctx.closePath();
+                ctx.fillStyle = `rgba(100, 180, 255, 0.5)`;
+                ctx.fill();
+            }
+
+            // External return field lines (curved)
+            [-1, 1].forEach(sign => {
+                ctx.beginPath();
+                ctx.moveTo(solX + solW + 20, cy + sign * 10);
+                ctx.bezierCurveTo(solX + solW + 120, cy + sign * 150,
+                                   solX - 120, cy + sign * 150,
+                                   solX - 20, cy + sign * 10);
+                ctx.strokeStyle = "rgba(100, 180, 255, 0.15)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // N and S poles
+            ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+            ctx.fillStyle = "#ef5350"; ctx.fillText("N", solX + solW + 35, cy + 6);
+            ctx.fillStyle = "#42a5f5"; ctx.fillText("S", solX - 35, cy + 6);
+
+            // Current direction labels
+            ctx.fillStyle = "#ff9800"; ctx.font = "10px sans-serif";
+            ctx.fillText("I \u2192", solX + solW / 2, solY - 20);
+
+            // B field label
+            ctx.fillStyle = "#42a5f5"; ctx.font = "12px sans-serif";
+            ctx.fillText("B = \u03bc\u2080nI", cx, cy + solH / 2 + 40);
+            ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+            ctx.fillText(`B \u221d I = ${current.toFixed(1)} A`, cx, cy + solH / 2 + 56);
+
+            // Compass needles outside
+            if (showCompass) {
+                for (let gx2 = 80; gx2 < W - 80; gx2 += 60) {
+                    for (let gy2 = 40; gy2 < H - 40; gy2 += 60) {
+                        if (gx2 > solX - 15 && gx2 < solX + solW + 15 &&
+                            gy2 > solY - 15 && gy2 < solY + solH + 15) continue;
+                        const dx = gx2 - cx, dy = gy2 - cy;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        // Approximate field direction
+                        let angle;
+                        if (gx2 > solX + solW) angle = Math.atan2(dy, dx - solW / 2);
+                        else if (gx2 < solX) angle = Math.atan2(dy, dx + solW / 2) + Math.PI;
+                        else angle = 0;
+
+                        ctx.save();
+                        ctx.translate(gx2, gy2);
+                        ctx.rotate(angle);
+                        ctx.beginPath();
+                        ctx.moveTo(-7, 0); ctx.lineTo(7, 0);
+                        ctx.strokeStyle = "rgba(239, 83, 80, 0.4)";
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(7, 0); ctx.lineTo(4, -2); ctx.lineTo(4, 2); ctx.closePath();
+                        ctx.fillStyle = "rgba(239, 83, 80, 0.4)"; ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            }
+
+        } else if (mode === "loop") {
+            // Current loop (top view)
+            const loopR = 120;
+            ctx.beginPath(); ctx.arc(cx, cy, loopR, 0, Math.PI * 2);
+            ctx.strokeStyle = "#ff9800"; ctx.lineWidth = 4; ctx.stroke();
+
+            // Current direction arrows
+            for (let a = 0; a < 6; a++) {
+                const angle = (a / 6) * Math.PI * 2;
+                const ax = cx + loopR * Math.cos(angle);
+                const ay = cy + loopR * Math.sin(angle);
+                const tangent = angle + Math.PI / 2;
+                ctx.beginPath();
+                ctx.moveTo(ax + 10 * Math.cos(tangent), ay + 10 * Math.sin(tangent));
+                ctx.lineTo(ax + 5 * Math.cos(tangent - 0.5), ay + 5 * Math.sin(tangent - 0.5));
+                ctx.lineTo(ax + 5 * Math.cos(tangent + 0.5), ay + 5 * Math.sin(tangent + 0.5));
+                ctx.closePath();
+                ctx.fillStyle = "#ff9800"; ctx.fill();
+            }
+
+            // Field lines through center (up)
+            for (let i = -2; i <= 2; i++) {
+                ctx.beginPath();
+                ctx.moveTo(cx + i * 15, cy + 200);
+                ctx.quadraticCurveTo(cx + i * 15, cy, cx + i * 15, cy - 200);
+                ctx.strokeStyle = `rgba(100, 180, 255, ${0.3 - Math.abs(i) * 0.05})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                // Arrow
+                ctx.beginPath();
+                ctx.moveTo(cx + i * 15, cy - 50);
+                ctx.lineTo(cx + i * 15 - 3, cy - 42);
+                ctx.lineTo(cx + i * 15 + 3, cy - 42);
+                ctx.closePath();
+                ctx.fillStyle = "rgba(100, 180, 255, 0.4)"; ctx.fill();
+            }
+
+            // External return lines
+            [-1, 1].forEach(sign => {
+                ctx.beginPath();
+                ctx.moveTo(cx + sign * 30, cy - 200);
+                ctx.bezierCurveTo(cx + sign * 250, cy - 200,
+                                   cx + sign * 250, cy + 200,
+                                   cx + sign * 30, cy + 200);
+                ctx.strokeStyle = "rgba(100, 180, 255, 0.1)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = "#42a5f5"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("B (through loop center)", cx, cy - 10);
+            ctx.fillStyle = "#ff9800";
+            ctx.fillText("Current loop (I)", cx, cy + loopR + 25);
+        }
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">Magnetic Field</b><br>` +
+            `Mode: ${mode}<br>` +
+            `I: ${current} A<br>` +
+            `B \u221d ${mode === "wire" ? "\u03bc\u2080I/2\u03c0r" : "\u03bc\u2080nI"}`;
+    }
+
+    bindSlider("current", "val-current", () => { if (currentSim === "magfield") drawMagField(); });
+    document.getElementById("magMode").addEventListener("change", () => { if (currentSim === "magfield") drawMagField(); });
+    document.getElementById("showCompass").addEventListener("change", () => { if (currentSim === "magfield") drawMagField(); });
+    document.getElementById("btn-mag-reset").addEventListener("click", initMagField);
+
+    // ═══════════════════════════════════════════════════════
+    // 37. CHEMICAL EQUILIBRIUM (LE CHATELIER)
+    // ═══════════════════════════════════════════════════════
+    let eqState = {};
+
+    function initChemEq() {
+        eqState = { A: 80, B: 20, running: true, t: 0, history: [] };
+        document.getElementById("btn-eq-toggle").textContent = "Pause";
+        drawChemEq();
+    }
+
+    function drawChemEq() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const kf = +document.getElementById("kf").value;
+        const kr = +document.getElementById("kr").value;
+
+        if (eqState.running) {
+            eqState.t += 0.016;
+            // A ⇌ B reaction
+            const forward = kf * eqState.A;
+            const reverse = kr * eqState.B;
+            eqState.A += (-forward + reverse) * 0.5;
+            eqState.B += (forward - reverse) * 0.5;
+            eqState.A = Math.max(0, eqState.A);
+            eqState.B = Math.max(0, eqState.B);
+
+            if (eqState.history.length === 0 || eqState.t - eqState.history[eqState.history.length - 1].t > 0.05) {
+                eqState.history.push({ t: eqState.t, A: eqState.A, B: eqState.B });
+                if (eqState.history.length > 500) eqState.history.shift();
+            }
+        }
+
+        // Beaker visualization
+        const beakerX = 60, beakerY = 50, beakerW = 280, beakerH = 250;
+
+        // Beaker outline
+        ctx.beginPath();
+        ctx.moveTo(beakerX, beakerY);
+        ctx.lineTo(beakerX, beakerY + beakerH);
+        ctx.lineTo(beakerX + beakerW, beakerY + beakerH);
+        ctx.lineTo(beakerX + beakerW, beakerY);
+        ctx.strokeStyle = "rgba(200,200,220,0.5)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Liquid level
+        const total = eqState.A + eqState.B;
+        const fillH = beakerH * 0.85;
+        const ratioA = eqState.A / total;
+        const ratioB = eqState.B / total;
+
+        // Mixed color
+        const r = Math.round(239 * ratioA + 66 * ratioB);
+        const g = Math.round(83 * ratioA + 187 * ratioB);
+        const b = Math.round(80 * ratioA + 106 * ratioB);
+        ctx.fillStyle = `rgba(${r},${g},${b},0.4)`;
+        ctx.fillRect(beakerX + 3, beakerY + beakerH - fillH, beakerW - 6, fillH - 3);
+
+        // Particles in beaker
+        const numDotsA = Math.min(40, Math.round(eqState.A / 2));
+        const numDotsB = Math.min(40, Math.round(eqState.B / 2));
+
+        for (let i = 0; i < numDotsA; i++) {
+            const px = beakerX + 15 + (i % 8) * 32;
+            const py = beakerY + beakerH - 20 - Math.floor(i / 8) * 20 + Math.sin(eqState.t * 2 + i) * 3;
+            ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#ef5350"; ctx.fill();
+        }
+        for (let i = 0; i < numDotsB; i++) {
+            const px = beakerX + 25 + (i % 8) * 32;
+            const py = beakerY + beakerH - 30 - Math.floor(i / 8) * 20 + Math.cos(eqState.t * 2 + i) * 3;
+            ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#42a5f5"; ctx.fill();
+        }
+
+        // Legend
+        ctx.fillStyle = "#ef5350"; ctx.font = "13px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`A (Reactant): ${eqState.A.toFixed(1)}`, beakerX, beakerY + beakerH + 25);
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText(`B (Product): ${eqState.B.toFixed(1)}`, beakerX, beakerY + beakerH + 45);
+
+        // Reaction equation
+        ctx.fillStyle = "#ccc"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("A \u21cc B", beakerX + beakerW / 2, beakerY - 12);
+
+        // Equilibrium constant
+        const Keq = eqState.B / Math.max(0.1, eqState.A);
+        const theoretical = kf / kr;
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "12px sans-serif";
+        ctx.fillText(`K_eq = [B]/[A] = ${Keq.toFixed(2)}`, beakerX + beakerW / 2, beakerY + beakerH + 65);
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText(`Theoretical K = k\u2081/k\u2082 = ${theoretical.toFixed(2)}`, beakerX + beakerW / 2, beakerY + beakerH + 82);
+
+        // Rate bars
+        const rateX = beakerX, rateY = beakerY + beakerH + 95, rateW = beakerW, rateH = 50;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(rateX, rateY, rateW, rateH);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(rateX, rateY, rateW, rateH);
+
+        const fwdRate = kf * eqState.A;
+        const revRate = kr * eqState.B;
+        const maxRate = Math.max(fwdRate, revRate, 1);
+
+        ctx.fillStyle = "#ef5350";
+        ctx.fillRect(rateX + 5, rateY + 8, (fwdRate / maxRate) * (rateW - 10) * 0.4, 12);
+        ctx.fillStyle = "#ef9a9a"; ctx.font = "9px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`Forward: ${fwdRate.toFixed(1)}`, rateX + 10, rateY + 17);
+
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillRect(rateX + 5, rateY + 28, (revRate / maxRate) * (rateW - 10) * 0.4, 12);
+        ctx.fillStyle = "#90caf9";
+        ctx.fillText(`Reverse: ${revRate.toFixed(1)}`, rateX + 10, rateY + 37);
+
+        // At equilibrium indicator
+        if (Math.abs(fwdRate - revRate) < 0.5) {
+            ctx.fillStyle = "#4caf50"; ctx.font = "bold 10px sans-serif";
+            ctx.fillText("\u2713 At Equilibrium", rateX + rateW - 100, rateY + 25);
+        }
+
+        // Concentration vs Time graph
+        const gx = 380, gy = 50, gw = W - 410, gh = H - 90;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(gx, gy, gw, gh);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Concentration vs Time", gx + 8, gy - 6);
+
+        if (eqState.history.length > 1) {
+            const tMin = eqState.history[0].t;
+            const tMax = eqState.history[eqState.history.length - 1].t;
+            const tRange = Math.max(0.1, tMax - tMin);
+            let maxVal = 1;
+            eqState.history.forEach(h => { maxVal = Math.max(maxVal, h.A, h.B); });
+
+            // A line
+            ctx.beginPath();
+            eqState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw;
+                const py = gy + gh - (h.A / maxVal) * gh * 0.9;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ef5350"; ctx.lineWidth = 2; ctx.stroke();
+
+            // B line
+            ctx.beginPath();
+            eqState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw;
+                const py = gy + gh - (h.B / maxVal) * gh * 0.9;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#42a5f5"; ctx.lineWidth = 2; ctx.stroke();
+        }
+
+        ctx.fillStyle = "#ef5350"; ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("[A] Reactant", gx + gw - 100, gy + 16);
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText("[B] Product", gx + gw - 100, gy + 30);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Chemical Equilibrium</b><br>` +
+            `[A]: ${eqState.A.toFixed(1)}<br>` +
+            `[B]: ${eqState.B.toFixed(1)}<br>` +
+            `K_eq: ${Keq.toFixed(2)}`;
+
+        if (eqState.running) {
+            animId = requestAnimationFrame(drawChemEq);
+        }
+    }
+
+    bindSlider("kf", "val-kf");
+    bindSlider("kr", "val-kr");
+
+    document.getElementById("btn-eq-addA").addEventListener("click", () => {
+        eqState.A += 30;
+    });
+    document.getElementById("btn-eq-addB").addEventListener("click", () => {
+        eqState.B += 30;
+    });
+    document.getElementById("btn-eq-toggle").addEventListener("click", () => {
+        eqState.running = !eqState.running;
+        document.getElementById("btn-eq-toggle").textContent = eqState.running ? "Pause" : "Resume";
+        if (eqState.running) drawChemEq();
+    });
+    document.getElementById("btn-eq-reset").addEventListener("click", initChemEq);
+
+    // ═══════════════════════════════════════════════════════
+    // 38. SIR EPIDEMIC MODEL
+    // ═══════════════════════════════════════════════════════
+    let sirState = {};
+
+    function initEpidemic() {
+        const pop = +document.getElementById("sirPop").value;
+        const people = [];
+        const W = canvas.width, H2 = 280;
+        for (let i = 0; i < pop; i++) {
+            people.push({
+                x: 30 + Math.random() * (W - 60),
+                y: 30 + Math.random() * H2,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                state: i === 0 ? "I" : "S", // patient zero
+                infectedAt: i === 0 ? 0 : -1
+            });
+        }
+        sirState = { people, t: 0, running: true, history: [] };
+        document.getElementById("btn-sir-toggle").textContent = "Pause";
+        drawEpidemic();
+    }
+
+    function drawEpidemic() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const beta = +document.getElementById("betaSIR").value;
+        const gamma = +document.getElementById("gammaSIR").value;
+        const simH = 280;
+        const R0 = (beta / gamma).toFixed(1);
+
+        if (sirState.running) {
+            sirState.t += 0.016;
+
+            sirState.people.forEach(p => {
+                // Movement
+                p.vx += (Math.random() - 0.5) * 0.3;
+                p.vy += (Math.random() - 0.5) * 0.3;
+                p.vx *= 0.96; p.vy *= 0.96;
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 15) { p.x = 15; p.vx *= -1; }
+                if (p.x > W - 15) { p.x = W - 15; p.vx *= -1; }
+                if (p.y < 15) { p.y = 15; p.vy *= -1; }
+                if (p.y > simH - 15) { p.y = simH - 15; p.vy *= -1; }
+
+                // Recovery
+                if (p.state === "I" && sirState.t - p.infectedAt > 1 / gamma * 0.1) {
+                    if (Math.random() < gamma * 0.016) {
+                        p.state = "R";
+                    }
+                }
+            });
+
+            // Transmission
+            const infected = sirState.people.filter(p => p.state === "I");
+            const susceptible = sirState.people.filter(p => p.state === "S");
+            infected.forEach(inf => {
+                susceptible.forEach(sus => {
+                    const dx = inf.x - sus.x, dy = inf.y - sus.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 15 && Math.random() < beta * 0.016) {
+                        sus.state = "I";
+                        sus.infectedAt = sirState.t;
+                    }
+                });
+            });
+
+            // Record
+            const sCount = sirState.people.filter(p => p.state === "S").length;
+            const iCount = sirState.people.filter(p => p.state === "I").length;
+            const rCount = sirState.people.filter(p => p.state === "R").length;
+            if (sirState.history.length === 0 || sirState.t - sirState.history[sirState.history.length - 1].t > 0.05) {
+                sirState.history.push({ t: sirState.t, S: sCount, I: iCount, R: rCount });
+                if (sirState.history.length > 600) sirState.history.shift();
+            }
+        }
+
+        // Simulation area
+        ctx.fillStyle = "rgba(16,20,58,0.3)";
+        ctx.fillRect(10, 10, W - 20, simH);
+        ctx.strokeStyle = "#2a2f6e"; ctx.lineWidth = 1;
+        ctx.strokeRect(10, 10, W - 20, simH);
+
+        // Draw people
+        sirState.people.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+            if (p.state === "S") ctx.fillStyle = "#42a5f5";
+            else if (p.state === "I") ctx.fillStyle = "#ef5350";
+            else ctx.fillStyle = "#66bb6a";
+            ctx.fill();
+
+            // Infection radius for infected
+            if (p.state === "I") {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(239, 83, 80, 0.15)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
+
+        // SIR Graph
+        const gx = 50, gy2 = simH + 30, gw2 = W - 100, gh2 = H - simH - 70;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(gx, gy2, gw2, gh2);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(gx, gy2, gw2, gh2);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("SIR Curves", gx + 8, gy2 - 6);
+
+        if (sirState.history.length > 1) {
+            const pop = sirState.people.length;
+            const tMin = sirState.history[0].t;
+            const tMax = sirState.history[sirState.history.length - 1].t;
+            const tRange = Math.max(0.1, tMax - tMin);
+
+            // S curve
+            ctx.beginPath();
+            sirState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw2;
+                const py = gy2 + gh2 - (h.S / pop) * gh2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#42a5f5"; ctx.lineWidth = 2; ctx.stroke();
+
+            // I curve
+            ctx.beginPath();
+            sirState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw2;
+                const py = gy2 + gh2 - (h.I / pop) * gh2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ef5350"; ctx.lineWidth = 2; ctx.stroke();
+
+            // R curve
+            ctx.beginPath();
+            sirState.history.forEach((h, i) => {
+                const px = gx + ((h.t - tMin) / tRange) * gw2;
+                const py = gy2 + gh2 - (h.R / pop) * gh2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2; ctx.stroke();
+        }
+
+        // Legend
+        const sC = sirState.people.filter(p => p.state === "S").length;
+        const iC = sirState.people.filter(p => p.state === "I").length;
+        const rC = sirState.people.filter(p => p.state === "R").length;
+
+        ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#42a5f5"; ctx.fillText(`Susceptible: ${sC}`, gx + gw2 - 180, gy2 + 16);
+        ctx.fillStyle = "#ef5350"; ctx.fillText(`Infected: ${iC}`, gx + gw2 - 180, gy2 + 30);
+        ctx.fillStyle = "#66bb6a"; ctx.fillText(`Recovered: ${rC}`, gx + gw2 - 180, gy2 + 44);
+        ctx.fillStyle = "#ffeb3b"; ctx.fillText(`R\u2080 = \u03b2/\u03b3 = ${R0}`, gx + gw2 - 180, gy2 + 60);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ef5350">SIR Epidemic</b><br>` +
+            `S: ${sC} | I: ${iC} | R: ${rC}<br>` +
+            `R\u2080: ${R0}<br>` +
+            `t: ${sirState.t.toFixed(1)}`;
+
+        if (sirState.running) {
+            animId = requestAnimationFrame(drawEpidemic);
+        }
+    }
+
+    bindSlider("betaSIR", "val-betaSIR");
+    bindSlider("gammaSIR", "val-gammaSIR");
+    bindSlider("sirPop", "val-sirPop");
+
+    document.getElementById("btn-sir-toggle").addEventListener("click", () => {
+        sirState.running = !sirState.running;
+        document.getElementById("btn-sir-toggle").textContent = sirState.running ? "Pause" : "Resume";
+        if (sirState.running) drawEpidemic();
+    });
+    document.getElementById("btn-sir-reset").addEventListener("click", initEpidemic);
+
+    // ═══════════════════════════════════════════════════════
+    // 39. FLUID DYNAMICS (BERNOULLI'S PRINCIPLE)
+    // ═══════════════════════════════════════════════════════
+    let bernState = { t: 0, running: true, particles: [] };
+
+    function initBernoulli() {
+        bernState = { t: 0, running: true, particles: [] };
+        // Seed particles
+        for (let i = 0; i < 120; i++) {
+            bernState.particles.push({
+                x: Math.random() * canvas.width,
+                y: 0,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+        document.getElementById("btn-bern-toggle").textContent = "Pause";
+        drawBernoulli();
+    }
+
+    function getPipeY(x, W, H, constrict) {
+        const cx = W / 2;
+        const pipeHalf = H * 0.35;
+        const constrictHalf = pipeHalf * constrict;
+        // Smooth constriction using cosine
+        const dist = Math.abs(x - cx) / (W * 0.25);
+        const factor = dist < 1 ? constrictHalf + (pipeHalf - constrictHalf) * (0.5 - 0.5 * Math.cos(dist * Math.PI)) : pipeHalf;
+        return { top: H / 2 - factor, bot: H / 2 + factor, halfH: factor };
+    }
+
+    function drawBernoulli() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const flowSpeed = +document.getElementById("flowSpeed").value;
+        const constrict = +document.getElementById("constrict").value;
+        const density = +document.getElementById("flDensity").value;
+
+        const cy = H / 2;
+        const pipeHalf = H * 0.35;
+
+        if (bernState.running) {
+            bernState.t += 0.016;
+        }
+
+        // Draw pipe walls
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 2) {
+            const { top } = getPipeY(x, W, H, constrict);
+            x === 0 ? ctx.moveTo(x, top) : ctx.lineTo(x, top);
+        }
+        ctx.strokeStyle = "#546e7a";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 2) {
+            const { bot } = getPipeY(x, W, H, constrict);
+            x === 0 ? ctx.moveTo(x, bot) : ctx.lineTo(x, bot);
+        }
+        ctx.strokeStyle = "#546e7a";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Fill pipe interior
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 2) {
+            const { top } = getPipeY(x, W, H, constrict);
+            x === 0 ? ctx.moveTo(x, top) : ctx.lineTo(x, top);
+        }
+        for (let x = W; x >= 0; x -= 2) {
+            const { bot } = getPipeY(x, W, H, constrict);
+            ctx.lineTo(x, bot);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "rgba(21, 101, 192, 0.12)";
+        ctx.fill();
+
+        // Flow particles
+        if (bernState.running) {
+            bernState.particles.forEach(p => {
+                const { halfH } = getPipeY(p.x, W, H, constrict);
+                const wideHalf = pipeHalf;
+                const localSpeed = flowSpeed * (wideHalf / halfH);
+                p.x += localSpeed * 1.5;
+                if (p.x > W + 10) p.x = -10;
+            });
+        }
+
+        bernState.particles.forEach((p, i) => {
+            const { top, bot, halfH } = getPipeY(p.x, W, H, constrict);
+            const yRange = bot - top - 10;
+            // Distribute particle within pipe
+            const yFrac = (Math.sin(p.phase + i * 0.3) * 0.5 + 0.5);
+            const py = top + 5 + yFrac * yRange;
+            const wideHalf = pipeHalf;
+            const localSpeed = flowSpeed * (wideHalf / halfH);
+            const speedRatio = localSpeed / flowSpeed;
+
+            ctx.beginPath(); ctx.arc(p.x, py, 2.5, 0, Math.PI * 2);
+            // Color by speed: blue (slow) to red (fast)
+            const hue = Math.max(0, 220 - speedRatio * 100);
+            ctx.fillStyle = `hsl(${hue}, 80%, 55%)`;
+            ctx.fill();
+        });
+
+        // Pressure and velocity indicators
+        const positions = [
+            { x: W * 0.15, label: "Wide section" },
+            { x: W * 0.5, label: "Narrow section" },
+            { x: W * 0.85, label: "Wide section" }
+        ];
+
+        positions.forEach(pos => {
+            const { halfH } = getPipeY(pos.x, W, H, constrict);
+            const wideHalf = pipeHalf;
+            const areaRatio = halfH / wideHalf;
+            const velocity = flowSpeed / areaRatio;
+            const P0 = 101325; // atmospheric
+            const pressure = P0 + 0.5 * density * 1000 * (flowSpeed * flowSpeed - velocity * velocity);
+            const relPressure = ((pressure - P0) / P0 * 100);
+
+            // Velocity arrow
+            const arrowLen = velocity * 8;
+            const { top, bot } = getPipeY(pos.x, W, H, constrict);
+            ctx.beginPath();
+            ctx.moveTo(pos.x - arrowLen / 2, (top + bot) / 2);
+            ctx.lineTo(pos.x + arrowLen / 2, (top + bot) / 2);
+            ctx.strokeStyle = "#ffeb3b";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x + arrowLen / 2, (top + bot) / 2);
+            ctx.lineTo(pos.x + arrowLen / 2 - 6, (top + bot) / 2 - 4);
+            ctx.lineTo(pos.x + arrowLen / 2 - 6, (top + bot) / 2 + 4);
+            ctx.closePath();
+            ctx.fillStyle = "#ffeb3b"; ctx.fill();
+
+            // Labels
+            ctx.fillStyle = "#ccc"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(pos.label, pos.x, top - 25);
+            ctx.fillStyle = "#ffeb3b";
+            ctx.fillText(`v = ${velocity.toFixed(1)}`, pos.x, top - 12);
+            ctx.fillStyle = relPressure >= 0 ? "#66bb6a" : "#ef5350";
+            ctx.fillText(`\u0394P = ${relPressure.toFixed(1)}%`, pos.x, bot + 18);
+
+            // Manometer tubes
+            const tubeH = 60 + relPressure * 2;
+            ctx.fillStyle = "rgba(33, 150, 243, 0.4)";
+            ctx.fillRect(pos.x - 5, bot + 25, 10, Math.max(10, tubeH));
+            ctx.strokeStyle = "#546e7a"; ctx.lineWidth = 1;
+            ctx.strokeRect(pos.x - 5, bot + 25, 10, Math.max(10, tubeH));
+        });
+
+        // Bernoulli equation
+        ctx.fillStyle = "#ccc"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("P\u2081 + \u00bdpv\u2081\u00b2 = P\u2082 + \u00bdpv\u2082\u00b2  (Bernoulli's Equation)", W / 2, H - 35);
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif";
+        ctx.fillText("Higher velocity \u2192 Lower pressure  |  Continuity: A\u2081v\u2081 = A\u2082v\u2082", W / 2, H - 15);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">Bernoulli's Principle</b><br>` +
+            `Flow: ${flowSpeed.toFixed(1)}<br>` +
+            `Constriction: ${(constrict * 100).toFixed(0)}%<br>` +
+            `\u03c1: ${density} kg/m\u00b3`;
+
+        if (bernState.running) {
+            animId = requestAnimationFrame(drawBernoulli);
+        }
+    }
+
+    bindSlider("flowSpeed", "val-flowSpeed");
+    bindSlider("constrict", "val-constrict");
+    bindSlider("flDensity", "val-flDensity");
+
+    document.getElementById("btn-bern-toggle").addEventListener("click", () => {
+        bernState.running = !bernState.running;
+        document.getElementById("btn-bern-toggle").textContent = bernState.running ? "Pause" : "Resume";
+        if (bernState.running) drawBernoulli();
+    });
+    document.getElementById("btn-bern-reset").addEventListener("click", initBernoulli);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

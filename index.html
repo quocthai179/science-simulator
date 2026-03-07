@@ -47,6 +47,11 @@
         <button class="nav-btn" data-sim="hardywein">Hardy-Weinberg</button>
         <button class="nav-btn" data-sim="foodweb">Food Web</button>
         <button class="nav-btn" data-sim="membrane">Cell Membrane</button>
+        <button class="nav-btn" data-sim="respiration">Cell Respiration</button>
+        <button class="nav-btn" data-sim="magfield">Magnetic Field</button>
+        <button class="nav-btn" data-sim="chemeq">Chemical Equilibrium</button>
+        <button class="nav-btn" data-sim="epidemic">SIR Epidemic</button>
+        <button class="nav-btn" data-sim="bernoulli">Fluid Dynamics</button>
     </nav>
 
     <main>
@@ -662,6 +667,102 @@
             <div class="btn-row">
                 <button id="btn-mem-toggle">Pause</button>
                 <button id="btn-mem-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cellular Respiration Controls -->
+        <div class="controls hidden" id="ctrl-respiration">
+            <h3>Cellular Respiration</h3>
+            <p class="ctrl-hint">Glucose is broken down to produce ATP through glycolysis, Krebs cycle, and ETC.</p>
+            <label>Glucose Input: <span id="val-glucoseIn">5</span> molecules
+                <input type="range" id="glucoseIn" min="1" max="10" value="5">
+            </label>
+            <label>Oxygen Available: <span id="val-o2avail">100</span>%
+                <input type="range" id="o2avail" min="0" max="100" value="100">
+            </label>
+            <div class="btn-row">
+                <button id="btn-resp-start">Start</button>
+                <button id="btn-resp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Magnetic Field Controls -->
+        <div class="controls hidden" id="ctrl-magfield">
+            <h3>Magnetic Field</h3>
+            <p class="ctrl-hint">Visualize the magnetic field around a current-carrying wire and solenoid.</p>
+            <label>Current (I): <span id="val-current">5.0</span> A
+                <input type="range" id="current" min="0.5" max="10" value="5.0" step="0.5">
+            </label>
+            <label>Field Mode
+                <select id="magMode">
+                    <option value="wire">Straight Wire</option>
+                    <option value="solenoid">Solenoid</option>
+                    <option value="loop">Current Loop</option>
+                </select>
+            </label>
+            <label>Show Compass Needles
+                <input type="checkbox" id="showCompass" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-mag-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Chemical Equilibrium Controls -->
+        <div class="controls hidden" id="ctrl-chemeq">
+            <h3>Chemical Equilibrium (Le Chatelier)</h3>
+            <p class="ctrl-hint">Disturb an equilibrium and watch it shift to restore balance.</p>
+            <label>Forward Rate (k&sub1;): <span id="val-kf">0.05</span>
+                <input type="range" id="kf" min="0.01" max="0.15" value="0.05" step="0.01">
+            </label>
+            <label>Reverse Rate (k&sub2;): <span id="val-kr">0.03</span>
+                <input type="range" id="kr" min="0.01" max="0.15" value="0.03" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-eq-addA">Add Reactant</button>
+                <button id="btn-eq-addB">Add Product</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-eq-toggle">Pause</button>
+                <button id="btn-eq-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- SIR Epidemic Controls -->
+        <div class="controls hidden" id="ctrl-epidemic">
+            <h3>SIR Epidemic Model</h3>
+            <p class="ctrl-hint">Simulate disease spread through a population using the SIR model.</p>
+            <label>Transmission Rate (&beta;): <span id="val-betaSIR">0.3</span>
+                <input type="range" id="betaSIR" min="0.05" max="1.0" value="0.3" step="0.05">
+            </label>
+            <label>Recovery Rate (&gamma;): <span id="val-gammaSIR">0.1</span>
+                <input type="range" id="gammaSIR" min="0.01" max="0.5" value="0.1" step="0.01">
+            </label>
+            <label>Population: <span id="val-sirPop">300</span>
+                <input type="range" id="sirPop" min="50" max="500" value="300">
+            </label>
+            <div class="btn-row">
+                <button id="btn-sir-toggle">Pause</button>
+                <button id="btn-sir-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Bernoulli / Fluid Dynamics Controls -->
+        <div class="controls hidden" id="ctrl-bernoulli">
+            <h3>Fluid Dynamics (Bernoulli's Principle)</h3>
+            <p class="ctrl-hint">Observe how fluid velocity and pressure change in a constricted pipe.</p>
+            <label>Flow Speed: <span id="val-flowSpeed">3.0</span>
+                <input type="range" id="flowSpeed" min="0.5" max="8" value="3.0" step="0.5">
+            </label>
+            <label>Constriction: <span id="val-constrict">0.5</span>
+                <input type="range" id="constrict" min="0.2" max="0.9" value="0.5" step="0.05">
+            </label>
+            <label>Fluid Density: <span id="val-flDensity">1.0</span> kg/m&sup3;
+                <input type="range" id="flDensity" min="0.5" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-bern-toggle">Pause</button>
+                <button id="btn-bern-reset">Reset</button>
             </div>
         </div>
 
