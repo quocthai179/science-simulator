@@ -180,6 +180,17 @@ canvas {
     color: #ccc;
 }
 
+.controls select {
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px;
+    background: #1a1d4a;
+    color: #ccc;
+    border: 1px solid #2a2f6e;
+    border-radius: 6px;
+    font-size: 0.88rem;
+}
+
 .ctrl-hint {
     font-size: 0.8rem;
     color: #667;

@@ -23,6 +23,10 @@
         <button class="nav-btn" data-sim="doubleslit">Double Slit</button>
         <button class="nav-btn" data-sim="life">Game of Life</button>
         <button class="nav-btn" data-sim="emspectrum">EM Spectrum</button>
+        <button class="nav-btn" data-sim="lens">Lens Optics</button>
+        <button class="nav-btn" data-sim="nbody">N-Body Gravity</button>
+        <button class="nav-btn" data-sim="decay">Radioactive Decay</button>
+        <button class="nav-btn" data-sim="thermo">Thermodynamics</button>
     </nav>
 
     <main>
@@ -195,6 +199,84 @@
             </label>
             <div class="btn-row">
                 <button id="btn-em-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Lens Optics Controls -->
+        <div class="controls hidden" id="ctrl-lens">
+            <h3>Lens Optics (Ray Tracing)</h3>
+            <label>Focal Length: <span id="val-focal">120</span> px
+                <input type="range" id="focal" min="40" max="250" value="120">
+            </label>
+            <label>Object Distance: <span id="val-objDist">250</span> px
+                <input type="range" id="objDist" min="60" max="400" value="250">
+            </label>
+            <label>Object Height: <span id="val-objHeight">80</span> px
+                <input type="range" id="objHeight" min="20" max="150" value="80">
+            </label>
+            <label>Lens Type
+                <select id="lensType">
+                    <option value="convex">Convex (Converging)</option>
+                    <option value="concave">Concave (Diverging)</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-lens-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- N-Body Gravity Controls -->
+        <div class="controls hidden" id="ctrl-nbody">
+            <h3>N-Body Gravitational Simulation</h3>
+            <p class="ctrl-hint">Watch bodies interact through gravity. Try different presets!</p>
+            <label>Time Step: <span id="val-nbStep">1.0</span>x
+                <input type="range" id="nbStep" min="0.2" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Show Trails
+                <input type="checkbox" id="nbTrails" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-nb-binary">Binary Star</button>
+                <button id="btn-nb-triple">Triple System</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-nb-cluster">Star Cluster</button>
+                <button id="btn-nb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Radioactive Decay Controls -->
+        <div class="controls hidden" id="ctrl-decay">
+            <h3>Radioactive Decay</h3>
+            <label>Half-Life: <span id="val-halflife">3.0</span> s
+                <input type="range" id="halflife" min="0.5" max="10" value="3.0" step="0.5">
+            </label>
+            <label>Initial Atoms: <span id="val-atoms">400</span>
+                <input type="range" id="atoms" min="50" max="800" value="400">
+            </label>
+            <div class="btn-row">
+                <button id="btn-decay-start">Start Decay</button>
+                <button id="btn-decay-reset">Reset</button>
+            </div>
+            <div id="decay-stats"></div>
+        </div>
+
+        <!-- Thermodynamics Controls -->
+        <div class="controls hidden" id="ctrl-thermo">
+            <h3>Heat Transfer Simulation</h3>
+            <p class="ctrl-hint">Two bodies exchange heat until thermal equilibrium. Watch temperature equalize.</p>
+            <label>Body A Temperature: <span id="val-tempA">800</span> K
+                <input type="range" id="tempA" min="100" max="1200" value="800">
+            </label>
+            <label>Body B Temperature: <span id="val-tempB">200</span> K
+                <input type="range" id="tempB" min="100" max="1200" value="200">
+            </label>
+            <label>Conductivity: <span id="val-conduct">0.05</span>
+                <input type="range" id="conduct" min="0.005" max="0.15" value="0.05" step="0.005">
+            </label>
+            <div class="btn-row">
+                <button id="btn-thermo-start">Start</button>
+                <button id="btn-thermo-reset">Reset</button>
             </div>
         </div>
 

@@ -38,6 +38,10 @@
             case "doubleslit":  initDoubleSlit();   break;
             case "life":        initLife();         break;
             case "emspectrum":  initEMSpectrum();   break;
+            case "lens":        initLens();         break;
+            case "nbody":       initNBody();        break;
+            case "decay":       initDecay();        break;
+            case "thermo":      initThermo();       break;
         }
     }
 
@@ -1484,6 +1488,756 @@
     bindSlider("emfreq", "val-emfreq", () => { /* live update */ });
     document.getElementById("showPhoton").addEventListener("change", () => {});
     document.getElementById("btn-em-reset").addEventListener("click", initEMSpectrum);
+
+    // ═══════════════════════════════════════════════════════
+    // 11. LENS OPTICS (RAY TRACING)
+    // ═══════════════════════════════════════════════════════
+
+    function initLens() {
+        drawLens();
+    }
+
+    function drawLens() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const f = +document.getElementById("focal").value;
+        const objDist = +document.getElementById("objDist").value;
+        const objH = +document.getElementById("objHeight").value;
+        const lensType = document.getElementById("lensType").value;
+        const fSign = lensType === "convex" ? f : -f;
+
+        const lensX = W / 2;
+        const axisY = H / 2 + 20;
+
+        // Optical axis
+        ctx.beginPath();
+        ctx.moveTo(0, axisY);
+        ctx.lineTo(W, axisY);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Lens
+        ctx.beginPath();
+        if (lensType === "convex") {
+            ctx.ellipse(lensX, axisY, 8, 180, 0, 0, Math.PI * 2);
+        } else {
+            ctx.moveTo(lensX, axisY - 180);
+            ctx.bezierCurveTo(lensX + 15, axisY - 90, lensX + 15, axisY + 90, lensX, axisY + 180);
+            ctx.bezierCurveTo(lensX + 5, axisY + 90, lensX + 5, axisY - 90, lensX, axisY - 180);
+        }
+        ctx.fillStyle = "rgba(100, 180, 255, 0.2)";
+        ctx.fill();
+        ctx.strokeStyle = "#64b5f6";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Focal points
+        ctx.fillStyle = "#ffeb3b";
+        ctx.beginPath(); ctx.arc(lensX - Math.abs(fSign), axisY, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(lensX + Math.abs(fSign), axisY, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#aab";
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("F", lensX - Math.abs(fSign), axisY + 16);
+        ctx.fillText("F'", lensX + Math.abs(fSign), axisY + 16);
+
+        // Object (arrow on left)
+        const objX = lensX - objDist;
+        ctx.strokeStyle = "#66bb6a";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(objX, axisY);
+        ctx.lineTo(objX, axisY - objH);
+        ctx.stroke();
+        // Arrowhead
+        ctx.beginPath();
+        ctx.moveTo(objX, axisY - objH);
+        ctx.lineTo(objX - 6, axisY - objH + 10);
+        ctx.lineTo(objX + 6, axisY - objH + 10);
+        ctx.closePath();
+        ctx.fillStyle = "#66bb6a";
+        ctx.fill();
+        ctx.font = "11px sans-serif";
+        ctx.fillText("Object", objX, axisY + 20);
+
+        // Thin lens formula: 1/v = 1/f - 1/u  (using sign convention)
+        const imgDist = 1 / (1 / fSign + 1 / objDist);
+        const magnification = imgDist / objDist;
+        const imgH = -magnification * objH;
+        const imgX = lensX + imgDist;
+
+        // Image (arrow)
+        const isVirtual = (lensType === "convex" && objDist < f) || lensType === "concave";
+        const imgColor = isVirtual ? "rgba(239, 83, 80, 0.5)" : "#ef5350";
+
+        if (isVirtual) {
+            ctx.setLineDash([6, 4]);
+        }
+        ctx.strokeStyle = imgColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(imgX, axisY);
+        ctx.lineTo(imgX, axisY - imgH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Arrowhead
+        ctx.beginPath();
+        const aDir = imgH > 0 ? 10 : -10;
+        ctx.moveTo(imgX, axisY - imgH);
+        ctx.lineTo(imgX - 6, axisY - imgH + aDir);
+        ctx.lineTo(imgX + 6, axisY - imgH + aDir);
+        ctx.closePath();
+        ctx.fillStyle = imgColor;
+        ctx.fill();
+        ctx.fillStyle = "#ef5350";
+        ctx.fillText(isVirtual ? "Virtual Image" : "Real Image", imgX, axisY + 20);
+
+        // Ray 1: parallel to axis → through focal point
+        ctx.strokeStyle = "rgba(255, 235, 59, 0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(objX, axisY - objH);
+        ctx.lineTo(lensX, axisY - objH);
+        if (lensType === "convex") {
+            ctx.lineTo(lensX + 400, axisY + (objH / fSign) * 400);
+        } else {
+            ctx.lineTo(lensX + 400, axisY - objH + (objH / Math.abs(fSign)) * 400);
+        }
+        ctx.stroke();
+
+        // Ray 2: through center of lens (undeviated)
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.6)";
+        ctx.beginPath();
+        ctx.moveTo(objX, axisY - objH);
+        const slope = -objH / (-objDist);
+        ctx.lineTo(lensX + 400, axisY - objH + slope * (objDist + 400));
+        ctx.stroke();
+
+        // Ray 3: through focal point → parallel
+        ctx.strokeStyle = "rgba(171, 71, 188, 0.6)";
+        ctx.beginPath();
+        ctx.moveTo(objX, axisY - objH);
+        if (lensType === "convex") {
+            const focalX = lensX - f;
+            const slopeF = (axisY - objH - axisY) / (objX - focalX);
+            const yAtLens = axisY + slopeF * (lensX - focalX);
+            ctx.lineTo(lensX, yAtLens);
+            ctx.lineTo(lensX + 400, yAtLens);
+        } else {
+            const focalX = lensX + f;
+            const slopeF = ((axisY) - (axisY - objH)) / (focalX - objX);
+            const yAtLens = axisY - objH + slopeF * (lensX - objX);
+            ctx.lineTo(lensX, yAtLens);
+            ctx.lineTo(lensX + 400, yAtLens);
+        }
+        ctx.stroke();
+
+        // Virtual ray extensions (dashed)
+        if (isVirtual) {
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(239, 83, 80, 0.3)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(lensX, axisY - objH);
+            ctx.lineTo(imgX, axisY - imgH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Legend
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(255,235,59,0.7)"; ctx.fillText("── Parallel ray", 14, 20);
+        ctx.fillStyle = "rgba(0,212,255,0.7)"; ctx.fillText("── Central ray", 14, 36);
+        ctx.fillStyle = "rgba(171,71,188,0.7)"; ctx.fillText("── Focal ray", 14, 52);
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#64b5f6">Lens Optics</b><br>` +
+            `Type: ${lensType}<br>` +
+            `f: ${f} px<br>` +
+            `u: ${objDist} px<br>` +
+            `v: ${imgDist.toFixed(0)} px<br>` +
+            `M: ${magnification.toFixed(2)}x<br>` +
+            `${isVirtual ? "Virtual" : "Real"}, ${magnification < 0 ? "Inverted" : "Upright"}`;
+    }
+
+    bindSlider("focal", "val-focal", () => { if (currentSim === "lens") drawLens(); });
+    bindSlider("objDist", "val-objDist", () => { if (currentSim === "lens") drawLens(); });
+    bindSlider("objHeight", "val-objHeight", () => { if (currentSim === "lens") drawLens(); });
+    document.getElementById("lensType").addEventListener("change", () => { if (currentSim === "lens") drawLens(); });
+    document.getElementById("btn-lens-reset").addEventListener("click", () => {
+        document.getElementById("focal").value = 120;
+        document.getElementById("val-focal").textContent = "120";
+        document.getElementById("objDist").value = 250;
+        document.getElementById("val-objDist").textContent = "250";
+        document.getElementById("objHeight").value = 80;
+        document.getElementById("val-objHeight").textContent = "80";
+        drawLens();
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // 12. N-BODY GRAVITATIONAL SIMULATION
+    // ═══════════════════════════════════════════════════════
+    let nbBodies = [];
+
+    function initNBody() {
+        // Default: binary star
+        setupBinary();
+        drawNBody();
+    }
+
+    function setupBinary() {
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        nbBodies = [
+            { x: cx - 80, y: cy, vx: 0, vy: -1.2, mass: 500, r: 14, color: "#fff176", trail: [] },
+            { x: cx + 80, y: cy, vx: 0, vy: 1.2, mass: 500, r: 14, color: "#ff8a65", trail: [] }
+        ];
+    }
+
+    function setupTriple() {
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        const R = 120;
+        nbBodies = [];
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2 - Math.PI / 2;
+            const vAngle = angle + Math.PI / 2;
+            const colors = ["#ff5252", "#69f0ae", "#448aff"];
+            nbBodies.push({
+                x: cx + R * Math.cos(angle),
+                y: cy + R * Math.sin(angle),
+                vx: 0.9 * Math.cos(vAngle),
+                vy: 0.9 * Math.sin(vAngle),
+                mass: 400, r: 12,
+                color: colors[i],
+                trail: []
+            });
+        }
+    }
+
+    function setupCluster() {
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        nbBodies = [
+            { x: cx, y: cy, vx: 0, vy: 0, mass: 2000, r: 20, color: "#fff176", trail: [] }
+        ];
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const dist = 100 + Math.random() * 100;
+            const speed = Math.sqrt(2000 / dist) * 0.6;
+            const vAngle = angle + Math.PI / 2;
+            const hue = (i / 8) * 360;
+            nbBodies.push({
+                x: cx + dist * Math.cos(angle),
+                y: cy + dist * Math.sin(angle),
+                vx: speed * Math.cos(vAngle),
+                vy: speed * Math.sin(vAngle),
+                mass: 5 + Math.random() * 15,
+                r: 4 + Math.random() * 3,
+                color: `hsl(${hue}, 70%, 65%)`,
+                trail: []
+            });
+        }
+    }
+
+    function drawNBody() {
+        const W = canvas.width, H = canvas.height;
+        const dt = +document.getElementById("nbStep").value;
+        const showTrails = document.getElementById("nbTrails").checked;
+        ctx.clearRect(0, 0, W, H);
+
+        // Starfield
+        for (let i = 0; i < 80; i++) {
+            const sx = ((i * 7919 + 17) % W);
+            const sy = ((i * 6271 + 17) % H);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,255,255,${0.15 + (i % 4) * 0.1})`;
+            ctx.fill();
+        }
+
+        const G = 0.5;
+
+        // Compute forces
+        for (let i = 0; i < nbBodies.length; i++) {
+            let fx = 0, fy = 0;
+            for (let j = 0; j < nbBodies.length; j++) {
+                if (i === j) continue;
+                const dx = nbBodies[j].x - nbBodies[i].x;
+                const dy = nbBodies[j].y - nbBodies[i].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 10) continue;
+                const force = G * nbBodies[i].mass * nbBodies[j].mass / (dist * dist);
+                fx += force * dx / dist;
+                fy += force * dy / dist;
+            }
+            nbBodies[i].vx += (fx / nbBodies[i].mass) * dt;
+            nbBodies[i].vy += (fy / nbBodies[i].mass) * dt;
+        }
+
+        // Update positions and trails
+        nbBodies.forEach(b => {
+            b.x += b.vx * dt;
+            b.y += b.vy * dt;
+            b.trail.push({ x: b.x, y: b.y });
+            if (b.trail.length > 400) b.trail.shift();
+        });
+
+        // Draw trails
+        if (showTrails) {
+            nbBodies.forEach(b => {
+                if (b.trail.length < 2) return;
+                for (let i = 1; i < b.trail.length; i++) {
+                    const alpha = (i / b.trail.length) * 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(b.trail[i - 1].x, b.trail[i - 1].y);
+                    ctx.lineTo(b.trail[i].x, b.trail[i].y);
+                    ctx.strokeStyle = b.color.replace(")", `, ${alpha})`).replace("rgb", "rgba").replace("hsl", "hsla");
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Draw bodies
+        nbBodies.forEach(b => {
+            const grad = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.r + 6);
+            grad.addColorStop(0, "#ffffff");
+            grad.addColorStop(0.4, b.color);
+            grad.addColorStop(1, "transparent");
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r + 6, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = b.color;
+            ctx.fill();
+        });
+
+        // Check bounds — recenter if all escaped
+        const allOOB = nbBodies.every(b => b.x < -200 || b.x > W + 200 || b.y < -200 || b.y > H + 200);
+        if (allOOB) { initNBody(); return; }
+
+        overlay.innerHTML =
+            `<b style="color:#fff176">N-Body Gravity</b><br>` +
+            `Bodies: ${nbBodies.length}<br>` +
+            `dt: ${dt}x`;
+
+        animId = requestAnimationFrame(drawNBody);
+    }
+
+    bindSlider("nbStep", "val-nbStep");
+    document.getElementById("btn-nb-binary").addEventListener("click", () => {
+        cancelAnimationFrame(animId); setupBinary(); drawNBody();
+    });
+    document.getElementById("btn-nb-triple").addEventListener("click", () => {
+        cancelAnimationFrame(animId); setupTriple(); drawNBody();
+    });
+    document.getElementById("btn-nb-cluster").addEventListener("click", () => {
+        cancelAnimationFrame(animId); setupCluster(); drawNBody();
+    });
+    document.getElementById("btn-nb-reset").addEventListener("click", () => {
+        cancelAnimationFrame(animId); initNBody();
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // 13. RADIOACTIVE DECAY
+    // ═══════════════════════════════════════════════════════
+    let decayState = {};
+
+    function initDecay() {
+        const n = +document.getElementById("atoms").value;
+        const cols = Math.ceil(Math.sqrt(n * (canvas.width / canvas.height)));
+        const rows = Math.ceil(n / cols);
+        decayState = {
+            atoms: Array.from({ length: n }, () => ({ decayed: false, decayTime: -1 })),
+            cols, rows,
+            running: false,
+            startTime: 0,
+            elapsed: 0,
+            history: []
+        };
+        drawDecay();
+    }
+
+    function drawDecay() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const halflife = +document.getElementById("halflife").value;
+        const { atoms, cols, rows } = decayState;
+        const total = atoms.length;
+
+        // Grid area
+        const gridW = W * 0.55;
+        const gridH = H - 40;
+        const cellW = gridW / cols;
+        const cellH = gridH / rows;
+        const offsetX = 20;
+        const offsetY = 20;
+
+        let remaining = 0;
+
+        // If running, decay atoms probabilistically
+        if (decayState.running) {
+            decayState.elapsed += 1 / 60;
+            const decayProb = 1 - Math.pow(0.5, 1 / (halflife * 60));
+            atoms.forEach(a => {
+                if (!a.decayed && Math.random() < decayProb) {
+                    a.decayed = true;
+                    a.decayTime = decayState.elapsed;
+                }
+            });
+        }
+
+        // Draw atoms grid
+        atoms.forEach((a, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = offsetX + col * cellW + cellW / 2;
+            const y = offsetY + row * cellH + cellH / 2;
+            const r = Math.min(cellW, cellH) * 0.35;
+
+            if (a.decayed) {
+                // Flash effect on recent decay
+                const age = decayState.elapsed - a.decayTime;
+                if (age < 0.3) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, r + 4, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 235, 59, ${0.5 - age * 1.5})`;
+                    ctx.fill();
+                }
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = "#37474f";
+                ctx.fill();
+            } else {
+                remaining++;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = "#66bb6a";
+                ctx.fill();
+            }
+        });
+
+        // Record history
+        if (decayState.running) {
+            decayState.history.push({ t: decayState.elapsed, n: remaining });
+        }
+
+        // Decay curve graph
+        const graphX = W * 0.6;
+        const graphW2 = W * 0.35;
+        const graphY = 30;
+        const graphH2 = H - 60;
+
+        ctx.fillStyle = "rgba(16, 20, 58, 0.8)";
+        ctx.fillRect(graphX, graphY, graphW2, graphH2);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY, graphW2, graphH2);
+
+        // Axes labels
+        ctx.fillStyle = "#aab";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Time (s)", graphX + graphW2 / 2, graphY + graphH2 + 16);
+        ctx.save();
+        ctx.translate(graphX - 8, graphY + graphH2 / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("Atoms Remaining", 0, 0);
+        ctx.restore();
+        ctx.textAlign = "start";
+
+        // Theoretical curve
+        const maxT = Math.max(halflife * 5, decayState.elapsed + 1);
+        ctx.beginPath();
+        for (let px = 0; px < graphW2; px++) {
+            const t = (px / graphW2) * maxT;
+            const n = total * Math.pow(0.5, t / halflife);
+            const y = graphY + graphH2 - (n / total) * graphH2;
+            px === 0 ? ctx.moveTo(graphX + px, y) : ctx.lineTo(graphX + px, y);
+        }
+        ctx.strokeStyle = "rgba(255, 152, 0, 0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Actual data
+        if (decayState.history.length > 1) {
+            ctx.beginPath();
+            decayState.history.forEach((h, i) => {
+                const px = graphX + (h.t / maxT) * graphW2;
+                const py = graphY + graphH2 - (h.n / total) * graphH2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#66bb6a";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Half-life marker
+        const hlX = graphX + (halflife / maxT) * graphW2;
+        ctx.beginPath();
+        ctx.moveTo(hlX, graphY);
+        ctx.lineTo(hlX, graphY + graphH2);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = "#888";
+        ctx.font = "9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("t\u00BD", hlX, graphY - 4);
+        ctx.textAlign = "start";
+
+        // Legend
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = "rgba(255,152,0,0.7)"; ctx.fillText("-- Theory", graphX + 8, graphY + 16);
+        ctx.fillStyle = "#66bb6a"; ctx.fillText("── Actual", graphX + 8, graphY + 30);
+
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Radioactive Decay</b><br>` +
+            `Remaining: ${remaining}/${total}<br>` +
+            `Decayed: ${total - remaining}<br>` +
+            `t: ${decayState.elapsed.toFixed(1)} s<br>` +
+            `t\u00BD: ${halflife} s`;
+
+        document.getElementById("decay-stats").innerHTML =
+            `Remaining: <b>${remaining}</b> / ${total} (${(remaining / total * 100).toFixed(1)}%)`;
+
+        if (decayState.running && remaining > 0) {
+            animId = requestAnimationFrame(drawDecay);
+        } else if (remaining === 0 && decayState.running) {
+            decayState.running = false;
+        }
+    }
+
+    bindSlider("halflife", "val-halflife");
+    bindSlider("atoms", "val-atoms", () => initDecay());
+    document.getElementById("btn-decay-start").addEventListener("click", () => {
+        if (!decayState.running) {
+            decayState.running = true;
+            decayState.elapsed = 0;
+            decayState.history = [];
+            decayState.atoms.forEach(a => { a.decayed = false; a.decayTime = -1; });
+            drawDecay();
+        }
+    });
+    document.getElementById("btn-decay-reset").addEventListener("click", initDecay);
+
+    // ═══════════════════════════════════════════════════════
+    // 14. THERMODYNAMICS (HEAT TRANSFER)
+    // ═══════════════════════════════════════════════════════
+    let thermoState = {};
+
+    function initThermo() {
+        thermoState = {
+            tA: +document.getElementById("tempA").value,
+            tB: +document.getElementById("tempB").value,
+            running: false,
+            history: [],
+            time: 0
+        };
+        drawThermo();
+    }
+
+    function tempToColor(t) {
+        // Blue (cold) → Red (hot)
+        const norm = Math.max(0, Math.min(1, (t - 100) / 1100));
+        const r = Math.floor(norm * 255);
+        const b = Math.floor((1 - norm) * 255);
+        const g = Math.floor(norm < 0.5 ? norm * 2 * 100 : (1 - norm) * 2 * 100);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function drawThermo() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const conductivity = +document.getElementById("conduct").value;
+
+        if (thermoState.running) {
+            const dQ = conductivity * (thermoState.tA - thermoState.tB);
+            thermoState.tA -= dQ;
+            thermoState.tB += dQ;
+            thermoState.time += 1 / 60;
+            thermoState.history.push({ t: thermoState.time, a: thermoState.tA, b: thermoState.tB });
+            if (thermoState.history.length > 600) thermoState.history.shift();
+        }
+
+        const { tA, tB } = thermoState;
+
+        // Body A (left)
+        const boxW = 160, boxH = 200;
+        const aX = 100, aY = 80;
+        const bX = W - 100 - boxW, bY = 80;
+
+        // Body A
+        ctx.fillStyle = tempToColor(tA);
+        ctx.fillRect(aX, aY, boxW, boxH);
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(aX, aY, boxW, boxH);
+
+        // Body B
+        ctx.fillStyle = tempToColor(tB);
+        ctx.fillRect(bX, bY, boxW, boxH);
+        ctx.strokeRect(bX, bY, boxW, boxH);
+
+        // Labels
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${tA.toFixed(0)} K`, aX + boxW / 2, aY + boxH / 2 + 8);
+        ctx.fillText(`${tB.toFixed(0)} K`, bX + boxW / 2, bY + boxH / 2 + 8);
+        ctx.font = "13px sans-serif";
+        ctx.fillText("Body A (Hot)", aX + boxW / 2, aY - 10);
+        ctx.fillText("Body B (Cold)", bX + boxW / 2, bY - 10);
+
+        // Heat flow arrow
+        const arrowY = aY + boxH / 2;
+        const arrowX1 = aX + boxW + 10;
+        const arrowX2 = bX - 10;
+        const dT = Math.abs(tA - tB);
+
+        if (dT > 1) {
+            const arrowMid = (arrowX1 + arrowX2) / 2;
+            const flowDir = tA > tB ? 1 : -1;
+
+            // Animated heat particles
+            if (thermoState.running) {
+                for (let i = 0; i < 8; i++) {
+                    const phase = (thermoState.time * 3 + i * 0.4) % 1;
+                    const px = arrowX1 + phase * (arrowX2 - arrowX1) * flowDir;
+                    const py = arrowY + Math.sin(phase * Math.PI * 4 + i) * 15;
+                    const alpha = Math.sin(phase * Math.PI) * 0.7;
+                    ctx.beginPath();
+                    ctx.arc(flowDir > 0 ? px : arrowX2 - (px - arrowX1), py, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 152, 0, ${alpha})`;
+                    ctx.fill();
+                }
+            }
+
+            // Arrow
+            ctx.beginPath();
+            ctx.moveTo(flowDir > 0 ? arrowX1 : arrowX2, arrowY);
+            ctx.lineTo(flowDir > 0 ? arrowX2 : arrowX1, arrowY);
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Arrowhead
+            const tipX = flowDir > 0 ? arrowX2 : arrowX1;
+            ctx.beginPath();
+            ctx.moveTo(tipX, arrowY);
+            ctx.lineTo(tipX - flowDir * 10, arrowY - 6);
+            ctx.lineTo(tipX - flowDir * 10, arrowY + 6);
+            ctx.closePath();
+            ctx.fillStyle = "#ff9800";
+            ctx.fill();
+
+            ctx.fillStyle = "#ff9800";
+            ctx.font = "12px sans-serif";
+            ctx.fillText("Q = " + (conductivity * dT).toFixed(1), arrowMid, arrowY - 20);
+        } else {
+            ctx.fillStyle = "#4caf50";
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Thermal Equilibrium!", (aX + boxW + bX) / 2, arrowY);
+            if (thermoState.running) thermoState.running = false;
+        }
+
+        // Temperature graph
+        const graphX = 60, graphY2 = 340, graphW2 = W - 120, graphH2 = 140;
+        ctx.fillStyle = "rgba(16, 20, 58, 0.8)";
+        ctx.fillRect(graphX, graphY2, graphW2, graphH2);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY2, graphW2, graphH2);
+
+        ctx.fillStyle = "#aab";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Temperature vs Time", graphX + 8, graphY2 - 6);
+
+        // Scale markers
+        ctx.fillStyle = "#556";
+        ctx.font = "9px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText("1200K", graphX - 4, graphY2 + 10);
+        ctx.fillText("100K", graphX - 4, graphY2 + graphH2);
+
+        if (thermoState.history.length > 1) {
+            const maxT = thermoState.history[thermoState.history.length - 1].t;
+            // Body A line
+            ctx.beginPath();
+            thermoState.history.forEach((h, i) => {
+                const px = graphX + (h.t / maxT) * graphW2;
+                const py = graphY2 + graphH2 - ((h.a - 100) / 1100) * graphH2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ef5350";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Body B line
+            ctx.beginPath();
+            thermoState.history.forEach((h, i) => {
+                const px = graphX + (h.t / maxT) * graphW2;
+                const py = graphY2 + graphH2 - ((h.b - 100) / 1100) * graphH2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#42a5f5";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Equilibrium line
+            const eq = (thermoState.history[0].a + thermoState.history[0].b) / 2;
+            const eqY = graphY2 + graphH2 - ((eq - 100) / 1100) * graphH2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(graphX, eqY);
+            ctx.lineTo(graphX + graphW2, eqY);
+            ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        ctx.textAlign = "start";
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = "#ef5350"; ctx.fillText("Body A", graphX + graphW2 - 90, graphY2 + 16);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("Body B", graphX + graphW2 - 90, graphY2 + 30);
+
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Heat Transfer</b><br>` +
+            `A: ${tA.toFixed(0)} K<br>` +
+            `B: ${tB.toFixed(0)} K<br>` +
+            `\u0394T: ${dT.toFixed(0)} K<br>` +
+            `t: ${thermoState.time.toFixed(1)} s`;
+
+        if (thermoState.running) {
+            animId = requestAnimationFrame(drawThermo);
+        }
+    }
+
+    bindSlider("tempA", "val-tempA", v => { if (!thermoState.running) { thermoState.tA = v; drawThermo(); } });
+    bindSlider("tempB", "val-tempB", v => { if (!thermoState.running) { thermoState.tB = v; drawThermo(); } });
+    bindSlider("conduct", "val-conduct");
+
+    document.getElementById("btn-thermo-start").addEventListener("click", () => {
+        if (!thermoState.running) {
+            thermoState.running = true;
+            thermoState.time = 0;
+            thermoState.history = [];
+            thermoState.tA = +document.getElementById("tempA").value;
+            thermoState.tB = +document.getElementById("tempB").value;
+            drawThermo();
+        }
+    });
+    document.getElementById("btn-thermo-reset").addEventListener("click", initThermo);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
