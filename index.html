@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Science Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Science Simulator</h1>
+        <p class="subtitle">Interactive Physics, Chemistry &amp; Astronomy Visualizations</p>
+    </header>
+
+    <nav id="sim-nav">
+        <button class="nav-btn active" data-sim="projectile">Projectile Motion</button>
+        <button class="nav-btn" data-sim="pendulum">Pendulum</button>
+        <button class="nav-btn" data-sim="wave">Wave Interference</button>
+        <button class="nav-btn" data-sim="gas">Gas Particles</button>
+        <button class="nav-btn" data-sim="orbit">Orbital Mechanics</button>
+    </nav>
+
+    <main>
+        <div class="sim-container">
+            <canvas id="simCanvas" width="900" height="520"></canvas>
+            <div id="info-overlay"></div>
+        </div>
+
+        <!-- Projectile Motion Controls -->
+        <div class="controls" id="ctrl-projectile">
+            <h3>Projectile Motion</h3>
+            <label>Launch Angle: <span id="val-angle">45</span>&deg;
+                <input type="range" id="angle" min="5" max="85" value="45">
+            </label>
+            <label>Initial Velocity: <span id="val-velocity">50</span> m/s
+                <input type="range" id="velocity" min="10" max="100" value="50">
+            </label>
+            <label>Gravity: <span id="val-gravity">9.8</span> m/s&sup2;
+                <input type="range" id="gravity" min="1" max="25" value="9.8" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-launch">Launch</button>
+                <button id="btn-reset-proj">Reset</button>
+            </div>
+        </div>
+
+        <!-- Pendulum Controls -->
+        <div class="controls hidden" id="ctrl-pendulum">
+            <h3>Simple Pendulum</h3>
+            <label>Length: <span id="val-length">200</span> px
+                <input type="range" id="pendLength" min="80" max="350" value="200">
+            </label>
+            <label>Initial Angle: <span id="val-pendAngle">30</span>&deg;
+                <input type="range" id="pendAngle" min="5" max="80" value="30">
+            </label>
+            <label>Damping: <span id="val-damping">0.999</span>
+                <input type="range" id="damping" min="0.980" max="1.000" value="0.999" step="0.001">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pend-start">Start</button>
+                <button id="btn-pend-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Wave Controls -->
+        <div class="controls hidden" id="ctrl-wave">
+            <h3>Wave Interference</h3>
+            <label>Frequency 1: <span id="val-freq1">0.03</span>
+                <input type="range" id="freq1" min="0.01" max="0.08" value="0.03" step="0.005">
+            </label>
+            <label>Frequency 2: <span id="val-freq2">0.04</span>
+                <input type="range" id="freq2" min="0.01" max="0.08" value="0.04" step="0.005">
+            </label>
+            <label>Amplitude: <span id="val-amp">60</span>
+                <input type="range" id="amplitude" min="20" max="120" value="60">
+            </label>
+            <div class="btn-row">
+                <button id="btn-wave-toggle">Pause</button>
+            </div>
+        </div>
+
+        <!-- Gas Controls -->
+        <div class="controls hidden" id="ctrl-gas">
+            <h3>Ideal Gas Simulation</h3>
+            <label>Particles: <span id="val-particles">80</span>
+                <input type="range" id="numParticles" min="10" max="200" value="80">
+            </label>
+            <label>Temperature: <span id="val-temp">300</span> K
+                <input type="range" id="temperature" min="50" max="800" value="300">
+            </label>
+            <div class="btn-row">
+                <button id="btn-gas-reset">Reset</button>
+            </div>
+            <div id="gas-stats"></div>
+        </div>
+
+        <!-- Orbit Controls -->
+        <div class="controls hidden" id="ctrl-orbit">
+            <h3>Orbital Mechanics</h3>
+            <label>Planet Mass: <span id="val-pmass">1.0</span>x
+                <input type="range" id="planetMass" min="0.2" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Orbital Velocity: <span id="val-ovel">1.0</span>x
+                <input type="range" id="orbVel" min="0.3" max="2.0" value="1.0" step="0.05">
+            </label>
+            <label>Show Trail
+                <input type="checkbox" id="showTrail" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-orbit-reset">Reset</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="simulations.js"></script>
+</body>
+</html>
