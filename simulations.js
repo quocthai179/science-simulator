@@ -72,6 +72,11 @@
             case "protein":     initProtein();      break;
             case "carbon":      initCarbon();       break;
             case "spectral":    initSpectral();     break;
+            case "redshift":    initRedshift();     break;
+            case "qho":         initQHO();          break;
+            case "tectonic":    initTectonic();     break;
+            case "titration":   initTitration();    break;
+            case "lorenz":      initLorenz();       break;
         }
     }
 
@@ -8107,6 +8112,982 @@
     document.getElementById("element").addEventListener("change", () => { if (currentSim === "spectral") drawSpectral(); });
     document.getElementById("showELevels").addEventListener("change", () => { if (currentSim === "spectral") drawSpectral(); });
     document.getElementById("btn-spec-reset").addEventListener("click", initSpectral);
+
+    // ═══════════════════════════════════════════════════════
+    // 45. COSMIC REDSHIFT
+    // ═══════════════════════════════════════════════════════
+
+    function initRedshift() {
+        drawRedshift();
+    }
+
+    function wlColor(wl) {
+        let r = 0, g = 0, b = 0;
+        if (wl >= 380 && wl < 440) { r = -(wl - 440) / 60; b = 1; }
+        else if (wl >= 440 && wl < 490) { g = (wl - 440) / 50; b = 1; }
+        else if (wl >= 490 && wl < 510) { g = 1; b = -(wl - 510) / 20; }
+        else if (wl >= 510 && wl < 580) { r = (wl - 510) / 70; g = 1; }
+        else if (wl >= 580 && wl < 645) { r = 1; g = -(wl - 645) / 65; }
+        else if (wl >= 645 && wl <= 780) { r = 1; }
+        else if (wl > 780) { r = 0.7; } // infrared - dark red
+        return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+    }
+
+    function drawRedshift() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const v = +document.getElementById("recession").value; // fraction of c
+        const origWL = +document.getElementById("origWL").value;
+
+        // Relativistic Doppler: λ_obs = λ_emit * sqrt((1+β)/(1-β))
+        const z = Math.sqrt((1 + v) / (1 - v)) - 1;
+        const obsWL = origWL * (1 + z);
+
+        // Starfield
+        for (let i = 0; i < 100; i++) {
+            const sx = (i * 137.5 + 20) % W;
+            const sy = (i * 83.3 + i * i * 0.07 + 10) % H;
+            ctx.beginPath(); ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(200,200,255,${0.15 + (i % 4) * 0.1})`;
+            ctx.fill();
+        }
+
+        // Galaxy (emitter) on left
+        const galX = 120, galY = H / 2 - 40;
+        const galGrad = ctx.createRadialGradient(galX, galY, 5, galX, galY, 50);
+        galGrad.addColorStop(0, wlColor(origWL));
+        galGrad.addColorStop(0.5, `rgba(200,200,255,0.2)`);
+        galGrad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.beginPath(); ctx.arc(galX, galY, 50, 0, Math.PI * 2);
+        ctx.fillStyle = galGrad; ctx.fill();
+        ctx.beginPath(); ctx.arc(galX, galY, 15, 0, Math.PI * 2);
+        ctx.fillStyle = wlColor(origWL); ctx.fill();
+
+        // Velocity arrow
+        ctx.beginPath();
+        ctx.moveTo(galX + 60, galY);
+        ctx.lineTo(galX + 60 + v * 120, galY);
+        ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(galX + 60 + v * 120, galY);
+        ctx.lineTo(galX + 52 + v * 120, galY - 5);
+        ctx.lineTo(galX + 52 + v * 120, galY + 5);
+        ctx.closePath();
+        ctx.fillStyle = "#ffeb3b"; ctx.fill();
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`v = ${(v * 100).toFixed(0)}% c`, galX + 60 + v * 60, galY - 12);
+
+        // Observer on right
+        const obsX = W - 120, obsY = galY;
+        ctx.beginPath(); ctx.arc(obsX, obsY, 20, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(76,175,80,0.3)"; ctx.fill();
+        ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = "#66bb6a"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Observer", obsX, obsY + 34);
+        ctx.fillText("\ud83d\udd2d", obsX, obsY + 7);
+
+        // Wave visualization between galaxy and observer
+        const waveStartX = galX + 60, waveEndX = obsX - 30;
+        const waveLen = waveEndX - waveStartX;
+        // Original wave (top)
+        const wy1 = galY - 80;
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Emitted", (waveStartX + waveEndX) / 2, wy1 - 25);
+        ctx.beginPath();
+        for (let x = waveStartX; x <= waveEndX; x++) {
+            const y = wy1 + Math.sin((x - waveStartX) / (origWL * 0.15) * Math.PI * 2) * 15;
+            x === waveStartX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = wlColor(origWL); ctx.lineWidth = 2; ctx.stroke();
+
+        // Observed wave (bottom, stretched)
+        const wy2 = galY + 60;
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText("Observed (redshifted)", (waveStartX + waveEndX) / 2, wy2 - 25);
+        ctx.beginPath();
+        for (let x = waveStartX; x <= waveEndX; x++) {
+            const y = wy2 + Math.sin((x - waveStartX) / (obsWL * 0.15) * Math.PI * 2) * 15;
+            x === waveStartX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = obsWL <= 780 ? wlColor(obsWL) : "#8b0000"; ctx.lineWidth = 2; ctx.stroke();
+
+        // Spectrum comparison
+        const specY = H - 200, specH = 30;
+        // Original
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Emitted spectrum:", 40, specY - 8);
+        for (let x = 60; x < W / 2 - 20; x++) {
+            const wl = 380 + ((x - 60) / (W / 2 - 80)) * 400;
+            ctx.fillStyle = wlColor(wl);
+            ctx.fillRect(x, specY, 1, specH);
+        }
+        // Emission line
+        const origLineX = 60 + ((origWL - 380) / 400) * (W / 2 - 80);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(origLineX - 1, specY - 5, 3, specH + 10);
+        ctx.fillStyle = wlColor(origWL); ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`${origWL} nm`, origLineX, specY + specH + 14);
+
+        // Observed
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Observed spectrum:", W / 2 + 20, specY - 8);
+        for (let x = W / 2 + 40; x < W - 40; x++) {
+            const wl = 380 + ((x - (W / 2 + 40)) / (W / 2 - 80)) * 400;
+            ctx.fillStyle = wlColor(wl);
+            ctx.fillRect(x, specY, 1, specH);
+        }
+        // Shifted line
+        if (obsWL <= 780) {
+            const obsLineX = W / 2 + 40 + ((obsWL - 380) / 400) * (W / 2 - 80);
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(obsLineX - 1, specY - 5, 3, specH + 10);
+            ctx.fillStyle = wlColor(obsWL); ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(`${obsWL.toFixed(0)} nm`, obsLineX, specY + specH + 14);
+        }
+        // Arrow between spectra
+        ctx.beginPath();
+        ctx.moveTo(W / 2 - 15, specY + specH / 2);
+        ctx.lineTo(W / 2 + 15, specY + specH / 2);
+        ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(W / 2 + 15, specY + specH / 2);
+        ctx.lineTo(W / 2 + 8, specY + specH / 2 - 4);
+        ctx.lineTo(W / 2 + 8, specY + specH / 2 + 4);
+        ctx.closePath(); ctx.fillStyle = "#ffeb3b"; ctx.fill();
+
+        // Hubble's Law info
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(50, H - 75, W - 100, 55);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(50, H - 75, W - 100, 55);
+
+        ctx.fillStyle = "#ccc"; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`z = ${z.toFixed(3)}  |  \u03bb_obs = ${obsWL.toFixed(0)} nm  |  v = ${(v * 100).toFixed(0)}% c`, W / 2, H - 52);
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif";
+        ctx.fillText(`Hubble's Law: v = H\u2080 \u00b7 d  |  Relativistic Doppler: \u03bb_obs = \u03bb_emit \u00b7 \u221a((1+\u03b2)/(1-\u03b2))`, W / 2, H - 32);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ef5350">Cosmic Redshift</b><br>` +
+            `z: ${z.toFixed(3)}<br>` +
+            `\u03bb: ${origWL} \u2192 ${obsWL.toFixed(0)} nm<br>` +
+            `v: ${(v * 100).toFixed(0)}% c`;
+    }
+
+    bindSlider("recession", "val-recession", () => { if (currentSim === "redshift") drawRedshift(); });
+    bindSlider("origWL", "val-origWL", () => { if (currentSim === "redshift") drawRedshift(); });
+    document.getElementById("btn-rs-reset").addEventListener("click", initRedshift);
+
+    // ═══════════════════════════════════════════════════════
+    // 46. QUANTUM HARMONIC OSCILLATOR
+    // ═══════════════════════════════════════════════════════
+
+    function initQHO() {
+        drawQHO();
+    }
+
+    function hermite(n, x) {
+        if (n === 0) return 1;
+        if (n === 1) return 2 * x;
+        let h0 = 1, h1 = 2 * x;
+        for (let i = 2; i <= n; i++) {
+            const h2 = 2 * x * h1 - 2 * (i - 1) * h0;
+            h0 = h1; h1 = h2;
+        }
+        return h1;
+    }
+
+    function factorial(n) {
+        let f = 1; for (let i = 2; i <= n; i++) f *= i; return f;
+    }
+
+    function psiQHO(n, x) {
+        const norm = 1 / Math.sqrt(Math.pow(2, n) * factorial(n) * Math.sqrt(Math.PI));
+        return norm * hermite(n, x) * Math.exp(-x * x / 2);
+    }
+
+    function drawQHO() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const n = +document.getElementById("qn").value;
+        const showProb = document.getElementById("showProb").checked;
+        const showClass = document.getElementById("showClassical").checked;
+
+        const cx = W / 2, cy = H / 2;
+        const scaleX = 60, scaleY = 150;
+        const xRange = 5;
+
+        // Parabolic potential
+        ctx.beginPath();
+        for (let px = 0; px < W; px++) {
+            const x = (px - cx) / scaleX;
+            const V = 0.5 * x * x;
+            const py = cy + 100 - V * scaleY * 0.3;
+            if (py < 20) continue;
+            px === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(120,144,156,0.4)"; ctx.lineWidth = 2; ctx.stroke();
+
+        // Fill potential
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        for (let px = 0; px < W; px++) {
+            const x = (px - cx) / scaleX;
+            const V = 0.5 * x * x;
+            const py = cy + 100 - V * scaleY * 0.3;
+            ctx.lineTo(px, Math.min(H, Math.max(20, py)));
+        }
+        ctx.lineTo(W, H); ctx.closePath();
+        ctx.fillStyle = "rgba(38, 50, 56, 0.2)"; ctx.fill();
+
+        // Energy levels and wavefunctions
+        for (let level = 0; level <= Math.min(8, n + 2); level++) {
+            const E = level + 0.5;
+            const ey = cy + 100 - E * scaleY * 0.3;
+            if (ey < 30) continue;
+
+            // Energy level line
+            const isActive = level === n;
+            ctx.beginPath();
+            const turnPt = Math.sqrt(2 * E);
+            const tpPx = turnPt * scaleX;
+            ctx.moveTo(cx - tpPx - 20, ey);
+            ctx.lineTo(cx + tpPx + 20, ey);
+            ctx.strokeStyle = isActive ? "rgba(255,235,59,0.6)" : "rgba(255,255,255,0.1)";
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.stroke();
+
+            ctx.fillStyle = isActive ? "#ffeb3b" : "#556";
+            ctx.font = isActive ? "bold 11px sans-serif" : "10px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(`n=${level}`, cx - tpPx - 28, ey + 4);
+            ctx.textAlign = "left";
+            ctx.fillText(`E=${E.toFixed(1)}\u210f\u03c9`, cx + tpPx + 28, ey + 4);
+
+            // Wavefunction for active level
+            if (isActive) {
+                const wfScale = 40;
+
+                // Probability density (filled)
+                if (showProb) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx - xRange * scaleX, ey);
+                    for (let px = cx - xRange * scaleX; px <= cx + xRange * scaleX; px++) {
+                        const x = (px - cx) / scaleX;
+                        const psi = psiQHO(n, x);
+                        const prob = psi * psi;
+                        ctx.lineTo(px, ey - prob * wfScale * wfScale * 2);
+                    }
+                    ctx.lineTo(cx + xRange * scaleX, ey);
+                    ctx.closePath();
+                    ctx.fillStyle = "rgba(66, 165, 245, 0.2)";
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    for (let px = cx - xRange * scaleX; px <= cx + xRange * scaleX; px++) {
+                        const x = (px - cx) / scaleX;
+                        const psi = psiQHO(n, x);
+                        const prob = psi * psi;
+                        const py = ey - prob * wfScale * wfScale * 2;
+                        px === cx - xRange * scaleX ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                    }
+                    ctx.strokeStyle = "#42a5f5"; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+
+                // Wavefunction ψ
+                ctx.beginPath();
+                for (let px = cx - xRange * scaleX; px <= cx + xRange * scaleX; px++) {
+                    const x = (px - cx) / scaleX;
+                    const psi = psiQHO(n, x);
+                    const py = ey - psi * wfScale;
+                    px === cx - xRange * scaleX ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 2; ctx.stroke();
+
+                // Classical turning points
+                if (showClass) {
+                    ctx.setLineDash([4, 4]);
+                    [-turnPt, turnPt].forEach(tp => {
+                        const tpx = cx + tp * scaleX;
+                        ctx.beginPath();
+                        ctx.moveTo(tpx, ey - 60);
+                        ctx.lineTo(tpx, ey + 20);
+                        ctx.strokeStyle = "rgba(239, 83, 80, 0.5)";
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    });
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = "#ef5350"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+                    ctx.fillText("Classical", cx + turnPt * scaleX, ey + 30);
+                    ctx.fillText("turning point", cx + turnPt * scaleX, ey + 42);
+                }
+            }
+        }
+
+        // Labels
+        ctx.fillStyle = "#ccc"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("V(x) = \u00bdm\u03c9\u00b2x\u00b2", W / 2, H - 55);
+        ctx.fillText(`E_n = (n + \u00bd)\u210f\u03c9  |  n = ${n}  |  E = ${(n + 0.5).toFixed(1)}\u210f\u03c9`, W / 2, H - 35);
+
+        // Legend
+        ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#66bb6a"; ctx.fillText("\u2014 \u03c8(x) wavefunction", 30, H - 15);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("\u2014 |\u03c8|\u00b2 probability density", 200, H - 15);
+        ctx.fillStyle = "#ef5350"; ctx.fillText("\u2014 Classical turning points", 420, H - 15);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Quantum HO</b><br>` +
+            `n: ${n}<br>` +
+            `E: ${(n + 0.5).toFixed(1)}\u210f\u03c9<br>` +
+            `Nodes: ${n}`;
+    }
+
+    bindSlider("qn", "val-qn", () => { if (currentSim === "qho") drawQHO(); });
+    document.getElementById("showProb").addEventListener("change", () => { if (currentSim === "qho") drawQHO(); });
+    document.getElementById("showClassical").addEventListener("change", () => { if (currentSim === "qho") drawQHO(); });
+    document.getElementById("btn-qho-reset").addEventListener("click", initQHO);
+
+    // ═══════════════════════════════════════════════════════
+    // 47. TECTONIC PLATES
+    // ═══════════════════════════════════════════════════════
+    let tectState = { t: 0, running: true, quakes: [] };
+
+    function initTectonic() {
+        tectState = { t: 0, running: true, quakes: [] };
+        document.getElementById("btn-tect-toggle").textContent = "Pause";
+        drawTectonic();
+    }
+
+    function drawTectonic() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const speed = +document.getElementById("plateSpeed").value;
+        const boundary = document.getElementById("boundaryType").value;
+
+        if (tectState.running) {
+            tectState.t += 0.016 * speed;
+            // Random earthquake
+            if (Math.random() < 0.01 * speed) {
+                tectState.quakes.push({
+                    x: W / 2 + (Math.random() - 0.5) * 60,
+                    y: H / 2 + (Math.random() - 0.5) * 40,
+                    r: 0, maxR: 30 + Math.random() * 40,
+                    mag: (3 + Math.random() * 4).toFixed(1)
+                });
+            }
+            tectState.quakes.forEach(q => { q.r += 1.5; });
+            tectState.quakes = tectState.quakes.filter(q => q.r < q.maxR);
+        }
+
+        const cx = W / 2, cy = H / 2 + 30;
+
+        // Cross-section view
+        // Atmosphere/Ocean top
+        ctx.fillStyle = "rgba(100, 149, 237, 0.15)";
+        ctx.fillRect(0, 0, W, 80);
+
+        if (boundary === "divergent") {
+            // Mid-ocean ridge
+            const offset = tectState.t * 5;
+
+            // Mantle (deep)
+            ctx.fillStyle = "rgba(183, 28, 28, 0.3)";
+            ctx.fillRect(0, cy + 80, W, H - cy - 80);
+            ctx.fillStyle = "#b71c1c"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Mantle (Asthenosphere)", cx, H - 20);
+
+            // Left plate
+            ctx.fillStyle = "rgba(62, 39, 35, 0.6)";
+            ctx.fillRect(0, 80, cx - 20 - offset * 0.5, cy - 80);
+            // Right plate
+            ctx.fillRect(cx + 20 + offset * 0.5, 80, W, cy - 80);
+
+            // Oceanic crust on plates
+            ctx.fillStyle = "rgba(78, 52, 46, 0.8)";
+            ctx.fillRect(0, 80, cx - 20 - offset * 0.5, 20);
+            ctx.fillRect(cx + 20 + offset * 0.5, 80, W, 20);
+
+            // Ridge
+            ctx.beginPath();
+            ctx.moveTo(cx - 30 - offset * 0.5, 80);
+            ctx.lineTo(cx, 40);
+            ctx.lineTo(cx + 30 + offset * 0.5, 80);
+            ctx.fillStyle = "rgba(183, 28, 28, 0.5)";
+            ctx.fill();
+
+            // Magma rising
+            for (let i = 0; i < 6; i++) {
+                const my = cy + 80 - (tectState.t * 30 + i * 30) % 120;
+                const mx = cx + Math.sin(i * 2 + tectState.t) * 8;
+                ctx.beginPath(); ctx.arc(mx, my, 4, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, ${100 + i * 20}, 0, ${0.6 - i * 0.08})`;
+                ctx.fill();
+            }
+
+            // Plate arrows
+            ctx.beginPath(); ctx.moveTo(cx - 80, cy - 30); ctx.lineTo(cx - 150, cy - 30);
+            ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 3; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + 80, cy - 30); ctx.lineTo(cx + 150, cy - 30);
+            ctx.stroke();
+
+            ctx.fillStyle = "#ffeb3b"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Plate A \u2190", cx - 115, cy - 40);
+            ctx.fillText("\u2192 Plate B", cx + 115, cy - 40);
+
+            // New crust
+            ctx.fillStyle = "rgba(255, 87, 34, 0.6)";
+            ctx.fillRect(cx - 15, 50, 30, 30);
+            ctx.fillStyle = "#ff5722"; ctx.font = "9px sans-serif";
+            ctx.fillText("New crust", cx, 48);
+
+            ctx.fillStyle = "#aab"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Divergent Boundary (Mid-Ocean Ridge)", cx, 24);
+
+        } else if (boundary === "convergent") {
+            // Subduction zone
+            const offset = tectState.t * 3;
+
+            // Mantle
+            ctx.fillStyle = "rgba(183, 28, 28, 0.3)";
+            ctx.fillRect(0, cy + 60, W, H - cy - 60);
+
+            // Overriding plate (continental, thicker, left)
+            ctx.fillStyle = "rgba(139, 119, 101, 0.7)";
+            ctx.beginPath();
+            ctx.moveTo(0, 80);
+            ctx.lineTo(cx + 30, 80);
+            ctx.lineTo(cx + 20, cy + 60);
+            ctx.lineTo(0, cy + 60);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#8d6e63"; ctx.fillRect(0, 70, cx + 30, 15);
+
+            // Mountains at convergent zone
+            for (let i = 0; i < 4; i++) {
+                const mx = cx - 10 + i * 25;
+                const mh = 25 + Math.sin(i * 1.5) * 10;
+                ctx.beginPath();
+                ctx.moveTo(mx - 15, 70);
+                ctx.lineTo(mx, 70 - mh);
+                ctx.lineTo(mx + 15, 70);
+                ctx.closePath();
+                ctx.fillStyle = `rgba(121, 85, 72, ${0.7 + i * 0.05})`;
+                ctx.fill();
+            }
+            // Snow caps
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+            for (let i = 0; i < 4; i++) {
+                const mx = cx - 10 + i * 25;
+                const mh = 25 + Math.sin(i * 1.5) * 10;
+                ctx.beginPath();
+                ctx.moveTo(mx - 5, 70 - mh + 5);
+                ctx.lineTo(mx, 70 - mh);
+                ctx.lineTo(mx + 5, 70 - mh + 5);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Subducting plate (oceanic, thinner, right)
+            ctx.beginPath();
+            ctx.moveTo(cx + 30, 100);
+            ctx.lineTo(W, 100);
+            ctx.lineTo(W, 120);
+            ctx.lineTo(cx + 30, 120);
+            // Curve down into mantle
+            ctx.quadraticCurveTo(cx - 40, cy + 80, cx - 80, H);
+            ctx.quadraticCurveTo(cx - 60, cy + 60, cx + 10, 100);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(62, 39, 35, 0.6)";
+            ctx.fill();
+
+            // Trench
+            ctx.beginPath();
+            ctx.moveTo(cx + 20, 100);
+            ctx.quadraticCurveTo(cx + 35, 130, cx + 50, 100);
+            ctx.strokeStyle = "#1565c0"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = "#42a5f5"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Trench", cx + 35, 142);
+
+            // Volcano
+            const volX = cx - 30, volY = 70;
+            ctx.beginPath();
+            ctx.moveTo(volX - 20, volY); ctx.lineTo(volX, volY - 30); ctx.lineTo(volX + 20, volY);
+            ctx.closePath();
+            ctx.fillStyle = "#795548"; ctx.fill();
+            // Eruption particles
+            if (tectState.running) {
+                for (let i = 0; i < 4; i++) {
+                    const py = volY - 35 - (tectState.t * 20 + i * 15) % 40;
+                    const px = volX + Math.sin(tectState.t * 3 + i) * 6;
+                    ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, ${150 - i * 30}, 0, ${0.7 - i * 0.15})`;
+                    ctx.fill();
+                }
+            }
+
+            // Arrows
+            ctx.beginPath(); ctx.moveTo(W - 80, 110); ctx.lineTo(cx + 60, 110);
+            ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 3; ctx.stroke();
+            ctx.fillStyle = "#ffeb3b"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Oceanic plate \u2192", W - 150, 98);
+            ctx.fillText("Continental plate", cx / 2, 95);
+
+            ctx.fillStyle = "#aab"; ctx.font = "bold 14px sans-serif";
+            ctx.fillText("Convergent Boundary (Subduction Zone)", cx, 24);
+
+        } else {
+            // Transform boundary
+            const offset = Math.sin(tectState.t * 2) * 15;
+
+            // Two plates side by side
+            ctx.fillStyle = "rgba(62, 39, 35, 0.5)";
+            ctx.fillRect(0, 80, W, cy - 80);
+
+            // Fault line
+            ctx.beginPath();
+            ctx.moveTo(cx, 80);
+            ctx.lineTo(cx, cy + 60);
+            ctx.strokeStyle = "#ef5350"; ctx.lineWidth = 3;
+            ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+            // Offset features to show movement
+            ctx.fillStyle = "rgba(76, 175, 80, 0.4)";
+            ctx.fillRect(cx - 100, cy - 40 + offset, 98, 20);
+            ctx.fillRect(cx + 2, cy - 40 - offset, 98, 20);
+            ctx.fillStyle = "#66bb6a"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Feature A", cx - 50, cy - 44 + offset);
+            ctx.fillText("Feature A (offset)", cx + 50, cy - 44 - offset);
+
+            // Arrows
+            ctx.beginPath(); ctx.moveTo(cx - 150, cy - 10); ctx.lineTo(cx - 50, cy - 10);
+            ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + 50, cy + 10); ctx.lineTo(cx + 150, cy + 10);
+            ctx.stroke();
+
+            // Mantle below
+            ctx.fillStyle = "rgba(183, 28, 28, 0.2)";
+            ctx.fillRect(0, cy + 60, W, H - cy - 60);
+
+            ctx.fillStyle = "#aab"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Transform Boundary (Strike-Slip Fault)", cx, 24);
+            ctx.fillStyle = "#ef5350"; ctx.font = "11px sans-serif";
+            ctx.fillText("San Andreas Fault type", cx, H - 70);
+        }
+
+        // Earthquake ripples
+        tectState.quakes.forEach(q => {
+            ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 235, 59, ${1 - q.r / q.maxR})`;
+            ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = `rgba(255, 235, 59, ${0.8 - q.r / q.maxR})`;
+            ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(`M${q.mag}`, q.x, q.y - q.r - 5);
+        });
+
+        // Layer labels
+        ctx.fillStyle = "rgba(16,20,58,0.8)";
+        ctx.fillRect(W - 170, H - 80, 155, 65);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(W - 170, H - 80, 155, 65);
+        ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#90caf9"; ctx.fillText("Ocean / Atmosphere", W - 160, H - 62);
+        ctx.fillStyle = "#8d6e63"; ctx.fillText("Crust (Lithosphere)", W - 160, H - 46);
+        ctx.fillStyle = "#ef5350"; ctx.fillText("Mantle (Asthenosphere)", W - 160, H - 30);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#8d6e63">Tectonic Plates</b><br>` +
+            `Type: ${boundary}<br>` +
+            `Speed: ${speed}x<br>` +
+            `Quakes: ${tectState.quakes.length}`;
+
+        if (tectState.running) {
+            animId = requestAnimationFrame(drawTectonic);
+        }
+    }
+
+    bindSlider("plateSpeed", "val-plateSpeed");
+    document.getElementById("boundaryType").addEventListener("change", () => { if (currentSim === "tectonic") { tectState.quakes = []; } });
+
+    document.getElementById("btn-tect-toggle").addEventListener("click", () => {
+        tectState.running = !tectState.running;
+        document.getElementById("btn-tect-toggle").textContent = tectState.running ? "Pause" : "Resume";
+        if (tectState.running) drawTectonic();
+    });
+    document.getElementById("btn-tect-reset").addEventListener("click", initTectonic);
+
+    // ═══════════════════════════════════════════════════════
+    // 48. ACID-BASE TITRATION
+    // ═══════════════════════════════════════════════════════
+    let titrState = {};
+
+    function initTitration() {
+        titrState = { baseAdded: 0, history: [], autoMode: false };
+        drawTitration();
+    }
+
+    function calcPH(acidConc, baseConc, baseVol, acidVol, isWeak) {
+        const molesAcid = acidConc * acidVol;
+        const molesBase = baseConc * baseVol;
+        const totalVol = acidVol + baseVol;
+
+        if (molesBase < molesAcid) {
+            const excessAcid = (molesAcid - molesBase) / totalVol;
+            if (isWeak) {
+                const Ka = 1.8e-5; // acetic acid
+                return -Math.log10((-Ka + Math.sqrt(Ka * Ka + 4 * Ka * excessAcid)) / 2);
+            }
+            return -Math.log10(excessAcid);
+        } else if (Math.abs(molesBase - molesAcid) < 0.0001) {
+            return isWeak ? 8.7 : 7; // equivalence point
+        } else {
+            const excessBase = (molesBase - molesAcid) / totalVol;
+            return 14 + Math.log10(excessBase);
+        }
+    }
+
+    function drawTitration() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const acidConc = +document.getElementById("acidConc").value;
+        const baseConc = +document.getElementById("baseConc").value;
+        const isWeak = document.getElementById("acidType").value === "weak";
+        const acidVol = 0.050; // 50 mL fixed
+        const baseVol = titrState.baseAdded / 1000;
+
+        const pH = calcPH(acidConc, baseConc, baseVol, acidVol, isWeak);
+
+        if (titrState.autoMode && titrState.baseAdded < 120) {
+            titrState.baseAdded += 0.3;
+            const newpH = calcPH(acidConc, baseConc, titrState.baseAdded / 1000, acidVol, isWeak);
+            titrState.history.push({ vol: titrState.baseAdded, pH: newpH });
+        }
+
+        // Beaker
+        const bkX = 80, bkY = 100, bkW = 180, bkH = 280;
+        ctx.beginPath();
+        ctx.moveTo(bkX, bkY);
+        ctx.lineTo(bkX, bkY + bkH);
+        ctx.lineTo(bkX + bkW, bkY + bkH);
+        ctx.lineTo(bkX + bkW, bkY);
+        ctx.strokeStyle = "rgba(200,200,220,0.5)"; ctx.lineWidth = 3; ctx.stroke();
+
+        // Liquid with pH-dependent color
+        const fillH = bkH * 0.75 + baseVol * 300;
+        let liquidColor;
+        if (pH < 3) liquidColor = "rgba(239, 83, 80, 0.5)";
+        else if (pH < 5) liquidColor = "rgba(255, 152, 0, 0.4)";
+        else if (pH < 6.5) liquidColor = "rgba(255, 235, 59, 0.4)";
+        else if (pH < 7.5) liquidColor = "rgba(76, 175, 80, 0.4)";
+        else if (pH < 9) liquidColor = "rgba(66, 165, 245, 0.4)";
+        else if (pH < 11) liquidColor = "rgba(63, 81, 181, 0.4)";
+        else liquidColor = "rgba(103, 58, 183, 0.5)";
+
+        ctx.fillStyle = liquidColor;
+        ctx.fillRect(bkX + 3, bkY + bkH - Math.min(fillH, bkH - 5), bkW - 6, Math.min(fillH, bkH - 5) - 3);
+
+        // Indicator color strip
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(bkX, bkY + bkH + 15, bkW, 25);
+        const phColors = [
+            "#ff1744", "#ff5252", "#ff9800", "#ffc107", "#ffeb3b",
+            "#cddc39", "#4caf50", "#009688", "#00bcd4", "#2196f3",
+            "#3f51b5", "#673ab7", "#9c27b0", "#e91e63"
+        ];
+        const phStep = bkW / 14;
+        for (let i = 0; i < 14; i++) {
+            ctx.fillStyle = phColors[i];
+            ctx.fillRect(bkX + i * phStep, bkY + bkH + 15, phStep, 25);
+        }
+        // pH marker
+        const markerX = bkX + (pH / 14) * bkW;
+        ctx.beginPath();
+        ctx.moveTo(markerX, bkY + bkH + 12);
+        ctx.lineTo(markerX - 5, bkY + bkH + 6);
+        ctx.lineTo(markerX + 5, bkY + bkH + 6);
+        ctx.closePath();
+        ctx.fillStyle = "#fff"; ctx.fill();
+
+        ctx.fillStyle = "#ccc"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        for (let i = 0; i <= 14; i += 2) {
+            ctx.fillText(`${i}`, bkX + (i / 14) * bkW, bkY + bkH + 52);
+        }
+        ctx.fillText("pH Scale", bkX + bkW / 2, bkY + bkH + 66);
+
+        // Burette above
+        ctx.fillStyle = "rgba(200,200,220,0.3)";
+        ctx.fillRect(bkX + bkW / 2 - 8, 10, 16, 85);
+        ctx.strokeStyle = "rgba(200,200,220,0.5)"; ctx.lineWidth = 1;
+        ctx.strokeRect(bkX + bkW / 2 - 8, 10, 16, 85);
+        // Drops
+        if (titrState.autoMode) {
+            const dropY = bkY - 5 + (Math.sin(titrState.baseAdded * 0.5) * 0.5 + 0.5) * 10;
+            ctx.beginPath(); ctx.arc(bkX + bkW / 2, dropY, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(63, 81, 181, 0.7)"; ctx.fill();
+        }
+        ctx.fillStyle = "#7986cb"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("NaOH", bkX + bkW / 2, 8);
+
+        // pH display
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "bold 24px sans-serif";
+        ctx.fillText(`pH ${pH.toFixed(2)}`, bkX + bkW / 2, bkY + bkH / 2);
+        ctx.fillStyle = "#ccc"; ctx.font = "11px sans-serif";
+        ctx.fillText(`${titrState.baseAdded.toFixed(1)} mL NaOH added`, bkX + bkW / 2, bkY + bkH / 2 + 20);
+
+        // Titration curve
+        const gx = 320, gy = 40, gw = W - 360, gh = H - 100;
+        ctx.fillStyle = "rgba(16,20,58,0.7)";
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(gx, gy, gw, gh);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Titration Curve", gx + 8, gy - 6);
+
+        // Y-axis (pH 0-14)
+        ctx.fillStyle = "#556"; ctx.font = "9px sans-serif"; ctx.textAlign = "right";
+        for (let ph = 0; ph <= 14; ph += 2) {
+            const py = gy + gh - (ph / 14) * gh;
+            ctx.fillText(`${ph}`, gx - 4, py + 4);
+            ctx.beginPath(); ctx.moveTo(gx, py); ctx.lineTo(gx + gw, py);
+            ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        // pH 7 line
+        const ph7Y = gy + gh - (7 / 14) * gh;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(gx, ph7Y); ctx.lineTo(gx + gw, ph7Y);
+        ctx.strokeStyle = "rgba(76,175,80,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#66bb6a"; ctx.font = "9px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("pH 7 (neutral)", gx + 4, ph7Y - 4);
+
+        // Theoretical curve
+        ctx.beginPath();
+        const maxVol = 120;
+        for (let v2 = 0; v2 <= maxVol; v2 += 0.5) {
+            const theorPH = calcPH(acidConc, baseConc, v2 / 1000, acidVol, isWeak);
+            const px = gx + (v2 / maxVol) * gw;
+            const py = gy + gh - (Math.max(0, Math.min(14, theorPH)) / 14) * gh;
+            v2 === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+
+        // Actual data
+        if (titrState.history.length > 1) {
+            ctx.beginPath();
+            titrState.history.forEach((h, i) => {
+                const px = gx + (h.vol / maxVol) * gw;
+                const py = gy + gh - (Math.max(0, Math.min(14, h.pH)) / 14) * gh;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ff9800"; ctx.lineWidth = 2.5; ctx.stroke();
+        }
+
+        // Current point
+        const cpx = gx + (titrState.baseAdded / maxVol) * gw;
+        const cpy = gy + gh - (Math.max(0, Math.min(14, pH)) / 14) * gh;
+        ctx.beginPath(); ctx.arc(cpx, cpy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffeb3b"; ctx.fill();
+
+        // Equivalence point marker
+        const eqVol = (acidConc * acidVol * 1000) / baseConc;
+        const eqX = gx + (eqVol / maxVol) * gw;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(eqX, gy); ctx.lineTo(eqX, gy + gh);
+        ctx.strokeStyle = "rgba(239,83,80,0.4)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ef5350"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`Equiv. pt (${eqVol.toFixed(1)} mL)`, eqX, gy + gh + 14);
+
+        // X-axis label
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText("Volume of NaOH added (mL)", gx + gw / 2, gy + gh + 30);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Titration</b><br>` +
+            `pH: ${pH.toFixed(2)}<br>` +
+            `Base: ${titrState.baseAdded.toFixed(1)} mL<br>` +
+            `${isWeak ? "Weak" : "Strong"} acid`;
+
+        if (titrState.autoMode && titrState.baseAdded < 120) {
+            animId = requestAnimationFrame(drawTitration);
+        }
+    }
+
+    bindSlider("acidConc", "val-acidConc", () => { if (currentSim === "titration") { titrState.history = []; titrState.baseAdded = 0; drawTitration(); } });
+    bindSlider("baseConc", "val-baseConc", () => { if (currentSim === "titration") { titrState.history = []; titrState.baseAdded = 0; drawTitration(); } });
+    document.getElementById("acidType").addEventListener("change", () => { if (currentSim === "titration") { titrState.history = []; titrState.baseAdded = 0; drawTitration(); } });
+
+    document.getElementById("btn-titr-add").addEventListener("click", () => {
+        titrState.baseAdded += 2;
+        const acidConc = +document.getElementById("acidConc").value;
+        const baseConc = +document.getElementById("baseConc").value;
+        const isWeak = document.getElementById("acidType").value === "weak";
+        const pH = calcPH(acidConc, baseConc, titrState.baseAdded / 1000, 0.050, isWeak);
+        titrState.history.push({ vol: titrState.baseAdded, pH });
+        drawTitration();
+    });
+    document.getElementById("btn-titr-auto").addEventListener("click", () => {
+        titrState.autoMode = !titrState.autoMode;
+        document.getElementById("btn-titr-auto").textContent = titrState.autoMode ? "Stop" : "Auto-Titrate";
+        if (titrState.autoMode) drawTitration();
+    });
+    document.getElementById("btn-titr-reset").addEventListener("click", () => {
+        titrState.autoMode = false;
+        document.getElementById("btn-titr-auto").textContent = "Auto-Titrate";
+        initTitration();
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // 49. LORENZ ATTRACTOR
+    // ═══════════════════════════════════════════════════════
+    let lorState = {};
+
+    function initLorenz() {
+        lorState = {
+            x: 1, y: 1, z: 1,
+            trail: [],
+            running: true,
+            t: 0
+        };
+        document.getElementById("btn-lor-toggle").textContent = "Pause";
+        drawLorenz();
+    }
+
+    function drawLorenz() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const sigma = +document.getElementById("sigma").value;
+        const rho = +document.getElementById("rho").value;
+        const beta = +document.getElementById("betaL").value;
+        const dt = 0.005;
+
+        if (lorState.running) {
+            for (let i = 0; i < 10; i++) {
+                const dx = sigma * (lorState.y - lorState.x);
+                const dy = lorState.x * (rho - lorState.z) - lorState.y;
+                const dz = lorState.x * lorState.y - beta * lorState.z;
+                lorState.x += dx * dt;
+                lorState.y += dy * dt;
+                lorState.z += dz * dt;
+                lorState.t += dt;
+                lorState.trail.push({ x: lorState.x, y: lorState.y, z: lorState.z });
+            }
+            if (lorState.trail.length > 5000) lorState.trail.splice(0, 50);
+        }
+
+        // Project 3D to 2D (XZ view)
+        const cx = W / 2, cy = H / 2 + 40;
+        const scaleXZ = 8, scaleY2 = 6;
+
+        // XZ projection (main view)
+        if (lorState.trail.length > 2) {
+            for (let i = 1; i < lorState.trail.length; i++) {
+                const p1 = lorState.trail[i - 1];
+                const p2 = lorState.trail[i];
+                const px1 = cx + p1.x * scaleXZ;
+                const py1 = cy - p1.z * scaleY2 + 100;
+                const px2 = cx + p2.x * scaleXZ;
+                const py2 = cy - p2.z * scaleY2 + 100;
+
+                const alpha = i / lorState.trail.length;
+                const hue = (i / lorState.trail.length) * 280;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.strokeStyle = `hsla(${hue}, 80%, 55%, ${alpha * 0.8})`;
+                ctx.lineWidth = 1 + alpha;
+                ctx.stroke();
+            }
+
+            // Current point
+            const last = lorState.trail[lorState.trail.length - 1];
+            const lpx = cx + last.x * scaleXZ;
+            const lpy = cy - last.z * scaleY2 + 100;
+            const pGrad = ctx.createRadialGradient(lpx, lpy, 2, lpx, lpy, 10);
+            pGrad.addColorStop(0, "#fff");
+            pGrad.addColorStop(1, "rgba(255,255,255,0)");
+            ctx.beginPath(); ctx.arc(lpx, lpy, 10, 0, Math.PI * 2);
+            ctx.fillStyle = pGrad; ctx.fill();
+            ctx.beginPath(); ctx.arc(lpx, lpy, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff"; ctx.fill();
+        }
+
+        // Fixed points
+        const fp1x = cx + Math.sqrt(beta * (rho - 1)) * scaleXZ;
+        const fp1y = cy - (rho - 1) * scaleY2 + 100;
+        const fp2x = cx - Math.sqrt(beta * (rho - 1)) * scaleXZ;
+        const fp2y = fp1y;
+        if (rho > 1) {
+            ctx.beginPath(); ctx.arc(fp1x, fp1y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(239,83,80,0.5)"; ctx.fill();
+            ctx.beginPath(); ctx.arc(fp2x, fp2y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(239,83,80,0.5)"; ctx.fill();
+        }
+
+        // Axes
+        ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx - 200, cy + 100); ctx.lineTo(cx + 200, cy + 100); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy + 200); ctx.lineTo(cx, cy - 200); ctx.stroke();
+        ctx.fillStyle = "#556"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("x", cx + 210, cy + 105);
+        ctx.fillText("z", cx + 10, cy - 205);
+
+        // Title
+        ctx.fillStyle = "#7b61ff"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Lorenz Attractor", cx, 24);
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif";
+        ctx.fillText("\"The Butterfly Effect\"", cx, 42);
+
+        // Equations
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(20, H - 85, 280, 70);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(20, H - 85, 280, 70);
+        ctx.fillStyle = "#ccc"; ctx.font = "12px monospace"; ctx.textAlign = "left";
+        ctx.fillText(`dx/dt = \u03c3(y - x)`, 30, H - 65);
+        ctx.fillText(`dy/dt = x(\u03c1 - z) - y`, 30, H - 47);
+        ctx.fillText(`dz/dt = xy - \u03b2z`, 30, H - 29);
+
+        // Parameters
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(W - 200, H - 85, 185, 70);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(W - 200, H - 85, 185, 70);
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`\u03c3 = ${sigma}`, W - 190, H - 65);
+        ctx.fillText(`\u03c1 = ${rho}`, W - 190, H - 47);
+        ctx.fillText(`\u03b2 = ${beta}`, W - 190, H - 29);
+        ctx.fillStyle = "#aab";
+        ctx.fillText(`x: ${lorState.x.toFixed(2)}`, W - 120, H - 65);
+        ctx.fillText(`y: ${lorState.y.toFixed(2)}`, W - 120, H - 47);
+        ctx.fillText(`z: ${lorState.z.toFixed(2)}`, W - 120, H - 29);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#7b61ff">Lorenz Attractor</b><br>` +
+            `\u03c3: ${sigma} | \u03c1: ${rho} | \u03b2: ${beta}<br>` +
+            `Points: ${lorState.trail.length}<br>` +
+            `t: ${lorState.t.toFixed(1)}`;
+
+        if (lorState.running) {
+            animId = requestAnimationFrame(drawLorenz);
+        }
+    }
+
+    bindSlider("sigma", "val-sigma", () => { if (currentSim === "lorenz") { lorState.trail = []; lorState.x = 1; lorState.y = 1; lorState.z = 1; } });
+    bindSlider("rho", "val-rho", () => { if (currentSim === "lorenz") { lorState.trail = []; lorState.x = 1; lorState.y = 1; lorState.z = 1; } });
+    bindSlider("betaL", "val-betaL", () => { if (currentSim === "lorenz") { lorState.trail = []; lorState.x = 1; lorState.y = 1; lorState.z = 1; } });
+
+    document.getElementById("btn-lor-toggle").addEventListener("click", () => {
+        lorState.running = !lorState.running;
+        document.getElementById("btn-lor-toggle").textContent = lorState.running ? "Pause" : "Resume";
+        if (lorState.running) drawLorenz();
+    });
+    document.getElementById("btn-lor-reset").addEventListener("click", initLorenz);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
