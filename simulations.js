@@ -47,6 +47,11 @@
             case "circuit":     initCircuit();      break;
             case "diffusion":   initDiffusion();    break;
             case "pendwave":    initPendWave();     break;
+            case "buoyancy":    initBuoyancy();     break;
+            case "coulomb":     initCoulomb();      break;
+            case "lissajous":   initLissajous();    break;
+            case "blackbody":   initBlackbody();    break;
+            case "collision":   initCollision();    break;
         }
     }
 
@@ -3115,6 +3120,758 @@
         if (pwState.running) drawPendWave();
     });
     document.getElementById("btn-pw-reset").addEventListener("click", initPendWave);
+
+    // ═══════════════════════════════════════════════════════
+    // 20. BUOYANCY (ARCHIMEDES)
+    // ═══════════════════════════════════════════════════════
+    let buoyState = {};
+
+    function initBuoyancy() {
+        buoyState = { y: 80, vy: 0, running: false };
+        drawBuoyancy();
+    }
+
+    function drawBuoyancy() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const objDens = +document.getElementById("objDensity").value;
+        const fluidDens = +document.getElementById("fluidDensity").value;
+        const size = +document.getElementById("objSize").value;
+        const g = 9.8;
+
+        const waterLevel = 200;
+        const objX = W / 2 - size / 2;
+
+        // Equilibrium position: fraction submerged = objDens/fluidDens
+        const fraction = Math.min(1, objDens / fluidDens);
+        const eqY = waterLevel - size * (1 - fraction);
+
+        if (buoyState.running) {
+            // Simple spring-like physics toward equilibrium
+            const submerged = Math.max(0, Math.min(size, buoyState.y + size - waterLevel));
+            const buoyForce = fluidDens * g * submerged * 0.001;
+            const weight = objDens * g * size * 0.001;
+            const netForce = weight - buoyForce;
+            const drag = buoyState.vy * 0.15;
+
+            buoyState.vy += (netForce - drag) * 0.01;
+            buoyState.y += buoyState.vy;
+
+            // Floor
+            if (buoyState.y + size > H - 20) {
+                buoyState.y = H - 20 - size;
+                buoyState.vy = 0;
+            }
+            // Ceiling
+            if (buoyState.y < 20) { buoyState.y = 20; buoyState.vy = 0; }
+        }
+
+        // Sky
+        ctx.fillStyle = "#0d1137";
+        ctx.fillRect(0, 0, W, waterLevel);
+
+        // Water
+        const waterGrad = ctx.createLinearGradient(0, waterLevel, 0, H);
+        waterGrad.addColorStop(0, "rgba(21, 101, 192, 0.5)");
+        waterGrad.addColorStop(1, "rgba(13, 71, 161, 0.7)");
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(0, waterLevel, W, H - waterLevel);
+
+        // Water surface waves
+        ctx.beginPath();
+        for (let x = 0; x < W; x++) {
+            const y = waterLevel + Math.sin(x * 0.03 + Date.now() * 0.002) * 3;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(100, 180, 255, 0.4)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Object
+        const submerged = Math.max(0, Math.min(size, buoyState.y + size - waterLevel));
+        const aboveWater = size - submerged;
+
+        // Part above water
+        if (aboveWater > 0) {
+            ctx.fillStyle = objDens > fluidDens ? "#ef5350" : "#ff9800";
+            ctx.fillRect(objX, buoyState.y, size, aboveWater);
+        }
+        // Part below water
+        if (submerged > 0) {
+            ctx.fillStyle = objDens > fluidDens ? "rgba(239,83,80,0.7)" : "rgba(255,152,0,0.7)";
+            ctx.fillRect(objX, waterLevel, size, submerged);
+        }
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(objX, buoyState.y, size, size);
+
+        // Force arrows
+        const centerX = W / 2;
+        const centerY = buoyState.y + size / 2;
+
+        // Weight (down)
+        const wLen = objDens * size * 0.05;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 15, centerY);
+        ctx.lineTo(centerX - 15, centerY + wLen);
+        ctx.strokeStyle = "#ef5350";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(centerX - 15, centerY + wLen);
+        ctx.lineTo(centerX - 20, centerY + wLen - 8);
+        ctx.lineTo(centerX - 10, centerY + wLen - 8);
+        ctx.closePath();
+        ctx.fillStyle = "#ef5350";
+        ctx.fill();
+        ctx.fillStyle = "#ef5350";
+        ctx.font = "11px sans-serif";
+        ctx.fillText("W", centerX - 30, centerY + wLen / 2);
+
+        // Buoyancy (up)
+        if (submerged > 0) {
+            const bLen = fluidDens * submerged * 0.05;
+            ctx.beginPath();
+            ctx.moveTo(centerX + 15, centerY);
+            ctx.lineTo(centerX + 15, centerY - bLen);
+            ctx.strokeStyle = "#42a5f5";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(centerX + 15, centerY - bLen);
+            ctx.lineTo(centerX + 10, centerY - bLen + 8);
+            ctx.lineTo(centerX + 20, centerY - bLen + 8);
+            ctx.closePath();
+            ctx.fillStyle = "#42a5f5";
+            ctx.fill();
+            ctx.fillStyle = "#42a5f5";
+            ctx.fillText("F_b", centerX + 22, centerY - bLen / 2);
+        }
+
+        // Info panel
+        const sinks = objDens > fluidDens;
+        const pctSub = (fraction * 100).toFixed(0);
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(20, H - 120, 250, 100);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(20, H - 120, 250, 100);
+        ctx.fillStyle = "#ccc";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(`Object: ${objDens} kg/m\u00b3`, 32, H - 98);
+        ctx.fillText(`Fluid: ${fluidDens} kg/m\u00b3`, 32, H - 78);
+        ctx.fillText(`Submerged: ${sinks ? "100% (sinks)" : pctSub + "%"}`, 32, H - 58);
+        ctx.fillText(`Status: ${sinks ? "SINKS" : fraction < 1 ? "FLOATS" : "NEUTRAL"}`, 32, H - 38);
+
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">Buoyancy</b><br>` +
+            `\u03c1_obj: ${objDens}<br>` +
+            `\u03c1_fluid: ${fluidDens}<br>` +
+            `${sinks ? "Sinks!" : "Floats (" + pctSub + "%)"}`;
+
+        if (buoyState.running) {
+            animId = requestAnimationFrame(drawBuoyancy);
+        }
+    }
+
+    bindSlider("objDensity", "val-objDensity", () => { if (!buoyState.running) drawBuoyancy(); });
+    bindSlider("fluidDensity", "val-fluidDensity", () => { if (!buoyState.running) drawBuoyancy(); });
+    bindSlider("objSize", "val-objSize", () => { if (!buoyState.running) drawBuoyancy(); });
+
+    document.getElementById("btn-buoy-drop").addEventListener("click", () => {
+        buoyState = { y: 40, vy: 0, running: true };
+        drawBuoyancy();
+    });
+    document.getElementById("btn-buoy-reset").addEventListener("click", initBuoyancy);
+
+    // ═══════════════════════════════════════════════════════
+    // 21. COULOMB'S LAW
+    // ═══════════════════════════════════════════════════════
+
+    function initCoulomb() {
+        drawCoulomb();
+    }
+
+    function drawCoulomb() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const q1 = +document.getElementById("q1").value;
+        const q2 = +document.getElementById("q2").value;
+        const sep = +document.getElementById("sep").value;
+        const k = 8.99e9;
+
+        const cy = H / 2 - 40;
+        const c1x = W / 2 - sep / 2;
+        const c2x = W / 2 + sep / 2;
+
+        // Force calculation (in micro-units for display)
+        const force = k * Math.abs(q1 * q2) / (sep * sep) * 0.01;
+        const attractive = (q1 * q2) < 0;
+
+        // Field lines between charges
+        const numLines = 8;
+        for (let i = 0; i < numLines; i++) {
+            const angle = (i / numLines) * Math.PI * 2;
+            ctx.beginPath();
+            let lx = c1x + 25 * Math.cos(angle);
+            let ly = cy + 25 * Math.sin(angle);
+            ctx.moveTo(lx, ly);
+
+            for (let step = 0; step < 200; step++) {
+                let ex = 0, ey = 0;
+                // Field from q1
+                const dx1 = lx - c1x, dy1 = ly - cy;
+                const r1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+                if (r1 > 5) { ex += q1 * dx1 / (r1 * r1 * r1); ey += q1 * dy1 / (r1 * r1 * r1); }
+                // Field from q2
+                const dx2 = lx - c2x, dy2 = ly - cy;
+                const r2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                if (r2 > 5) { ex += q2 * dx2 / (r2 * r2 * r2); ey += q2 * dy2 / (r2 * r2 * r2); }
+
+                const mag = Math.sqrt(ex * ex + ey * ey);
+                if (mag < 0.0001) break;
+                lx += (ex / mag) * 5;
+                ly += (ey / mag) * 5;
+                if (lx < 0 || lx > W || ly < 0 || ly > H) break;
+                if (Math.sqrt((lx - c2x) ** 2 + (ly - cy) ** 2) < 20) break;
+                ctx.lineTo(lx, ly);
+            }
+            ctx.strokeStyle = "rgba(100,200,255,0.2)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Charge 1
+        const r1 = 22 + Math.abs(q1) * 3;
+        const g1 = ctx.createRadialGradient(c1x, cy, 3, c1x, cy, r1);
+        g1.addColorStop(0, q1 > 0 ? "#ff5252" : "#448aff");
+        g1.addColorStop(1, q1 > 0 ? "rgba(255,82,82,0.1)" : "rgba(68,138,255,0.1)");
+        ctx.beginPath(); ctx.arc(c1x, cy, r1, 0, Math.PI * 2); ctx.fillStyle = g1; ctx.fill();
+        ctx.beginPath(); ctx.arc(c1x, cy, r1 * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = q1 > 0 ? "#ff5252" : "#448aff"; ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(q1 > 0 ? "+" : q1 < 0 ? "\u2212" : "0", c1x, cy + 6);
+        ctx.font = "11px sans-serif";
+        ctx.fillText(`q\u2081 = ${q1}\u00b5C`, c1x, cy + r1 + 18);
+
+        // Charge 2
+        const r2 = 22 + Math.abs(q2) * 3;
+        const g2 = ctx.createRadialGradient(c2x, cy, 3, c2x, cy, r2);
+        g2.addColorStop(0, q2 > 0 ? "#ff5252" : "#448aff");
+        g2.addColorStop(1, q2 > 0 ? "rgba(255,82,82,0.1)" : "rgba(68,138,255,0.1)");
+        ctx.beginPath(); ctx.arc(c2x, cy, r2, 0, Math.PI * 2); ctx.fillStyle = g2; ctx.fill();
+        ctx.beginPath(); ctx.arc(c2x, cy, r2 * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = q2 > 0 ? "#ff5252" : "#448aff"; ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "bold 16px sans-serif";
+        ctx.fillText(q2 > 0 ? "+" : q2 < 0 ? "\u2212" : "0", c2x, cy + 6);
+        ctx.font = "11px sans-serif";
+        ctx.fillText(`q\u2082 = ${q2}\u00b5C`, c2x, cy + r2 + 18);
+
+        // Force arrows
+        const fScale = Math.min(force * 50, 100);
+        if (q1 !== 0 && q2 !== 0) {
+            // Force on q1
+            const dir1 = attractive ? 1 : -1;
+            ctx.beginPath();
+            ctx.moveTo(c1x + dir1 * (r1 + 5), cy);
+            ctx.lineTo(c1x + dir1 * (r1 + 5 + fScale), cy);
+            ctx.strokeStyle = "#ff9800"; ctx.lineWidth = 3; ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(c1x + dir1 * (r1 + 5 + fScale), cy);
+            ctx.lineTo(c1x + dir1 * (r1 - 3 + fScale), cy - 5);
+            ctx.lineTo(c1x + dir1 * (r1 - 3 + fScale), cy + 5);
+            ctx.closePath(); ctx.fillStyle = "#ff9800"; ctx.fill();
+
+            // Force on q2
+            const dir2 = attractive ? -1 : 1;
+            ctx.beginPath();
+            ctx.moveTo(c2x + dir2 * (r2 + 5), cy);
+            ctx.lineTo(c2x + dir2 * (r2 + 5 + fScale), cy);
+            ctx.strokeStyle = "#ff9800"; ctx.lineWidth = 3; ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(c2x + dir2 * (r2 + 5 + fScale), cy);
+            ctx.lineTo(c2x + dir2 * (r2 - 3 + fScale), cy - 5);
+            ctx.lineTo(c2x + dir2 * (r2 - 3 + fScale), cy + 5);
+            ctx.closePath(); ctx.fillStyle = "#ff9800"; ctx.fill();
+        }
+
+        // Distance marker
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(c1x, cy + 50); ctx.lineTo(c2x, cy + 50);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif";
+        ctx.fillText(`r = ${sep} px`, (c1x + c2x) / 2, cy + 66);
+
+        // Force vs Distance graph
+        const graphX = 50, graphY2 = 320, graphW2 = W - 100, graphH2 = 160;
+        ctx.fillStyle = "rgba(16,20,58,0.8)";
+        ctx.fillRect(graphX, graphY2, graphW2, graphH2);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.strokeRect(graphX, graphY2, graphW2, graphH2);
+
+        ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("Force vs Distance (1/r\u00b2)", graphX + 8, graphY2 - 6);
+
+        // Curve
+        ctx.beginPath();
+        for (let px = 5; px < graphW2; px++) {
+            const r = 60 + (px / graphW2) * 440;
+            const f = k * Math.abs(q1 * q2) / (r * r) * 0.01;
+            const maxF = k * Math.abs(q1 * q2) / (60 * 60) * 0.01;
+            const py = graphY2 + graphH2 - (f / maxF) * graphH2 * 0.9;
+            px === 5 ? ctx.moveTo(graphX + px, py) : ctx.lineTo(graphX + px, py);
+        }
+        ctx.strokeStyle = "#ff9800"; ctx.lineWidth = 2; ctx.stroke();
+
+        // Current position marker
+        const curPx = graphX + ((sep - 60) / 440) * graphW2;
+        const maxF = k * Math.abs(q1 * q2) / (60 * 60) * 0.01 || 1;
+        const curPy = graphY2 + graphH2 - (force / maxF) * graphH2 * 0.9;
+        ctx.beginPath(); ctx.arc(curPx, curPy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffeb3b"; ctx.fill();
+
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Coulomb's Law</b><br>` +
+            `q\u2081: ${q1} \u00b5C<br>` +
+            `q\u2082: ${q2} \u00b5C<br>` +
+            `r: ${sep} px<br>` +
+            `F \u221d ${force.toFixed(2)}<br>` +
+            `${attractive ? "Attractive" : "Repulsive"}`;
+    }
+
+    bindSlider("q1", "val-q1", () => { if (currentSim === "coulomb") drawCoulomb(); });
+    bindSlider("q2", "val-q2", () => { if (currentSim === "coulomb") drawCoulomb(); });
+    bindSlider("sep", "val-sep", () => { if (currentSim === "coulomb") drawCoulomb(); });
+    document.getElementById("btn-coulomb-reset").addEventListener("click", () => {
+        document.getElementById("q1").value = 3; document.getElementById("val-q1").textContent = "+3";
+        document.getElementById("q2").value = -2; document.getElementById("val-q2").textContent = "-2";
+        document.getElementById("sep").value = 200; document.getElementById("val-sep").textContent = "200";
+        drawCoulomb();
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // 22. LISSAJOUS CURVES
+    // ═══════════════════════════════════════════════════════
+    let lissState = { t: 0, running: true, trail: [] };
+
+    function initLissajous() {
+        lissState = { t: 0, running: true, trail: [] };
+        document.getElementById("btn-liss-toggle").textContent = "Pause";
+        drawLissajous();
+    }
+
+    function drawLissajous() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const A = +document.getElementById("lissA").value;
+        const B = +document.getElementById("lissB").value;
+        const phase = +document.getElementById("lissPhase").value * Math.PI / 180;
+
+        const cx = W / 2, cy = H / 2;
+        const ampX = 200, ampY = 180;
+
+        if (lissState.running) {
+            lissState.t += 0.02;
+        }
+
+        // Draw complete curve (faded)
+        ctx.beginPath();
+        for (let t = 0; t < Math.PI * 2 + 0.1; t += 0.01) {
+            const x = cx + ampX * Math.sin(A * t + phase);
+            const y = cy + ampY * Math.sin(B * t);
+            t === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(123, 97, 255, 0.2)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Animated trail
+        const trailLen = 200;
+        lissState.trail.push({
+            x: cx + ampX * Math.sin(A * lissState.t + phase),
+            y: cy + ampY * Math.sin(B * lissState.t)
+        });
+        if (lissState.trail.length > trailLen) lissState.trail.shift();
+
+        if (lissState.trail.length > 1) {
+            for (let i = 1; i < lissState.trail.length; i++) {
+                const alpha = i / lissState.trail.length;
+                const hue = (i / lissState.trail.length) * 120 + 200;
+                ctx.beginPath();
+                ctx.moveTo(lissState.trail[i - 1].x, lissState.trail[i - 1].y);
+                ctx.lineTo(lissState.trail[i].x, lissState.trail[i].y);
+                ctx.strokeStyle = `hsla(${hue}, 80%, 65%, ${alpha})`;
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+            }
+        }
+
+        // Current point
+        const px = lissState.trail[lissState.trail.length - 1];
+        if (px) {
+            const pg = ctx.createRadialGradient(px.x, px.y, 2, px.x, px.y, 10);
+            pg.addColorStop(0, "#fff");
+            pg.addColorStop(1, "rgba(123,97,255,0)");
+            ctx.beginPath(); ctx.arc(px.x, px.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = pg; ctx.fill();
+            ctx.beginPath(); ctx.arc(px.x, px.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff"; ctx.fill();
+        }
+
+        // Axes
+        ctx.strokeStyle = "rgba(255,255,255,0.07)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx - ampX - 20, cy); ctx.lineTo(cx + ampX + 20, cy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy - ampY - 20); ctx.lineTo(cx, cy + ampY + 20); ctx.stroke();
+
+        // Ratio display
+        ctx.fillStyle = "#7b61ff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${A} : ${B}`, cx, 30);
+        ctx.font = "12px sans-serif";
+        ctx.fillStyle = "#aab";
+        ctx.fillText(`\u03b4 = ${(phase * 180 / Math.PI).toFixed(0)}\u00b0`, cx, 50);
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#7b61ff">Lissajous</b><br>` +
+            `A: ${A} | B: ${B}<br>` +
+            `Phase: ${(phase * 180 / Math.PI).toFixed(0)}\u00b0<br>` +
+            `Ratio: ${A}:${B}`;
+
+        if (lissState.running) {
+            animId = requestAnimationFrame(drawLissajous);
+        }
+    }
+
+    bindSlider("lissA", "val-lissA", () => { lissState.trail = []; });
+    bindSlider("lissB", "val-lissB", () => { lissState.trail = []; });
+    bindSlider("lissPhase", "val-lissPhase", () => { lissState.trail = []; });
+
+    document.getElementById("btn-liss-toggle").addEventListener("click", () => {
+        lissState.running = !lissState.running;
+        document.getElementById("btn-liss-toggle").textContent = lissState.running ? "Pause" : "Resume";
+        if (lissState.running) drawLissajous();
+    });
+    document.getElementById("btn-liss-reset").addEventListener("click", initLissajous);
+
+    // ═══════════════════════════════════════════════════════
+    // 23. BLACKBODY RADIATION
+    // ═══════════════════════════════════════════════════════
+    let bbCompareTemps = [];
+
+    function initBlackbody() {
+        bbCompareTemps = [];
+        drawBlackbody();
+    }
+
+    function planck(wavelength, T) {
+        const h = 6.626e-34, c = 3e8, kb = 1.381e-23;
+        const l = wavelength * 1e-9;
+        return (2 * h * c * c) / (Math.pow(l, 5) * (Math.exp((h * c) / (l * kb * T)) - 1));
+    }
+
+    function bbTempToRGB(T) {
+        // Approximate color of blackbody at temperature T
+        let r, g, b;
+        T = T / 100;
+        if (T <= 66) { r = 255; } else { r = Math.min(255, Math.max(0, 329.7 * Math.pow(T - 60, -0.133))); }
+        if (T <= 66) { g = Math.min(255, Math.max(0, 99.47 * Math.log(T) - 161.1)); } else { g = Math.min(255, Math.max(0, 288.1 * Math.pow(T - 60, -0.0755))); }
+        if (T >= 66) { b = 255; } else if (T <= 19) { b = 0; } else { b = Math.min(255, Math.max(0, 138.5 * Math.log(T - 10) - 305.0)); }
+        return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+    }
+
+    function drawBlackbody() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const T = +document.getElementById("bbTemp").value;
+        const showWien = document.getElementById("showWien").checked;
+
+        // Graph area
+        const gx = 80, gy = 40, gw = W - 120, gh = 340;
+        ctx.fillStyle = "rgba(16,20,58,0.6)";
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = "#2a2f6e"; ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        // Wavelength range: 100nm to 3000nm
+        const wlMin = 100, wlMax = 3000;
+
+        // Find peak intensity for scaling
+        let maxI = 0;
+        const allTemps = [T, ...bbCompareTemps];
+        allTemps.forEach(temp => {
+            for (let wl = wlMin; wl < wlMax; wl += 10) {
+                const I = planck(wl, temp);
+                if (I > maxI) maxI = I;
+            }
+        });
+        if (maxI === 0) maxI = 1;
+
+        // Visible spectrum background
+        const visMin = 380, visMax = 700;
+        const visX1 = gx + ((visMin - wlMin) / (wlMax - wlMin)) * gw;
+        const visX2 = gx + ((visMax - wlMin) / (wlMax - wlMin)) * gw;
+        for (let px = Math.floor(visX1); px < Math.ceil(visX2); px++) {
+            const wl = wlMin + ((px - gx) / gw) * (wlMax - wlMin);
+            const t = (wl - 380) / 320;
+            let r = 0, g = 0, b = 0;
+            if (t < 0.2) { r = (0.2 - t) / 0.2 * 0.5; b = t / 0.2; }
+            else if (t < 0.4) { b = 1 - (t - 0.2) / 0.2 * 0.5; g = (t - 0.2) / 0.2; }
+            else if (t < 0.6) { g = 1; r = (t - 0.4) / 0.2; }
+            else if (t < 0.8) { r = 1; g = 1 - (t - 0.6) / 0.2; }
+            else { r = 1; }
+            ctx.fillStyle = `rgba(${r * 255 | 0},${g * 255 | 0},${b * 255 | 0},0.08)`;
+            ctx.fillRect(px, gy, 1, gh);
+        }
+
+        ctx.fillStyle = "#667"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("UV", gx + ((300 - wlMin) / (wlMax - wlMin)) * gw, gy + gh + 24);
+        ctx.fillText("Visible", (visX1 + visX2) / 2, gy + gh + 24);
+        ctx.fillText("Infrared", gx + ((1500 - wlMin) / (wlMax - wlMin)) * gw, gy + gh + 24);
+
+        // Draw comparison curves
+        const colors = ["rgba(255,152,0,0.4)", "rgba(76,175,80,0.4)", "rgba(171,71,188,0.4)"];
+        bbCompareTemps.forEach((temp, idx) => {
+            ctx.beginPath();
+            for (let px = 0; px < gw; px += 2) {
+                const wl = wlMin + (px / gw) * (wlMax - wlMin);
+                const I = planck(wl, temp);
+                const py = gy + gh - (I / maxI) * gh * 0.9;
+                px === 0 ? ctx.moveTo(gx + px, py) : ctx.lineTo(gx + px, py);
+            }
+            ctx.strokeStyle = colors[idx % colors.length];
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = colors[idx % colors.length];
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`${temp} K`, gx + gw - 80, gy + 16 + idx * 14);
+        });
+
+        // Main curve
+        ctx.beginPath();
+        for (let px = 0; px < gw; px += 2) {
+            const wl = wlMin + (px / gw) * (wlMax - wlMin);
+            const I = planck(wl, T);
+            const py = gy + gh - (I / maxI) * gh * 0.9;
+            px === 0 ? ctx.moveTo(gx + px, py) : ctx.lineTo(gx + px, py);
+        }
+        ctx.strokeStyle = bbTempToRGB(T);
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Wien's displacement law: λ_max = b/T
+        if (showWien) {
+            const b = 2.898e6; // Wien's constant in nm·K
+            const wlPeak = b / T;
+            if (wlPeak >= wlMin && wlPeak <= wlMax) {
+                const peakX = gx + ((wlPeak - wlMin) / (wlMax - wlMin)) * gw;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(peakX, gy);
+                ctx.lineTo(peakX, gy + gh);
+                ctx.strokeStyle = "#ffeb3b";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#ffeb3b";
+                ctx.font = "10px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`\u03bb_max = ${wlPeak.toFixed(0)} nm`, peakX, gy - 6);
+            }
+        }
+
+        // X-axis labels
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+        for (let wl = 500; wl <= 2500; wl += 500) {
+            const px = gx + ((wl - wlMin) / (wlMax - wlMin)) * gw;
+            ctx.fillText(`${wl}`, px, gy + gh + 12);
+        }
+        ctx.fillText("Wavelength (nm)", gx + gw / 2, gy + gh + 38);
+
+        // Temperature color swatch
+        ctx.beginPath();
+        ctx.arc(W / 2, H - 40, 25, 0, Math.PI * 2);
+        ctx.fillStyle = bbTempToRGB(T);
+        ctx.fill();
+        ctx.strokeStyle = "#555"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = "#ccc"; ctx.font = "12px sans-serif";
+        ctx.fillText(`${T} K`, W / 2, H - 12);
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:${bbTempToRGB(T)}">Blackbody</b><br>` +
+            `T: ${T} K<br>` +
+            `\u03bb_peak: ${(2.898e6 / T).toFixed(0)} nm<br>` +
+            `P \u221d T\u2074`;
+    }
+
+    bindSlider("bbTemp", "val-bbTemp", () => { if (currentSim === "blackbody") drawBlackbody(); });
+    document.getElementById("showWien").addEventListener("change", () => { if (currentSim === "blackbody") drawBlackbody(); });
+    document.getElementById("btn-bb-compare").addEventListener("click", () => {
+        const T = +document.getElementById("bbTemp").value;
+        if (bbCompareTemps.length < 3) bbCompareTemps.push(T);
+        drawBlackbody();
+    });
+    document.getElementById("btn-bb-reset").addEventListener("click", initBlackbody);
+
+    // ═══════════════════════════════════════════════════════
+    // 24. ELASTIC COLLISIONS (1D)
+    // ═══════════════════════════════════════════════════════
+    let collState = {};
+
+    function initCollision() {
+        collState = { running: false, collided: false, t: 0,
+            a: { x: 200, v: 0 }, b: { x: 550, v: 0 } };
+        drawCollision();
+    }
+
+    function drawCollision() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const mA = +document.getElementById("massA").value;
+        const mB = +document.getElementById("massB").value;
+        const vA0 = +document.getElementById("velA").value;
+
+        const trackY = 200;
+        const rA = 15 + mA * 3, rB = 15 + mB * 3;
+
+        if (collState.running) {
+            collState.t++;
+            collState.a.x += collState.a.v * 2;
+            collState.b.x += collState.b.v * 2;
+
+            // Collision detection
+            if (!collState.collided && collState.a.x + rA >= collState.b.x - rB) {
+                collState.collided = true;
+                // Elastic collision formulas
+                const v1f = ((mA - mB) / (mA + mB)) * collState.a.v + ((2 * mB) / (mA + mB)) * collState.b.v;
+                const v2f = ((2 * mA) / (mA + mB)) * collState.a.v + ((mB - mA) / (mA + mB)) * collState.b.v;
+                collState.a.v = v1f;
+                collState.b.v = v2f;
+            }
+
+            // Walls
+            if (collState.a.x - rA < 20) { collState.a.x = 20 + rA; collState.a.v *= -1; }
+            if (collState.b.x + rB > W - 20) { collState.b.x = W - 20 - rB; collState.b.v *= -1; }
+        }
+
+        // Track
+        ctx.fillStyle = "#1a2a1a";
+        ctx.fillRect(20, trackY + 50, W - 40, 10);
+        ctx.strokeStyle = "#2a4a2a"; ctx.lineWidth = 1;
+        ctx.strokeRect(20, trackY + 50, W - 40, 10);
+
+        // Object A
+        const gA = ctx.createRadialGradient(collState.a.x - 3, trackY - 3, 2, collState.a.x, trackY, rA);
+        gA.addColorStop(0, "#ef5350"); gA.addColorStop(1, "#b71c1c");
+        ctx.beginPath(); ctx.arc(collState.a.x, trackY, rA, 0, Math.PI * 2);
+        ctx.fillStyle = gA; ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("A", collState.a.x, trackY + 4);
+        ctx.font = "10px sans-serif"; ctx.fillStyle = "#ef5350";
+        ctx.fillText(`${mA} kg`, collState.a.x, trackY + rA + 16);
+
+        // Object B
+        const gB = ctx.createRadialGradient(collState.b.x - 3, trackY - 3, 2, collState.b.x, trackY, rB);
+        gB.addColorStop(0, "#42a5f5"); gB.addColorStop(1, "#0d47a1");
+        ctx.beginPath(); ctx.arc(collState.b.x, trackY, rB, 0, Math.PI * 2);
+        ctx.fillStyle = gB; ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "bold 12px sans-serif";
+        ctx.fillText("B", collState.b.x, trackY + 4);
+        ctx.font = "10px sans-serif"; ctx.fillStyle = "#42a5f5";
+        ctx.fillText(`${mB} kg`, collState.b.x, trackY + rB + 16);
+
+        // Velocity arrows
+        if (Math.abs(collState.a.v) > 0.1) {
+            const len = collState.a.v * 15;
+            ctx.beginPath();
+            ctx.moveTo(collState.a.x, trackY - rA - 10);
+            ctx.lineTo(collState.a.x + len, trackY - rA - 10);
+            ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.stroke();
+        }
+        if (Math.abs(collState.b.v) > 0.1) {
+            const len = collState.b.v * 15;
+            ctx.beginPath();
+            ctx.moveTo(collState.b.x, trackY - rB - 10);
+            ctx.lineTo(collState.b.x + len, trackY - rB - 10);
+            ctx.strokeStyle = "#ffeb3b"; ctx.lineWidth = 2; ctx.stroke();
+        }
+
+        // Conservation display
+        const pBefore = mA * vA0;
+        const keBefore = 0.5 * mA * vA0 * vA0;
+        const pAfter = mA * collState.a.v + mB * collState.b.v;
+        const keAfter = 0.5 * mA * collState.a.v * collState.a.v + 0.5 * mB * collState.b.v * collState.b.v;
+
+        const boxY = 300;
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(40, boxY, W - 80, 180);
+        ctx.strokeStyle = "#2a2f6e"; ctx.lineWidth = 1;
+        ctx.strokeRect(40, boxY, W - 80, 180);
+
+        ctx.font = "13px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#7b61ff"; ctx.fillText("Conservation Laws", 60, boxY + 24);
+
+        ctx.font = "12px sans-serif";
+        ctx.fillStyle = "#ccc";
+        ctx.fillText("Before Collision:", 60, boxY + 50);
+        ctx.fillText(`p = m\u2081v\u2081 = ${pBefore.toFixed(1)} kg\u00b7m/s`, 80, boxY + 70);
+        ctx.fillText(`KE = \u00bdm\u2081v\u2081\u00b2 = ${keBefore.toFixed(1)} J`, 80, boxY + 90);
+
+        ctx.fillText("After Collision:", 60, boxY + 116);
+        ctx.fillStyle = collState.collided ? "#ccc" : "#556";
+        ctx.fillText(`p = ${collState.collided ? pAfter.toFixed(1) : "?"} kg\u00b7m/s`, 80, boxY + 136);
+        ctx.fillText(`KE = ${collState.collided ? keAfter.toFixed(1) : "?"} J`, 80, boxY + 156);
+
+        if (collState.collided) {
+            // Elastic collision formulas result
+            const v1f = ((mA - mB) / (mA + mB)) * vA0;
+            const v2f = ((2 * mA) / (mA + mB)) * vA0;
+            ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif";
+            ctx.fillText(`v\u2081' = ${v1f.toFixed(2)} m/s`, 400, boxY + 70);
+            ctx.fillText(`v\u2082' = ${v2f.toFixed(2)} m/s`, 400, boxY + 90);
+
+            // Verify conservation
+            ctx.fillStyle = "#4caf50";
+            ctx.fillText("\u2713 Momentum conserved", 400, boxY + 136);
+            ctx.fillText("\u2713 Kinetic energy conserved", 400, boxY + 156);
+        }
+
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#7b61ff">Elastic Collision</b><br>` +
+            `v_A: ${collState.a.v.toFixed(2)} m/s<br>` +
+            `v_B: ${collState.b.v.toFixed(2)} m/s<br>` +
+            `${collState.collided ? "Collided!" : "Waiting..."}`;
+
+        if (collState.running) {
+            animId = requestAnimationFrame(drawCollision);
+        }
+    }
+
+    bindSlider("massA", "val-massA", () => { if (!collState.running) drawCollision(); });
+    bindSlider("massB", "val-massB", () => { if (!collState.running) drawCollision(); });
+    bindSlider("velA", "val-velA", () => { if (!collState.running) drawCollision(); });
+
+    document.getElementById("btn-coll-start").addEventListener("click", () => {
+        const vA0 = +document.getElementById("velA").value;
+        collState = { running: true, collided: false, t: 0,
+            a: { x: 200, v: vA0 }, b: { x: 550, v: 0 } };
+        drawCollision();
+    });
+    document.getElementById("btn-coll-reset").addEventListener("click", initCollision);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

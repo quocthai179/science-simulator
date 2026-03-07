@@ -32,6 +32,11 @@
         <button class="nav-btn" data-sim="circuit">RC Circuit</button>
         <button class="nav-btn" data-sim="diffusion">Diffusion</button>
         <button class="nav-btn" data-sim="pendwave">Pendulum Wave</button>
+        <button class="nav-btn" data-sim="buoyancy">Buoyancy</button>
+        <button class="nav-btn" data-sim="coulomb">Coulomb's Law</button>
+        <button class="nav-btn" data-sim="lissajous">Lissajous Curves</button>
+        <button class="nav-btn" data-sim="blackbody">Blackbody Radiation</button>
+        <button class="nav-btn" data-sim="collision">Elastic Collisions</button>
     </nav>
 
     <main>
@@ -372,6 +377,93 @@
             <div class="btn-row">
                 <button id="btn-pw-toggle">Pause</button>
                 <button id="btn-pw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Buoyancy Controls -->
+        <div class="controls hidden" id="ctrl-buoyancy">
+            <h3>Buoyancy (Archimedes' Principle)</h3>
+            <label>Object Density: <span id="val-objDensity">500</span> kg/m&sup3;
+                <input type="range" id="objDensity" min="100" max="2000" value="500" step="50">
+            </label>
+            <label>Fluid Density: <span id="val-fluidDensity">1000</span> kg/m&sup3;
+                <input type="range" id="fluidDensity" min="500" max="2500" value="1000" step="50">
+            </label>
+            <label>Object Size: <span id="val-objSize">60</span> px
+                <input type="range" id="objSize" min="30" max="100" value="60">
+            </label>
+            <div class="btn-row">
+                <button id="btn-buoy-drop">Drop</button>
+                <button id="btn-buoy-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Coulomb's Law Controls -->
+        <div class="controls hidden" id="ctrl-coulomb">
+            <h3>Coulomb's Law</h3>
+            <p class="ctrl-hint">Drag charges to see how force changes with distance. Toggle charge signs.</p>
+            <label>Charge 1: <span id="val-q1">+3</span> &mu;C
+                <input type="range" id="q1" min="-5" max="5" value="3" step="1">
+            </label>
+            <label>Charge 2: <span id="val-q2">-2</span> &mu;C
+                <input type="range" id="q2" min="-5" max="5" value="-2" step="1">
+            </label>
+            <label>Separation: <span id="val-sep">200</span> px
+                <input type="range" id="sep" min="60" max="500" value="200">
+            </label>
+            <div class="btn-row">
+                <button id="btn-coulomb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Lissajous Controls -->
+        <div class="controls hidden" id="ctrl-lissajous">
+            <h3>Lissajous Curves</h3>
+            <label>Frequency A: <span id="val-lissA">3</span>
+                <input type="range" id="lissA" min="1" max="10" value="3">
+            </label>
+            <label>Frequency B: <span id="val-lissB">2</span>
+                <input type="range" id="lissB" min="1" max="10" value="2">
+            </label>
+            <label>Phase Shift: <span id="val-lissPhase">0</span>&deg;
+                <input type="range" id="lissPhase" min="0" max="360" value="0">
+            </label>
+            <div class="btn-row">
+                <button id="btn-liss-toggle">Pause</button>
+                <button id="btn-liss-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Blackbody Radiation Controls -->
+        <div class="controls hidden" id="ctrl-blackbody">
+            <h3>Blackbody Radiation</h3>
+            <label>Temperature: <span id="val-bbTemp">5500</span> K
+                <input type="range" id="bbTemp" min="500" max="15000" value="5500" step="100">
+            </label>
+            <label>Show Wien's Peak
+                <input type="checkbox" id="showWien" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-bb-compare">Compare Temps</button>
+                <button id="btn-bb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Elastic Collisions Controls -->
+        <div class="controls hidden" id="ctrl-collision">
+            <h3>Elastic Collisions (1D)</h3>
+            <label>Mass A: <span id="val-massA">3.0</span> kg
+                <input type="range" id="massA" min="0.5" max="10" value="3.0" step="0.5">
+            </label>
+            <label>Mass B: <span id="val-massB">1.0</span> kg
+                <input type="range" id="massB" min="0.5" max="10" value="1.0" step="0.5">
+            </label>
+            <label>Velocity A: <span id="val-velA">4.0</span> m/s
+                <input type="range" id="velA" min="0" max="10" value="4.0" step="0.5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-coll-start">Start</button>
+                <button id="btn-coll-reset">Reset</button>
             </div>
         </div>
 
