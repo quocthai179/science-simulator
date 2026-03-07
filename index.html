@@ -18,6 +18,11 @@
         <button class="nav-btn" data-sim="wave">Wave Interference</button>
         <button class="nav-btn" data-sim="gas">Gas Particles</button>
         <button class="nav-btn" data-sim="orbit">Orbital Mechanics</button>
+        <button class="nav-btn" data-sim="efield">Electric Field</button>
+        <button class="nav-btn" data-sim="spring">Spring Oscillator</button>
+        <button class="nav-btn" data-sim="doubleslit">Double Slit</button>
+        <button class="nav-btn" data-sim="life">Game of Life</button>
+        <button class="nav-btn" data-sim="emspectrum">EM Spectrum</button>
     </nav>
 
     <main>
@@ -110,6 +115,89 @@
                 <button id="btn-orbit-reset">Reset</button>
             </div>
         </div>
+        <!-- Electric Field Controls -->
+        <div class="controls hidden" id="ctrl-efield">
+            <h3>Electric Field Visualization</h3>
+            <p class="ctrl-hint">Click on the canvas to place positive charges. Right-click (or hold Shift+click) to place negative charges.</p>
+            <label>Field Line Density: <span id="val-fieldDensity">12</span>
+                <input type="range" id="fieldDensity" min="4" max="24" value="12">
+            </label>
+            <label>Show Field Vectors
+                <input type="checkbox" id="showVectors" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-efield-clear">Clear Charges</button>
+            </div>
+        </div>
+
+        <!-- Spring Oscillator Controls -->
+        <div class="controls hidden" id="ctrl-spring">
+            <h3>Spring / Harmonic Oscillator</h3>
+            <label>Spring Constant (k): <span id="val-springK">0.03</span>
+                <input type="range" id="springK" min="0.005" max="0.08" value="0.03" step="0.005">
+            </label>
+            <label>Mass: <span id="val-springMass">1.0</span>
+                <input type="range" id="springMass" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Damping: <span id="val-springDamp">0.998</span>
+                <input type="range" id="springDamp" min="0.980" max="1.000" value="0.998" step="0.001">
+            </label>
+            <div class="btn-row">
+                <button id="btn-spring-start">Start</button>
+                <button id="btn-spring-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Double Slit Controls -->
+        <div class="controls hidden" id="ctrl-doubleslit">
+            <h3>Double Slit Experiment</h3>
+            <label>Wavelength: <span id="val-wavelength">16</span> px
+                <input type="range" id="wavelength" min="6" max="40" value="16">
+            </label>
+            <label>Slit Separation: <span id="val-slitSep">80</span> px
+                <input type="range" id="slitSep" min="30" max="180" value="80">
+            </label>
+            <label>Slit Width: <span id="val-slitWidth">10</span> px
+                <input type="range" id="slitWidth" min="4" max="30" value="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ds-toggle">Pause</button>
+                <button id="btn-ds-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Game of Life Controls -->
+        <div class="controls hidden" id="ctrl-life">
+            <h3>Conway's Game of Life</h3>
+            <p class="ctrl-hint">Click cells to toggle alive/dead while paused. Use presets or randomize to start.</p>
+            <label>Speed: <span id="val-lifeSpeed">5</span> gen/s
+                <input type="range" id="lifeSpeed" min="1" max="30" value="5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-life-toggle">Start</button>
+                <button id="btn-life-random">Randomize</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-life-glider">Glider Gun</button>
+                <button id="btn-life-clear">Clear</button>
+            </div>
+            <div id="life-stats"></div>
+        </div>
+
+        <!-- EM Spectrum Controls -->
+        <div class="controls hidden" id="ctrl-emspectrum">
+            <h3>Electromagnetic Spectrum</h3>
+            <label>Frequency (log Hz): <span id="val-emfreq">14.5</span>
+                <input type="range" id="emfreq" min="4" max="20" value="14.5" step="0.1">
+            </label>
+            <label>Show Photon Animation
+                <input type="checkbox" id="showPhoton" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-em-reset">Reset</button>
+            </div>
+        </div>
+
     </main>
 
     <script src="simulations.js"></script>

@@ -22,16 +22,26 @@
 
     function switchSim(name) {
         cancelAnimationFrame(animId);
+        if (lifeInterval) { clearInterval(lifeInterval); lifeInterval = null; }
         currentSim = name;
         overlay.textContent = "";
+        canvas.onmousedown = null;
+        canvas.oncontextmenu = null;
         switch (name) {
-            case "projectile": initProjectile(); break;
-            case "pendulum":   initPendulum();   break;
-            case "wave":       initWave();        break;
-            case "gas":        initGas();         break;
-            case "orbit":      initOrbit();       break;
+            case "projectile":  initProjectile();  break;
+            case "pendulum":    initPendulum();    break;
+            case "wave":        initWave();         break;
+            case "gas":         initGas();          break;
+            case "orbit":       initOrbit();        break;
+            case "efield":      initEField();       break;
+            case "spring":      initSpring();       break;
+            case "doubleslit":  initDoubleSlit();   break;
+            case "life":        initLife();         break;
+            case "emspectrum":  initEMSpectrum();   break;
         }
     }
+
+    let lifeInterval = null;
 
     // Helper: bind slider to its value span
     function bindSlider(id, spanId, cb) {
@@ -671,6 +681,809 @@
     bindSlider("planetMass", "val-pmass");
     bindSlider("orbVel", "val-ovel");
     document.getElementById("btn-orbit-reset").addEventListener("click", initOrbit);
+
+    // ═══════════════════════════════════════════════════════
+    // 6. ELECTRIC FIELD VISUALIZATION
+    // ═══════════════════════════════════════════════════════
+    let charges = [];
+
+    function initEField() {
+        charges = [
+            { x: 350, y: 260, q: 1 },
+            { x: 550, y: 260, q: -1 }
+        ];
+        canvas.oncontextmenu = e => e.preventDefault();
+        canvas.onmousedown = e => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            const q = (e.button === 2 || e.shiftKey) ? -1 : 1;
+            charges.push({ x, y, q });
+            drawEField();
+        };
+        drawEField();
+    }
+
+    function eFieldAt(x, y) {
+        let ex = 0, ey = 0;
+        for (const c of charges) {
+            const dx = x - c.x, dy = y - c.y;
+            const r2 = dx * dx + dy * dy;
+            if (r2 < 100) continue;
+            const r = Math.sqrt(r2);
+            const f = c.q * 5000 / r2;
+            ex += f * dx / r;
+            ey += f * dy / r;
+        }
+        return { ex, ey };
+    }
+
+    function drawEField() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const density = +document.getElementById("fieldDensity").value;
+        const showVec = document.getElementById("showVectors").checked;
+
+        // Field lines from each positive charge
+        for (const c of charges) {
+            if (c.q <= 0) continue;
+            for (let i = 0; i < density; i++) {
+                const angle = (i / density) * Math.PI * 2;
+                let lx = c.x + 15 * Math.cos(angle);
+                let ly = c.y + 15 * Math.sin(angle);
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                for (let step = 0; step < 300; step++) {
+                    const { ex, ey } = eFieldAt(lx, ly);
+                    const mag = Math.sqrt(ex * ex + ey * ey);
+                    if (mag < 0.01) break;
+                    lx += (ex / mag) * 4;
+                    ly += (ey / mag) * 4;
+                    if (lx < 0 || lx > W || ly < 0 || ly > H) break;
+                    ctx.lineTo(lx, ly);
+                    // Stop near a negative charge
+                    let nearNeg = false;
+                    for (const c2 of charges) {
+                        if (c2.q < 0) {
+                            const d2 = (lx - c2.x) ** 2 + (ly - c2.y) ** 2;
+                            if (d2 < 225) { nearNeg = true; break; }
+                        }
+                    }
+                    if (nearNeg) break;
+                }
+                ctx.strokeStyle = "rgba(100, 200, 255, 0.25)";
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+            }
+        }
+
+        // Vector field grid
+        if (showVec) {
+            const step = 40;
+            for (let gx = step; gx < W; gx += step) {
+                for (let gy = step; gy < H; gy += step) {
+                    let tooClose = false;
+                    for (const c of charges) {
+                        if ((gx - c.x) ** 2 + (gy - c.y) ** 2 < 900) { tooClose = true; break; }
+                    }
+                    if (tooClose) continue;
+                    const { ex, ey } = eFieldAt(gx, gy);
+                    const mag = Math.sqrt(ex * ex + ey * ey);
+                    if (mag < 0.02) continue;
+                    const len = Math.min(mag * 8, 18);
+                    const ax = (ex / mag) * len, ay = (ey / mag) * len;
+                    ctx.beginPath();
+                    ctx.moveTo(gx, gy);
+                    ctx.lineTo(gx + ax, gy + ay);
+                    const alpha = Math.min(mag * 2, 0.7);
+                    ctx.strokeStyle = `rgba(255, 235, 59, ${alpha})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Draw charges
+        for (const c of charges) {
+            const grad = ctx.createRadialGradient(c.x, c.y, 3, c.x, c.y, 18);
+            if (c.q > 0) {
+                grad.addColorStop(0, "#ff5252");
+                grad.addColorStop(1, "rgba(255,82,82,0.1)");
+            } else {
+                grad.addColorStop(0, "#448aff");
+                grad.addColorStop(1, "rgba(68,138,255,0.1)");
+            }
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 18, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = c.q > 0 ? "#ff5252" : "#448aff";
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(c.q > 0 ? "+" : "\u2212", c.x, c.y);
+            ctx.textAlign = "start";
+            ctx.textBaseline = "alphabetic";
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#ffeb3b">Electric Field</b><br>` +
+            `Charges: ${charges.length}<br>` +
+            `+ : ${charges.filter(c => c.q > 0).length}<br>` +
+            `\u2212 : ${charges.filter(c => c.q < 0).length}`;
+    }
+
+    bindSlider("fieldDensity", "val-fieldDensity", () => { if (currentSim === "efield") drawEField(); });
+    document.getElementById("showVectors").addEventListener("change", () => { if (currentSim === "efield") drawEField(); });
+    document.getElementById("btn-efield-clear").addEventListener("click", () => { charges = []; drawEField(); });
+
+    // ═══════════════════════════════════════════════════════
+    // 7. SPRING / HARMONIC OSCILLATOR
+    // ═══════════════════════════════════════════════════════
+    let springState = {};
+
+    function initSpring() {
+        springState = { x: 200, v: 0, running: false, history: [] };
+        drawSpring();
+    }
+
+    function drawSpring() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const k = +document.getElementById("springK").value;
+        const m = +document.getElementById("springMass").value;
+        const damp = +document.getElementById("springDamp").value;
+        const anchorX = 100, anchorY = 200;
+        const restLen = 200;
+
+        if (springState.running) {
+            const force = -k * springState.x / m;
+            springState.v += force;
+            springState.v *= damp;
+            springState.x += springState.v;
+            springState.history.push(springState.x);
+            if (springState.history.length > 500) springState.history.shift();
+        }
+
+        const bobX = anchorX + restLen + springState.x;
+        const bobY = anchorY;
+
+        // Wall
+        ctx.fillStyle = "#2a2f6e";
+        ctx.fillRect(anchorX - 10, anchorY - 60, 10, 120);
+        for (let i = 0; i < 6; i++) {
+            ctx.beginPath();
+            ctx.moveTo(anchorX - 10, anchorY - 50 + i * 20);
+            ctx.lineTo(anchorX - 20, anchorY - 40 + i * 20);
+            ctx.strokeStyle = "#3949ab";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Spring coils
+        const coils = 14;
+        const springLen = bobX - anchorX - 15;
+        ctx.beginPath();
+        ctx.moveTo(anchorX, anchorY);
+        for (let i = 0; i <= coils; i++) {
+            const px = anchorX + (springLen * i) / coils;
+            const py = anchorY + (i % 2 === 0 ? -14 : 14);
+            ctx.lineTo(px, py);
+        }
+        ctx.lineTo(bobX - 15, anchorY);
+        const compression = Math.abs(springState.x) / 200;
+        const springHue = 120 - compression * 120;
+        ctx.strokeStyle = `hsl(${springHue}, 70%, 55%)`;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Equilibrium line
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(anchorX + restLen, anchorY - 70);
+        ctx.lineTo(anchorX + restLen, anchorY + 70);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#556";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("equilibrium", anchorX + restLen - 28, anchorY + 82);
+
+        // Bob
+        const bobSize = 14 + m * 8;
+        const grad = ctx.createRadialGradient(bobX - 3, bobY - 3, 2, bobX, bobY, bobSize);
+        grad.addColorStop(0, "#ce93d8");
+        grad.addColorStop(1, "#6a1b9a");
+        ctx.beginPath();
+        ctx.arc(bobX, bobY, bobSize, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Force arrow
+        if (springState.running && Math.abs(springState.x) > 2) {
+            const fDir = springState.x > 0 ? -1 : 1;
+            const fLen = Math.min(Math.abs(springState.x) * 0.5, 60);
+            ctx.beginPath();
+            ctx.moveTo(bobX, bobY);
+            ctx.lineTo(bobX + fDir * fLen, bobY);
+            ctx.strokeStyle = "#ef5350";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            // Arrowhead
+            ctx.beginPath();
+            ctx.moveTo(bobX + fDir * fLen, bobY);
+            ctx.lineTo(bobX + fDir * (fLen - 8), bobY - 5);
+            ctx.lineTo(bobX + fDir * (fLen - 8), bobY + 5);
+            ctx.closePath();
+            ctx.fillStyle = "#ef5350";
+            ctx.fill();
+        }
+
+        // Position-time graph
+        const graphY = 380, graphH = 100, graphX = 60, graphW = W - 120;
+        ctx.fillStyle = "rgba(16, 20, 58, 0.8)";
+        ctx.fillRect(graphX, graphY, graphW, graphH);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY, graphW, graphH);
+
+        // Zero line
+        ctx.beginPath();
+        ctx.moveTo(graphX, graphY + graphH / 2);
+        ctx.lineTo(graphX + graphW, graphY + graphH / 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.stroke();
+
+        ctx.fillStyle = "#aab";
+        ctx.font = "11px sans-serif";
+        ctx.fillText("Position vs Time", graphX, graphY - 6);
+
+        if (springState.history.length > 1) {
+            ctx.beginPath();
+            for (let i = 0; i < springState.history.length; i++) {
+                const gx = graphX + (i / 500) * graphW;
+                const gy = graphY + graphH / 2 - (springState.history[i] / 250) * (graphH / 2);
+                i === 0 ? ctx.moveTo(gx, gy) : ctx.lineTo(gx, gy);
+            }
+            ctx.strokeStyle = "#ce93d8";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        const period = 2 * Math.PI * Math.sqrt(m / (k * 60));
+        overlay.innerHTML =
+            `<b style="color:#ce93d8">Spring Oscillator</b><br>` +
+            `x: ${springState.x.toFixed(1)}<br>` +
+            `v: ${springState.v.toFixed(2)}<br>` +
+            `k: ${k} | m: ${m}<br>` +
+            `T \u2248 ${period.toFixed(1)} frames`;
+
+        if (springState.running) {
+            animId = requestAnimationFrame(drawSpring);
+        }
+    }
+
+    bindSlider("springK", "val-springK", () => { if (!springState.running) drawSpring(); });
+    bindSlider("springMass", "val-springMass", () => { if (!springState.running) drawSpring(); });
+    bindSlider("springDamp", "val-springDamp");
+
+    document.getElementById("btn-spring-start").addEventListener("click", () => {
+        if (!springState.running) {
+            springState.running = true;
+            springState.x = 150;
+            springState.v = 0;
+            springState.history = [];
+            drawSpring();
+        }
+    });
+    document.getElementById("btn-spring-reset").addEventListener("click", initSpring);
+
+    // ═══════════════════════════════════════════════════════
+    // 8. DOUBLE SLIT EXPERIMENT
+    // ═══════════════════════════════════════════════════════
+    let dsState = { t: 0, running: true };
+
+    function initDoubleSlit() {
+        dsState = { t: 0, running: true };
+        document.getElementById("btn-ds-toggle").textContent = "Pause";
+        drawDoubleSlit();
+    }
+
+    function drawDoubleSlit() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const wavelength = +document.getElementById("wavelength").value;
+        const slitSep = +document.getElementById("slitSep").value;
+        const slitW = +document.getElementById("slitWidth").value;
+        const t = dsState.t;
+
+        const wallX = 250;
+        const slit1Y = H / 2 - slitSep / 2;
+        const slit2Y = H / 2 + slitSep / 2;
+
+        // Draw wave source (left side)
+        for (let r = 10; r < wallX; r += wavelength) {
+            const phase = (r - t * 2) % wavelength;
+            if (phase < 0) continue;
+            const alpha = Math.max(0, 0.3 - r / (wallX * 2));
+            ctx.beginPath();
+            ctx.arc(20, H / 2, r, -Math.PI / 2, Math.PI / 2);
+            ctx.strokeStyle = `rgba(66, 165, 245, ${alpha})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Source marker
+        ctx.beginPath();
+        ctx.arc(20, H / 2, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#42a5f5";
+        ctx.fill();
+
+        // Wall with slits
+        ctx.fillStyle = "#37474f";
+        ctx.fillRect(wallX, 0, 12, slit1Y - slitW / 2);
+        ctx.fillRect(wallX, slit1Y + slitW / 2, 12, slit2Y - slitW / 2 - slit1Y - slitW / 2);
+        ctx.fillRect(wallX, slit2Y + slitW / 2, 12, H - slit2Y - slitW / 2);
+
+        // Slit glow
+        ctx.fillStyle = "rgba(66, 165, 245, 0.4)";
+        ctx.fillRect(wallX, slit1Y - slitW / 2, 12, slitW);
+        ctx.fillRect(wallX, slit2Y - slitW / 2, 12, slitW);
+
+        // Interference pattern (right side) using wave superposition
+        const screenX = wallX + 12;
+        const imgData = ctx.createImageData(W - screenX, H);
+
+        for (let py = 0; py < H; py++) {
+            for (let px = 0; px < W - screenX; px++) {
+                const x = px + screenX;
+                const y = py;
+
+                // Distance from each slit
+                const d1 = Math.sqrt((x - wallX - 12) ** 2 + (y - slit1Y) ** 2);
+                const d2 = Math.sqrt((x - wallX - 12) ** 2 + (y - slit2Y) ** 2);
+
+                // Superposition of two circular waves
+                const k = 2 * Math.PI / wavelength;
+                const w1 = Math.sin(k * d1 - t * 0.15);
+                const w2 = Math.sin(k * d2 - t * 0.15);
+                const amp = (w1 + w2) / 2;
+
+                // Fade with distance
+                const dist = Math.sqrt(px * px + (y - H / 2) ** 2);
+                const fade = Math.max(0, 1 - dist / (W * 0.7));
+
+                const intensity = amp * amp * fade;
+                const idx = (py * (W - screenX) + px) * 4;
+                imgData.data[idx] = Math.floor(intensity * 80);
+                imgData.data[idx + 1] = Math.floor(intensity * 180);
+                imgData.data[idx + 2] = Math.floor(intensity * 255);
+                imgData.data[idx + 3] = Math.floor(intensity * 220);
+            }
+        }
+        ctx.putImageData(imgData, screenX, 0);
+
+        // Detection screen on far right
+        const detX = W - 30;
+        ctx.fillStyle = "#1a1a2e";
+        ctx.fillRect(detX, 0, 30, H);
+        for (let y = 0; y < H; y++) {
+            const d1 = Math.sqrt((detX - wallX - 12) ** 2 + (y - slit1Y) ** 2);
+            const d2 = Math.sqrt((detX - wallX - 12) ** 2 + (y - slit2Y) ** 2);
+            const k = 2 * Math.PI / wavelength;
+            const w1 = Math.cos(k * d1);
+            const w2 = Math.cos(k * d2);
+            const intensity = ((w1 + w2) / 2) ** 2;
+            ctx.fillStyle = `rgba(100, 200, 255, ${intensity * 0.9})`;
+            ctx.fillRect(detX, y, 30, 1);
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">Double Slit</b><br>` +
+            `\u03bb: ${wavelength} px<br>` +
+            `Slit sep: ${slitSep} px<br>` +
+            `Slit width: ${slitW} px`;
+
+        if (dsState.running) {
+            dsState.t++;
+            animId = requestAnimationFrame(drawDoubleSlit);
+        }
+    }
+
+    bindSlider("wavelength", "val-wavelength");
+    bindSlider("slitSep", "val-slitSep");
+    bindSlider("slitWidth", "val-slitWidth");
+
+    document.getElementById("btn-ds-toggle").addEventListener("click", () => {
+        dsState.running = !dsState.running;
+        document.getElementById("btn-ds-toggle").textContent = dsState.running ? "Pause" : "Resume";
+        if (dsState.running) drawDoubleSlit();
+    });
+    document.getElementById("btn-ds-reset").addEventListener("click", initDoubleSlit);
+
+    // ═══════════════════════════════════════════════════════
+    // 9. CONWAY'S GAME OF LIFE
+    // ═══════════════════════════════════════════════════════
+    const CELL = 8;
+    const COLS = Math.floor(canvas.width / CELL);
+    const ROWS = Math.floor(canvas.height / CELL);
+    let lifeGrid = [];
+    let lifeGen = 0;
+    let lifeRunning = false;
+
+    function makeGrid() {
+        return Array.from({ length: ROWS }, () => new Uint8Array(COLS));
+    }
+
+    function initLife() {
+        lifeGrid = makeGrid();
+        lifeGen = 0;
+        lifeRunning = false;
+        if (lifeInterval) { clearInterval(lifeInterval); lifeInterval = null; }
+        document.getElementById("btn-life-toggle").textContent = "Start";
+
+        canvas.onmousedown = e => {
+            if (lifeRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const col = Math.floor((e.clientX - rect.left) * scaleX / CELL);
+            const row = Math.floor((e.clientY - rect.top) * scaleY / CELL);
+            if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+                lifeGrid[row][col] = lifeGrid[row][col] ? 0 : 1;
+                drawLife();
+            }
+        };
+
+        drawLife();
+    }
+
+    function stepLife() {
+        const next = makeGrid();
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                let n = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = (r + dr + ROWS) % ROWS;
+                        const nc = (c + dc + COLS) % COLS;
+                        n += lifeGrid[nr][nc];
+                    }
+                }
+                if (lifeGrid[r][c]) {
+                    next[r][c] = (n === 2 || n === 3) ? 1 : 0;
+                } else {
+                    next[r][c] = (n === 3) ? 1 : 0;
+                }
+            }
+        }
+        lifeGrid = next;
+        lifeGen++;
+    }
+
+    function drawLife() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        // Grid lines
+        ctx.strokeStyle = "rgba(42, 47, 110, 0.3)";
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x <= W; x += CELL) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+        }
+        for (let y = 0; y <= H; y += CELL) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        }
+
+        // Cells
+        let alive = 0;
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (lifeGrid[r][c]) {
+                    alive++;
+                    // Color based on neighbor count for visual interest
+                    let n = 0;
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (dr === 0 && dc === 0) continue;
+                            const nr = (r + dr + ROWS) % ROWS;
+                            const nc = (c + dc + COLS) % COLS;
+                            n += lifeGrid[nr][nc];
+                        }
+                    }
+                    const hue = 120 + n * 30;
+                    ctx.fillStyle = `hsl(${hue}, 70%, 55%)`;
+                    ctx.fillRect(c * CELL + 1, r * CELL + 1, CELL - 2, CELL - 2);
+                }
+            }
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Game of Life</b><br>` +
+            `Generation: ${lifeGen}<br>` +
+            `Alive: ${alive}<br>` +
+            `Grid: ${COLS}x${ROWS}`;
+
+        document.getElementById("life-stats").innerHTML =
+            `Gen: <b>${lifeGen}</b> | Alive: <b>${alive}</b> / ${COLS * ROWS}`;
+    }
+
+    function lifeLoop() {
+        stepLife();
+        drawLife();
+    }
+
+    bindSlider("lifeSpeed", "val-lifeSpeed", val => {
+        if (lifeRunning && lifeInterval) {
+            clearInterval(lifeInterval);
+            lifeInterval = setInterval(lifeLoop, 1000 / val);
+        }
+    });
+
+    document.getElementById("btn-life-toggle").addEventListener("click", () => {
+        lifeRunning = !lifeRunning;
+        document.getElementById("btn-life-toggle").textContent = lifeRunning ? "Pause" : "Start";
+        if (lifeRunning) {
+            const speed = +document.getElementById("lifeSpeed").value;
+            lifeInterval = setInterval(lifeLoop, 1000 / speed);
+        } else {
+            if (lifeInterval) { clearInterval(lifeInterval); lifeInterval = null; }
+        }
+    });
+
+    document.getElementById("btn-life-random").addEventListener("click", () => {
+        lifeGrid = makeGrid();
+        lifeGen = 0;
+        for (let r = 0; r < ROWS; r++)
+            for (let c = 0; c < COLS; c++)
+                lifeGrid[r][c] = Math.random() < 0.3 ? 1 : 0;
+        drawLife();
+    });
+
+    document.getElementById("btn-life-glider").addEventListener("click", () => {
+        lifeGrid = makeGrid();
+        lifeGen = 0;
+        // Gosper Glider Gun
+        const gun = [
+            [5,1],[5,2],[6,1],[6,2],
+            [3,13],[3,14],[4,12],[4,16],[5,11],[5,17],[6,11],[6,15],[6,17],[6,18],[7,11],[7,17],[8,12],[8,16],[9,13],[9,14],
+            [1,25],[2,23],[2,25],[3,21],[3,22],[4,21],[4,22],[5,21],[5,22],[6,23],[6,25],[7,25],
+            [3,35],[3,36],[4,35],[4,36]
+        ];
+        gun.forEach(([r, c]) => {
+            if (r < ROWS && c < COLS) lifeGrid[r][c] = 1;
+        });
+        drawLife();
+    });
+
+    document.getElementById("btn-life-clear").addEventListener("click", () => {
+        lifeGrid = makeGrid();
+        lifeGen = 0;
+        lifeRunning = false;
+        if (lifeInterval) { clearInterval(lifeInterval); lifeInterval = null; }
+        document.getElementById("btn-life-toggle").textContent = "Start";
+        drawLife();
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // 10. ELECTROMAGNETIC SPECTRUM
+    // ═══════════════════════════════════════════════════════
+    let emState = { t: 0, running: true };
+
+    function initEMSpectrum() {
+        emState = { t: 0, running: true };
+        drawEMSpectrum();
+    }
+
+    function freqToColor(logFreq) {
+        // Map visible light range ~14.0 - 14.85 log Hz
+        if (logFreq < 14.0 || logFreq > 14.85) return null;
+        const t = (logFreq - 14.0) / 0.85; // 0=red, 1=violet
+        let r, g, b;
+        if (t < 0.17) { r = 255; g = Math.floor(t / 0.17 * 165); b = 0; }           // red-orange
+        else if (t < 0.33) { r = 255; g = 165 + Math.floor((t - 0.17) / 0.16 * 90); b = 0; } // orange-yellow
+        else if (t < 0.50) { r = Math.floor(255 - (t - 0.33) / 0.17 * 255); g = 255; b = 0; } // yellow-green
+        else if (t < 0.67) { r = 0; g = Math.floor(255 - (t - 0.50) / 0.17 * 128); b = Math.floor((t - 0.50) / 0.17 * 255); } // green-blue
+        else if (t < 0.83) { r = Math.floor((t - 0.67) / 0.16 * 75); g = 0; b = 255; } // blue-indigo
+        else { r = Math.floor(75 + (t - 0.83) / 0.17 * 73); g = 0; b = Math.floor(255 - (t - 0.83) / 0.17 * 25); } // indigo-violet
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function drawEMSpectrum() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const logFreq = +document.getElementById("emfreq").value;
+        const showPhoton = document.getElementById("showPhoton").checked;
+
+        // Spectrum bar
+        const barY = 40, barH = 60;
+        const bands = [
+            { name: "Radio",       min: 4,    max: 9,    color: "#b71c1c" },
+            { name: "Microwave",   min: 9,    max: 11.5, color: "#e65100" },
+            { name: "Infrared",    min: 11.5, max: 14.0, color: "#ff6f00" },
+            { name: "Visible",     min: 14.0, max: 14.85,color: null },
+            { name: "Ultraviolet", min: 14.85,max: 16.5, color: "#7b1fa2" },
+            { name: "X-ray",       min: 16.5, max: 19,   color: "#1565c0" },
+            { name: "Gamma",       min: 19,   max: 20,   color: "#004d40" }
+        ];
+
+        const totalRange = 20 - 4;
+        bands.forEach(band => {
+            const x1 = ((band.min - 4) / totalRange) * W;
+            const x2 = ((band.max - 4) / totalRange) * W;
+
+            if (band.name === "Visible") {
+                // Draw rainbow gradient
+                for (let px = Math.floor(x1); px < Math.ceil(x2); px++) {
+                    const f = 14.0 + ((px - x1) / (x2 - x1)) * 0.85;
+                    const col = freqToColor(f);
+                    if (col) {
+                        ctx.fillStyle = col;
+                        ctx.fillRect(px, barY, 1, barH);
+                    }
+                }
+            } else {
+                ctx.fillStyle = band.color;
+                ctx.fillRect(x1, barY, x2 - x1, barH);
+            }
+
+            // Label
+            ctx.fillStyle = "#ddd";
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(band.name, (x1 + x2) / 2, barY + barH + 14);
+        });
+
+        // Frequency indicator
+        const indX = ((logFreq - 4) / totalRange) * W;
+        ctx.beginPath();
+        ctx.moveTo(indX, barY - 8);
+        ctx.lineTo(indX - 6, barY - 20);
+        ctx.lineTo(indX + 6, barY - 20);
+        ctx.closePath();
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(indX, barY);
+        ctx.lineTo(indX, barY + barH);
+        ctx.strokeStyle = "rgba(255,255,255,0.8)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(`10^${logFreq.toFixed(1)} Hz`, indX, barY - 24);
+
+        // Determine which band we're in
+        let currentBand = "Unknown";
+        for (const b of bands) {
+            if (logFreq >= b.min && logFreq < b.max) { currentBand = b.name; break; }
+        }
+
+        // Wave visualization
+        const waveY = 220;
+        const displayFreq = Math.pow(10, (logFreq - 4) * 0.15) * 0.5;
+        const displayWavelength = Math.max(4, 200 / displayFreq);
+
+        // Draw wave
+        ctx.beginPath();
+        for (let x = 0; x < W; x++) {
+            const y = waveY + 50 * Math.sin((x / displayWavelength) * Math.PI * 2 - emState.t * 0.08 * displayFreq);
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        const waveColor = freqToColor(logFreq) || (logFreq < 14 ? "#ff6f00" : "#7b1fa2");
+        ctx.strokeStyle = waveColor;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // E and B field labels
+        ctx.fillStyle = waveColor;
+        ctx.font = "13px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("E field", 14, waveY - 55);
+
+        // B field (perpendicular, shown as dashed)
+        ctx.beginPath();
+        for (let x = 0; x < W; x++) {
+            const y = waveY + 30 * Math.cos((x / displayWavelength) * Math.PI * 2 - emState.t * 0.08 * displayFreq);
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = "rgba(150,150,200,0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(150,150,200,0.6)";
+        ctx.fillText("B field", 14, waveY + 45);
+
+        // Photon animation
+        if (showPhoton) {
+            const photonX = (emState.t * 2 * Math.min(displayFreq, 5)) % W;
+            const photonY = waveY + 50 * Math.sin((photonX / displayWavelength) * Math.PI * 2 - emState.t * 0.08 * displayFreq);
+            const pgr = ctx.createRadialGradient(photonX, photonY, 2, photonX, photonY, 12);
+            pgr.addColorStop(0, "#ffffff");
+            pgr.addColorStop(0.5, waveColor);
+            pgr.addColorStop(1, "transparent");
+            ctx.beginPath();
+            ctx.arc(photonX, photonY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = pgr;
+            ctx.fill();
+        }
+
+        // Info panel at bottom
+        const freq = Math.pow(10, logFreq);
+        const c = 3e8;
+        const wl = c / freq;
+        const energy = 6.626e-34 * freq;
+
+        let wlStr;
+        if (wl > 1) wlStr = wl.toFixed(1) + " m";
+        else if (wl > 1e-3) wlStr = (wl * 1e3).toFixed(1) + " mm";
+        else if (wl > 1e-6) wlStr = (wl * 1e6).toFixed(2) + " \u00b5m";
+        else if (wl > 1e-9) wlStr = (wl * 1e9).toFixed(1) + " nm";
+        else wlStr = (wl * 1e12).toFixed(2) + " pm";
+
+        // Properties box
+        const boxY = 340;
+        ctx.fillStyle = "rgba(16, 20, 58, 0.9)";
+        ctx.fillRect(40, boxY, W - 80, 140);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(40, boxY, W - 80, 140);
+
+        ctx.font = "13px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#00d4ff";
+        ctx.fillText(`Band: ${currentBand}`, 60, boxY + 24);
+        ctx.fillStyle = "#ccc";
+        ctx.fillText(`Frequency: ${freq.toExponential(2)} Hz`, 60, boxY + 48);
+        ctx.fillText(`Wavelength: ${wlStr}`, 60, boxY + 72);
+        ctx.fillText(`Photon Energy: ${energy.toExponential(2)} J  (${(energy / 1.602e-19).toExponential(2)} eV)`, 60, boxY + 96);
+
+        // Real-world use
+        const uses = {
+            "Radio": "AM/FM radio, TV broadcasting, communication",
+            "Microwave": "Microwave ovens, radar, WiFi, cell phones",
+            "Infrared": "Thermal imaging, remote controls, heating",
+            "Visible": "Human vision, optical fibers, photography",
+            "Ultraviolet": "Sterilization, fluorescence, sunburn",
+            "X-ray": "Medical imaging, security scanning, crystallography",
+            "Gamma": "Cancer treatment, nuclear physics, sterilization"
+        };
+        ctx.fillStyle = "#888";
+        ctx.font = "11px sans-serif";
+        ctx.fillText(`Uses: ${uses[currentBand] || "N/A"}`, 60, boxY + 124);
+
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:${waveColor}">EM Spectrum</b><br>` +
+            `Band: ${currentBand}<br>` +
+            `\u03bb: ${wlStr}<br>` +
+            `f: 10^${logFreq.toFixed(1)} Hz`;
+
+        if (emState.running) {
+            emState.t++;
+            animId = requestAnimationFrame(drawEMSpectrum);
+        }
+    }
+
+    bindSlider("emfreq", "val-emfreq", () => { /* live update */ });
+    document.getElementById("showPhoton").addEventListener("change", () => {});
+    document.getElementById("btn-em-reset").addEventListener("click", initEMSpectrum);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

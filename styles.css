@@ -180,7 +180,16 @@ canvas {
     color: #ccc;
 }
 
-#gas-stats {
+.ctrl-hint {
+    font-size: 0.8rem;
+    color: #667;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+#gas-stats,
+#life-stats {
     margin-top: 14px;
     font-size: 0.85rem;
     color: #8899aa;
