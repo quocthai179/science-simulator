@@ -62,6 +62,11 @@
         <button class="nav-btn" data-sim="tectonic">Tectonic Plates</button>
         <button class="nav-btn" data-sim="titration">Acid-Base Titration</button>
         <button class="nav-btn" data-sim="lorenz">Lorenz Attractor</button>
+        <button class="nav-btn" data-sim="fourier">Fourier Series</button>
+        <button class="nav-btn" data-sim="galton">Galton Board</button>
+        <button class="nav-btn" data-sim="stressstrain">Stress-Strain</button>
+        <button class="nav-btn" data-sim="reactiondiff">Reaction-Diffusion</button>
+        <button class="nav-btn" data-sim="fluidflow">Fluid Flow</button>
     </nav>
 
     <main>
@@ -959,6 +964,102 @@
             <div class="btn-row">
                 <button id="btn-lor-toggle">Pause</button>
                 <button id="btn-lor-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Fourier Series Controls -->
+        <div class="controls hidden" id="ctrl-fourier">
+            <h3>Fourier Series</h3>
+            <p class="ctrl-hint">Approximate any waveform by summing sine and cosine harmonics.</p>
+            <label>Waveform:
+                <select id="sel-fourier-wave">
+                    <option value="square">Square Wave</option>
+                    <option value="sawtooth">Sawtooth Wave</option>
+                    <option value="triangle">Triangle Wave</option>
+                </select>
+            </label>
+            <label>Harmonics: <span id="val-harmonics">5</span>
+                <input type="range" id="harmonics" min="1" max="50" value="5">
+            </label>
+            <label>Speed: <span id="val-four-speed">1</span>
+                <input type="range" id="four-speed" min="0.1" max="3" value="1" step="0.1">
+            </label>
+        </div>
+
+        <!-- Galton Board Controls -->
+        <div class="controls hidden" id="ctrl-galton">
+            <h3>Galton Board (CLT)</h3>
+            <p class="ctrl-hint">Balls fall through pegs to demonstrate the Central Limit Theorem and normal distribution.</p>
+            <label>Rows: <span id="val-galton-rows">10</span>
+                <input type="range" id="galton-rows" min="4" max="16" value="10">
+            </label>
+            <label>Ball Rate: <span id="val-galton-rate">5</span>/s
+                <input type="range" id="galton-rate" min="1" max="20" value="5">
+            </label>
+            <label>Bias: <span id="val-galton-bias">0.50</span>
+                <input type="range" id="galton-bias" min="0.2" max="0.8" value="0.5" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-galton-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Stress-Strain Controls -->
+        <div class="controls hidden" id="ctrl-stressstrain">
+            <h3>Stress-Strain Curve</h3>
+            <p class="ctrl-hint">Visualize material deformation under load: elastic region, yield point, and fracture.</p>
+            <label>Material:
+                <select id="sel-material">
+                    <option value="steel">Steel</option>
+                    <option value="aluminum">Aluminum</option>
+                    <option value="rubber">Rubber</option>
+                    <option value="glass">Glass (Brittle)</option>
+                </select>
+            </label>
+            <label>Load Rate: <span id="val-load-rate">1</span>
+                <input type="range" id="load-rate" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ss-toggle">Start Loading</button>
+                <button id="btn-ss-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Reaction-Diffusion Controls -->
+        <div class="controls hidden" id="ctrl-reactiondiff">
+            <h3>Reaction-Diffusion</h3>
+            <p class="ctrl-hint">Turing patterns emerge from two reacting chemicals diffusing at different rates.</p>
+            <label>Feed Rate: <span id="val-rd-feed">0.055</span>
+                <input type="range" id="rd-feed" min="0.01" max="0.08" value="0.055" step="0.001">
+            </label>
+            <label>Kill Rate: <span id="val-rd-kill">0.062</span>
+                <input type="range" id="rd-kill" min="0.04" max="0.075" value="0.062" step="0.001">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rd-reset">Reset</button>
+                <button id="btn-rd-seed">Add Seed</button>
+            </div>
+        </div>
+
+        <!-- Fluid Flow Controls -->
+        <div class="controls hidden" id="ctrl-fluidflow">
+            <h3>Fluid Flow</h3>
+            <p class="ctrl-hint">Visualize laminar and turbulent flow around obstacles using particle advection.</p>
+            <label>Flow Speed: <span id="val-flow-speed">3</span>
+                <input type="range" id="flow-speed" min="0.5" max="8" value="3" step="0.5">
+            </label>
+            <label>Obstacle:
+                <select id="sel-obstacle">
+                    <option value="circle">Circle</option>
+                    <option value="airfoil">Airfoil</option>
+                    <option value="square">Square</option>
+                </select>
+            </label>
+            <label>Viscosity: <span id="val-viscosity">0.5</span>
+                <input type="range" id="viscosity" min="0.1" max="1" value="0.5" step="0.05">
+            </label>
+            <div class="btn-row">
+                <button id="btn-flow-reset">Reset</button>
             </div>
         </div>
 

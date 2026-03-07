@@ -77,6 +77,11 @@
             case "tectonic":    initTectonic();     break;
             case "titration":   initTitration();    break;
             case "lorenz":      initLorenz();       break;
+            case "fourier":     initFourier();      break;
+            case "galton":      initGalton();       break;
+            case "stressstrain":initStressStrain(); break;
+            case "reactiondiff":initReactionDiff(); break;
+            case "fluidflow":   initFluidFlow();    break;
         }
     }
 
@@ -9088,6 +9093,708 @@
         if (lorState.running) drawLorenz();
     });
     document.getElementById("btn-lor-reset").addEventListener("click", initLorenz);
+
+    // ── 50. Fourier Series ─────────────────────────────────
+    let fourState = {};
+    function initFourier() {
+        cancelAnimationFrame(animId);
+        currentSim = "fourier";
+        fourState = { t: 0 };
+        drawFourier();
+    }
+    function drawFourier() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const wave = document.getElementById("sel-fourier-wave").value;
+        const N = parseInt(document.getElementById("harmonics").value);
+        const speed = parseFloat(document.getElementById("four-speed").value);
+        fourState.t += 0.02 * speed;
+
+        const cx = 200, cy = H / 2, R = 80;
+        const trace = [];
+
+        // Draw epicycles
+        let x = cx, y = cy;
+        for (let n = 0; n < N; n++) {
+            let k, amp;
+            if (wave === "square") {
+                k = 2 * n + 1;
+                amp = R * (4 / (Math.PI * k));
+            } else if (wave === "sawtooth") {
+                k = n + 1;
+                amp = R * (2 / (Math.PI * k)) * (k % 2 === 0 ? 1 : -1) * -1;
+            } else {
+                k = 2 * n + 1;
+                amp = R * (8 / (Math.PI * Math.PI * k * k)) * (n % 2 === 0 ? 1 : -1);
+            }
+            const prevX = x, prevY = y;
+            ctx.beginPath();
+            ctx.arc(prevX, prevY, Math.abs(amp), 0, Math.PI * 2);
+            ctx.strokeStyle = `hsla(${(n / N) * 360}, 70%, 60%, 0.3)`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            x += amp * Math.cos(k * fourState.t);
+            y += amp * Math.sin(k * fourState.t);
+            ctx.beginPath();
+            ctx.moveTo(prevX, prevY);
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = `hsla(${(n / N) * 360}, 70%, 70%, 0.7)`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Dot at tip
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+
+        // Draw waveform on the right
+        const waveStartX = 350;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(waveStartX, y);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let px = 0; px < W - waveStartX; px++) {
+            const tOff = fourState.t - px * 0.02;
+            let val = 0;
+            for (let n = 0; n < N; n++) {
+                let k2, amp2;
+                if (wave === "square") {
+                    k2 = 2 * n + 1;
+                    amp2 = 4 / (Math.PI * k2);
+                } else if (wave === "sawtooth") {
+                    k2 = n + 1;
+                    amp2 = (2 / (Math.PI * k2)) * (k2 % 2 === 0 ? 1 : -1) * -1;
+                } else {
+                    k2 = 2 * n + 1;
+                    amp2 = (8 / (Math.PI * Math.PI * k2 * k2)) * (n % 2 === 0 ? 1 : -1);
+                }
+                val += amp2 * Math.sin(k2 * tOff);
+            }
+            const py = cy + val * R;
+            if (px === 0) ctx.moveTo(waveStartX + px, py);
+            else ctx.lineTo(waveStartX + px, py);
+        }
+        ctx.strokeStyle = "#00e5ff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Target waveform (faint)
+        ctx.beginPath();
+        for (let px = 0; px < W - waveStartX; px++) {
+            const tOff = fourState.t - px * 0.02;
+            let val;
+            const phase = tOff % (Math.PI * 2);
+            if (wave === "square") val = phase > 0 && phase < Math.PI ? 1 : -1;
+            else if (wave === "sawtooth") val = 1 - phase / Math.PI;
+            else val = 2 * Math.abs(2 * (phase / (2 * Math.PI) - Math.floor(phase / (2 * Math.PI) + 0.5))) - 1;
+            const py = cy + val * R;
+            if (px === 0) ctx.moveTo(waveStartX + px, py);
+            else ctx.lineTo(waveStartX + px, py);
+        }
+        ctx.strokeStyle = "rgba(255,100,100,0.25)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        overlay.innerHTML =
+            `<b style="color:#00e5ff">Fourier Series</b><br>` +
+            `Waveform: ${wave}<br>` +
+            `Harmonics: ${N}`;
+
+        animId = requestAnimationFrame(drawFourier);
+    }
+    bindSlider("harmonics", "val-harmonics");
+    bindSlider("four-speed", "val-four-speed");
+
+    // ── 51. Galton Board ─────────────────────────────────────
+    let galtonState = {};
+    function initGalton() {
+        cancelAnimationFrame(animId);
+        currentSim = "galton";
+        const rows = parseInt(document.getElementById("galton-rows").value);
+        galtonState = {
+            rows: rows,
+            balls: [],
+            bins: new Array(rows + 1).fill(0),
+            lastSpawn: 0,
+            maxBin: 0
+        };
+        drawGalton();
+    }
+    function drawGalton() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const rows = parseInt(document.getElementById("galton-rows").value);
+        const rate = parseInt(document.getElementById("galton-rate").value);
+        const bias = parseFloat(document.getElementById("galton-bias").value);
+
+        if (galtonState.rows !== rows) {
+            galtonState.rows = rows;
+            galtonState.bins = new Array(rows + 1).fill(0);
+            galtonState.balls = [];
+            galtonState.maxBin = 0;
+        }
+
+        const pegSpacing = Math.min(35, (W - 100) / (rows + 1));
+        const pegStartY = 60;
+        const pegEndY = pegStartY + rows * pegSpacing;
+        const boardCX = W / 2;
+
+        // Draw pegs
+        for (let r = 0; r < rows; r++) {
+            const numPegs = r + 1;
+            const rowY = pegStartY + r * pegSpacing;
+            for (let p = 0; p < numPegs; p++) {
+                const px = boardCX + (p - r / 2) * pegSpacing;
+                ctx.beginPath();
+                ctx.arc(px, rowY, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#667";
+                ctx.fill();
+            }
+        }
+
+        // Spawn balls
+        const now = Date.now();
+        if (now - galtonState.lastSpawn > 1000 / rate) {
+            galtonState.lastSpawn = now;
+            // Pre-compute path through pegs
+            let ballBin = 0;
+            const path = [{ x: boardCX, y: pegStartY - 20 }];
+            let bx = boardCX;
+            for (let r = 0; r < rows; r++) {
+                const goRight = Math.random() < bias;
+                if (goRight) ballBin++;
+                bx += (goRight ? 0.5 : -0.5) * pegSpacing;
+                path.push({ x: bx, y: pegStartY + r * pegSpacing });
+            }
+            path.push({ x: bx, y: pegEndY + 30 });
+            galtonState.balls.push({
+                path: path,
+                progress: 0,
+                bin: ballBin,
+                settled: false,
+                hue: Math.random() * 360
+            });
+        }
+
+        // Update and draw balls
+        const binWidth = pegSpacing * 0.9;
+        const binBaseY = H - 20;
+        for (let i = galtonState.balls.length - 1; i >= 0; i--) {
+            const ball = galtonState.balls[i];
+            if (!ball.settled) {
+                ball.progress += 0.04;
+                if (ball.progress >= ball.path.length - 1) {
+                    ball.settled = true;
+                    galtonState.bins[ball.bin]++;
+                    galtonState.maxBin = Math.max(galtonState.maxBin, galtonState.bins[ball.bin]);
+                }
+            }
+            let bx2, by2;
+            if (ball.settled) {
+                const binX = boardCX + (ball.bin - rows / 2) * pegSpacing;
+                const stackH = galtonState.bins[ball.bin];
+                by2 = binBaseY - (stackH * 4);
+                bx2 = binX;
+                // Remove if offscreen below histogram
+                if (by2 < pegEndY + 20) by2 = pegEndY + 20;
+            } else {
+                const idx = Math.floor(ball.progress);
+                const frac = ball.progress - idx;
+                const p1 = ball.path[Math.min(idx, ball.path.length - 1)];
+                const p2 = ball.path[Math.min(idx + 1, ball.path.length - 1)];
+                bx2 = p1.x + (p2.x - p1.x) * frac;
+                by2 = p1.y + (p2.y - p1.y) * frac;
+            }
+            ctx.beginPath();
+            ctx.arc(bx2, by2, 3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${ball.hue}, 70%, 60%)`;
+            ctx.fill();
+        }
+
+        // Draw histogram
+        const maxH = H - pegEndY - 60;
+        const numBins = rows + 1;
+        for (let b = 0; b < numBins; b++) {
+            const bx3 = boardCX + (b - rows / 2) * pegSpacing;
+            const bh = galtonState.maxBin > 0 ? (galtonState.bins[b] / galtonState.maxBin) * maxH : 0;
+            ctx.fillStyle = `hsla(210, 60%, 50%, 0.4)`;
+            ctx.fillRect(bx3 - binWidth / 2, binBaseY - bh, binWidth, bh);
+            ctx.strokeStyle = `hsla(210, 60%, 60%, 0.6)`;
+            ctx.strokeRect(bx3 - binWidth / 2, binBaseY - bh, binWidth, bh);
+        }
+
+        // Normal distribution overlay
+        if (galtonState.maxBin > 5) {
+            const total = galtonState.bins.reduce((a, b) => a + b, 0);
+            const mean = galtonState.bins.reduce((s, v, i) => s + v * i, 0) / total;
+            const variance = galtonState.bins.reduce((s, v, i) => s + v * (i - mean) * (i - mean), 0) / total;
+            const std = Math.sqrt(variance);
+            if (std > 0) {
+                ctx.beginPath();
+                for (let b = 0; b <= rows; b += 0.1) {
+                    const nv = Math.exp(-0.5 * ((b - mean) / std) ** 2) / (std * Math.sqrt(2 * Math.PI));
+                    const bx4 = boardCX + (b - rows / 2) * pegSpacing;
+                    const bh2 = nv * total * (maxH / galtonState.maxBin);
+                    if (b === 0) ctx.moveTo(bx4, binBaseY - bh2);
+                    else ctx.lineTo(bx4, binBaseY - bh2);
+                }
+                ctx.strokeStyle = "#ff6b6b";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.lineWidth = 1;
+            }
+        }
+
+        const total = galtonState.bins.reduce((a, b) => a + b, 0);
+        overlay.innerHTML =
+            `<b style="color:#6bc5ff">Galton Board</b><br>` +
+            `Balls: ${total} | Rows: ${rows}<br>` +
+            `Bias: ${bias.toFixed(2)}`;
+
+        animId = requestAnimationFrame(drawGalton);
+    }
+    bindSlider("galton-rows", "val-galton-rows");
+    bindSlider("galton-rate", "val-galton-rate");
+    bindSlider("galton-bias", "val-galton-bias");
+    document.getElementById("btn-galton-reset").addEventListener("click", initGalton);
+
+    // ── 52. Stress-Strain ────────────────────────────────────
+    let ssState = {};
+    const materials = {
+        steel: { E: 200, yieldStr: 250, ultStr: 400, fracStr: 350, fracStrain: 0.25, name: "Steel", color: "#8899aa" },
+        aluminum: { E: 70, yieldStr: 150, ultStr: 200, fracStr: 170, fracStrain: 0.15, name: "Aluminum", color: "#c0c0c0" },
+        rubber: { E: 5, yieldStr: 10, ultStr: 30, fracStr: 28, fracStrain: 0.8, name: "Rubber", color: "#cc6644" },
+        glass: { E: 70, yieldStr: 50, ultStr: 50, fracStr: 50, fracStrain: 0.002, name: "Glass", color: "#aaddff" }
+    };
+    function initStressStrain() {
+        cancelAnimationFrame(animId);
+        currentSim = "stressstrain";
+        ssState = {
+            strain: 0,
+            loading: false,
+            fractured: false,
+            curve: []
+        };
+        document.getElementById("btn-ss-toggle").textContent = "Start Loading";
+        drawStressStrain();
+    }
+    function drawStressStrain() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const matKey = document.getElementById("sel-material").value;
+        const mat = materials[matKey];
+        const loadRate = parseFloat(document.getElementById("load-rate").value);
+
+        if (ssState.loading && !ssState.fractured) {
+            ssState.strain += 0.0005 * loadRate;
+            let stress;
+            const yieldStrain = mat.yieldStr / mat.E;
+
+            if (ssState.strain <= yieldStrain) {
+                stress = mat.E * ssState.strain;
+            } else if (ssState.strain <= mat.fracStrain * 0.7) {
+                const plastic = ssState.strain - yieldStrain;
+                stress = mat.yieldStr + (mat.ultStr - mat.yieldStr) * (plastic / (mat.fracStrain * 0.7 - yieldStrain));
+            } else if (ssState.strain <= mat.fracStrain) {
+                const neckFrac = (ssState.strain - mat.fracStrain * 0.7) / (mat.fracStrain * 0.3);
+                stress = mat.ultStr - (mat.ultStr - mat.fracStr) * neckFrac;
+            } else {
+                ssState.fractured = true;
+                ssState.loading = false;
+                document.getElementById("btn-ss-toggle").textContent = "Fractured!";
+                stress = 0;
+            }
+            if (!ssState.fractured) {
+                ssState.curve.push({ strain: ssState.strain, stress: stress });
+            }
+        }
+
+        // Graph area
+        const gx = 80, gy = 40, gw = 450, gh = H - 100;
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        // Axis labels
+        ctx.fillStyle = "#aaa";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Strain", gx + gw / 2, H - 20);
+        ctx.save();
+        ctx.translate(20, gy + gh / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("Stress (MPa)", 0, 0);
+        ctx.restore();
+
+        // Scale
+        const maxStrain = Math.max(mat.fracStrain * 1.2, 0.01);
+        const maxStress = mat.ultStr * 1.3;
+
+        // Grid lines
+        ctx.strokeStyle = "rgba(100,100,100,0.3)";
+        for (let i = 0; i <= 5; i++) {
+            const yy = gy + gh - (i / 5) * gh;
+            ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + gw, yy); ctx.stroke();
+            ctx.fillStyle = "#888";
+            ctx.textAlign = "right";
+            ctx.fillText(((i / 5) * maxStress).toFixed(0), gx - 5, yy + 4);
+        }
+        for (let i = 0; i <= 5; i++) {
+            const xx = gx + (i / 5) * gw;
+            ctx.beginPath(); ctx.moveTo(xx, gy); ctx.lineTo(xx, gy + gh); ctx.stroke();
+            ctx.fillStyle = "#888";
+            ctx.textAlign = "center";
+            ctx.fillText(((i / 5) * maxStrain).toFixed(3), xx, gy + gh + 15);
+        }
+
+        // Draw curve
+        if (ssState.curve.length > 1) {
+            ctx.beginPath();
+            for (let i = 0; i < ssState.curve.length; i++) {
+                const px = gx + (ssState.curve[i].strain / maxStrain) * gw;
+                const py = gy + gh - (ssState.curve[i].stress / maxStress) * gh;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = "#00e5ff";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+
+            // Current point
+            const last = ssState.curve[ssState.curve.length - 1];
+            const lx = gx + (last.strain / maxStrain) * gw;
+            const ly = gy + gh - (last.stress / maxStress) * gh;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#ff0";
+            ctx.fill();
+        }
+
+        // Specimen visualization
+        const specX = 620, specY = 100, specW = 200, specH = 60;
+        const strainVis = Math.min(ssState.strain / maxStrain, 1);
+        const elongation = strainVis * 80;
+        const necking = ssState.strain > mat.fracStrain * 0.6 ? (ssState.strain - mat.fracStrain * 0.6) / (mat.fracStrain * 0.4) * 15 : 0;
+
+        ctx.fillStyle = mat.color;
+        if (ssState.fractured) {
+            // Two broken pieces
+            ctx.fillRect(specX, specY, specW / 2 - 10 + elongation / 2, specH);
+            ctx.fillRect(specX + specW / 2 + 10 + elongation / 2, specY, specW / 2, specH);
+            ctx.fillStyle = "#ff4444";
+            ctx.font = "16px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("FRACTURED", specX + specW / 2 + elongation / 2, specY + specH + 30);
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(specX, specY);
+            ctx.lineTo(specX + specW + elongation, specY);
+            ctx.lineTo(specX + specW + elongation, specY + specH);
+            ctx.lineTo(specX, specY + specH);
+            ctx.closePath();
+            ctx.fill();
+            if (necking > 0) {
+                ctx.fillStyle = "#0a0a2e";
+                const neckX = specX + (specW + elongation) / 2;
+                ctx.beginPath();
+                ctx.ellipse(neckX, specY, Math.min(necking, 12), 6, 0, 0, Math.PI);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(neckX, specY + specH, Math.min(necking, 12), 6, 0, Math.PI, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Region labels
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        const yieldStrain = mat.yieldStr / mat.E;
+        if (ssState.strain > 0) {
+            const phase = ssState.strain <= yieldStrain ? "Elastic" :
+                ssState.strain <= mat.fracStrain * 0.7 ? "Plastic (Hardening)" :
+                ssState.strain <= mat.fracStrain ? "Necking" : "Fractured";
+            ctx.fillStyle = phase === "Elastic" ? "#4fc3f7" : phase.includes("Plastic") ? "#ffb74d" : phase === "Necking" ? "#ef5350" : "#ff1744";
+            ctx.fillText(`Phase: ${phase}`, 620, 250);
+        }
+
+        const lastPt = ssState.curve.length > 0 ? ssState.curve[ssState.curve.length - 1] : { strain: 0, stress: 0 };
+        overlay.innerHTML =
+            `<b style="color:${mat.color}">${mat.name} - Stress-Strain</b><br>` +
+            `Strain: ${lastPt.strain.toFixed(4)} | Stress: ${lastPt.stress.toFixed(1)} MPa<br>` +
+            `E: ${mat.E} GPa | Yield: ${mat.yieldStr} MPa`;
+
+        animId = requestAnimationFrame(drawStressStrain);
+    }
+    bindSlider("load-rate", "val-load-rate");
+    document.getElementById("btn-ss-toggle").addEventListener("click", () => {
+        if (ssState.fractured) return;
+        ssState.loading = !ssState.loading;
+        document.getElementById("btn-ss-toggle").textContent = ssState.loading ? "Pause" : "Resume Loading";
+    });
+    document.getElementById("btn-ss-reset").addEventListener("click", initStressStrain);
+
+    // ── 53. Reaction-Diffusion ───────────────────────────────
+    let rdState = {};
+    function initReactionDiff() {
+        cancelAnimationFrame(animId);
+        currentSim = "reactiondiff";
+        const W = 180, H2 = 104; // Scaled grid
+        const gridA = [], gridB = [];
+        for (let i = 0; i < W * H2; i++) {
+            gridA.push(1);
+            gridB.push(0);
+        }
+        // Initial seed
+        const cx = Math.floor(W / 2), cy2 = Math.floor(H2 / 2);
+        for (let dy = -5; dy <= 5; dy++) {
+            for (let dx = -5; dx <= 5; dx++) {
+                if (dx * dx + dy * dy <= 25) {
+                    gridB[(cy2 + dy) * W + (cx + dx)] = 1;
+                }
+            }
+        }
+        rdState = { W: W, H: H2, gridA, gridB, imgData: ctx.createImageData(W, H2) };
+        drawReactionDiff();
+    }
+    function drawReactionDiff() {
+        const cW = canvas.width, cH = canvas.height;
+        const { W: gW, H: gH, gridA, gridB, imgData } = rdState;
+        const f = parseFloat(document.getElementById("rd-feed").value);
+        const k = parseFloat(document.getElementById("rd-kill").value);
+        const dA = 1.0, dB = 0.5, dt = 1;
+
+        // Run multiple steps per frame for speed
+        for (let step = 0; step < 5; step++) {
+            const newA = new Float64Array(gW * gH);
+            const newB = new Float64Array(gW * gH);
+            for (let y = 0; y < gH; y++) {
+                for (let x = 0; x < gW; x++) {
+                    const idx = y * gW + x;
+                    const a = gridA[idx], b = gridB[idx];
+                    // Laplacian with wrapping
+                    const l = x > 0 ? x - 1 : gW - 1, r = x < gW - 1 ? x + 1 : 0;
+                    const u = y > 0 ? y - 1 : gH - 1, d2 = y < gH - 1 ? y + 1 : 0;
+                    const lapA = gridA[y * gW + l] + gridA[y * gW + r] + gridA[u * gW + x] + gridA[d2 * gW + x] - 4 * a;
+                    const lapB = gridB[y * gW + l] + gridB[y * gW + r] + gridB[u * gW + x] + gridB[d2 * gW + x] - 4 * b;
+                    const abb = a * b * b;
+                    newA[idx] = a + (dA * lapA - abb + f * (1 - a)) * dt;
+                    newB[idx] = b + (dB * lapB + abb - (k + f) * b) * dt;
+                    newA[idx] = Math.max(0, Math.min(1, newA[idx]));
+                    newB[idx] = Math.max(0, Math.min(1, newB[idx]));
+                }
+            }
+            for (let i = 0; i < gW * gH; i++) {
+                gridA[i] = newA[i];
+                gridB[i] = newB[i];
+            }
+        }
+
+        // Render to image data
+        for (let i = 0; i < gW * gH; i++) {
+            const val = gridA[i] - gridB[i];
+            const c = Math.max(0, Math.min(255, Math.floor(val * 255)));
+            // Color map: dark blue -> cyan -> white
+            const r2 = c < 128 ? 0 : (c - 128) * 2;
+            const g = c < 128 ? c * 1.5 : 180 + (c - 128) * 0.6;
+            const b2 = c;
+            imgData.data[i * 4] = r2;
+            imgData.data[i * 4 + 1] = Math.min(255, g);
+            imgData.data[i * 4 + 2] = b2;
+            imgData.data[i * 4 + 3] = 255;
+        }
+
+        // Scale up to canvas
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, cW, cH);
+        const offCanvas = document.createElement("canvas");
+        offCanvas.width = gW;
+        offCanvas.height = gH;
+        offCanvas.getContext("2d").putImageData(imgData, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offCanvas, 0, 0, cW, cH);
+        ctx.imageSmoothingEnabled = true;
+
+        overlay.innerHTML =
+            `<b style="color:#00bcd4">Reaction-Diffusion</b><br>` +
+            `Feed: ${f.toFixed(3)} | Kill: ${k.toFixed(3)}<br>` +
+            `Grid: ${gW}\u00d7${gH} | Gray-Scott Model`;
+
+        animId = requestAnimationFrame(drawReactionDiff);
+    }
+    bindSlider("rd-feed", "val-rd-feed");
+    bindSlider("rd-kill", "val-rd-kill");
+    document.getElementById("btn-rd-reset").addEventListener("click", initReactionDiff);
+    document.getElementById("btn-rd-seed").addEventListener("click", () => {
+        if (currentSim !== "reactiondiff") return;
+        const { W: gW, H: gH, gridB } = rdState;
+        const sx = Math.floor(Math.random() * (gW - 10)) + 5;
+        const sy = Math.floor(Math.random() * (gH - 10)) + 5;
+        for (let dy = -5; dy <= 5; dy++) {
+            for (let dx = -5; dx <= 5; dx++) {
+                if (dx * dx + dy * dy <= 25) {
+                    const idx = (sy + dy) * gW + (sx + dx);
+                    if (idx >= 0 && idx < gW * gH) gridB[idx] = 1;
+                }
+            }
+        }
+    });
+
+    // ── 54. Fluid Flow ───────────────────────────────────────
+    let flowState = {};
+    function initFluidFlow() {
+        cancelAnimationFrame(animId);
+        currentSim = "fluidflow";
+        const particles = [];
+        for (let i = 0; i < 600; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                age: Math.random() * 100,
+                hue: Math.random() * 60 + 190
+            });
+        }
+        flowState = { particles, t: 0 };
+        drawFluidFlow();
+    }
+    function getObstacle(type) {
+        const cx = canvas.width * 0.35, cy = canvas.height / 2;
+        if (type === "circle") return { type: "circle", cx, cy, r: 40 };
+        if (type === "square") return { type: "square", cx: cx - 30, cy: cy - 30, w: 60, h: 60 };
+        // airfoil
+        return { type: "airfoil", cx, cy, r: 50 };
+    }
+    function isInsideObstacle(x, y, obs) {
+        if (obs.type === "circle") {
+            return (x - obs.cx) ** 2 + (y - obs.cy) ** 2 < obs.r ** 2;
+        }
+        if (obs.type === "square") {
+            return x > obs.cx && x < obs.cx + obs.w && y > obs.cy && y < obs.cy + obs.h;
+        }
+        // airfoil - approximation with ellipse
+        const dx = x - obs.cx, dy = y - obs.cy;
+        return (dx / obs.r) ** 2 + (dy / (obs.r * 0.3)) ** 2 < 1;
+    }
+    function flowVelocity(x, y, obs, speed, visc) {
+        let vx = speed, vy = 0;
+        let dx, dy, dist;
+        if (obs.type === "circle") {
+            dx = x - obs.cx; dy = y - obs.cy;
+            dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < obs.r * 3 && dist > 0) {
+                const r2 = obs.r * obs.r;
+                const factor = r2 / (dist * dist);
+                vx = speed * (1 - factor * (dx * dx - dy * dy) / (dist * dist));
+                vy = speed * (-2 * factor * dx * dy / (dist * dist));
+                // Wake turbulence behind obstacle
+                if (dx > 0 && dist < obs.r * 2) {
+                    vy += Math.sin(flowState.t * 3 + y * 0.05) * speed * 0.5 * (1 - visc);
+                }
+            }
+        } else if (obs.type === "square") {
+            const scx = obs.cx + obs.w / 2, scy = obs.cy + obs.h / 2;
+            dx = x - scx; dy = y - scy;
+            dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 80 && dist > 0) {
+                const factor = 1600 / (dist * dist);
+                vx = speed * (1 - factor * 0.5);
+                vy = speed * dy / dist * factor * 0.5;
+                if (dx > obs.w / 2) {
+                    vy += Math.sin(flowState.t * 4 + y * 0.1) * speed * 0.8 * (1 - visc);
+                }
+            }
+        } else {
+            dx = x - obs.cx; dy = y - obs.cy;
+            dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < obs.r * 3 && dist > 0) {
+                const r2 = obs.r * obs.r * 0.3;
+                const factor = r2 / (dist * dist);
+                vx = speed * (1 - factor * 0.8);
+                vy = -dy * factor * speed * 0.3 + (dy > 0 ? -1 : 1) * speed * factor * 0.5;
+            }
+        }
+        return { vx, vy };
+    }
+    function drawFluidFlow() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "rgba(10, 10, 46, 0.15)";
+        ctx.fillRect(0, 0, W, H);
+
+        const speed = parseFloat(document.getElementById("flow-speed").value);
+        const obsType = document.getElementById("sel-obstacle").value;
+        const visc = parseFloat(document.getElementById("viscosity").value);
+        const obs = getObstacle(obsType);
+        flowState.t += 0.02;
+
+        // Draw obstacle
+        ctx.fillStyle = "#445";
+        ctx.strokeStyle = "#778";
+        ctx.lineWidth = 2;
+        if (obs.type === "circle") {
+            ctx.beginPath();
+            ctx.arc(obs.cx, obs.cy, obs.r, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+        } else if (obs.type === "square") {
+            ctx.fillRect(obs.cx, obs.cy, obs.w, obs.h);
+            ctx.strokeRect(obs.cx, obs.cy, obs.w, obs.h);
+        } else {
+            ctx.beginPath();
+            for (let a = 0; a < Math.PI * 2; a += 0.05) {
+                const ax = obs.cx + obs.r * Math.cos(a);
+                const ay = obs.cy + obs.r * 0.3 * Math.sin(a);
+                if (a === 0) ctx.moveTo(ax, ay);
+                else ctx.lineTo(ax, ay);
+            }
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+        }
+
+        // Update particles
+        for (const p of flowState.particles) {
+            const vel = flowVelocity(p.x, p.y, obs, speed, visc);
+            p.x += vel.vx;
+            p.y += vel.vy;
+            p.age++;
+
+            if (p.x > W || p.x < -10 || p.y < -10 || p.y > H + 10 || p.age > 200 || isInsideObstacle(p.x, p.y, obs)) {
+                p.x = -5;
+                p.y = Math.random() * H;
+                p.age = 0;
+                p.hue = Math.random() * 60 + 190;
+            }
+
+            const spd = Math.sqrt(vel.vx * vel.vx + vel.vy * vel.vy);
+            const alpha = Math.min(1, 0.3 + spd / (speed * 2));
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.hue + spd * 10}, 70%, 60%, ${alpha})`;
+            ctx.fill();
+        }
+
+        // Reynolds number approximation
+        const Re = (speed * 80 / (visc * 10)).toFixed(0);
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">Fluid Flow</b><br>` +
+            `Obstacle: ${obsType} | Speed: ${speed}<br>` +
+            `Viscosity: ${visc} | Re \u2248 ${Re}`;
+
+        animId = requestAnimationFrame(drawFluidFlow);
+    }
+    bindSlider("flow-speed", "val-flow-speed");
+    bindSlider("viscosity", "val-viscosity");
+    document.getElementById("btn-flow-reset").addEventListener("click", initFluidFlow);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
