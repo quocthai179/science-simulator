@@ -27,6 +27,11 @@
         <button class="nav-btn" data-sim="nbody">N-Body Gravity</button>
         <button class="nav-btn" data-sim="decay">Radioactive Decay</button>
         <button class="nav-btn" data-sim="thermo">Thermodynamics</button>
+        <button class="nav-btn" data-sim="doppler">Doppler Effect</button>
+        <button class="nav-btn" data-sim="incline">Inclined Plane</button>
+        <button class="nav-btn" data-sim="circuit">RC Circuit</button>
+        <button class="nav-btn" data-sim="diffusion">Diffusion</button>
+        <button class="nav-btn" data-sim="pendwave">Pendulum Wave</button>
     </nav>
 
     <main>
@@ -277,6 +282,96 @@
             <div class="btn-row">
                 <button id="btn-thermo-start">Start</button>
                 <button id="btn-thermo-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Doppler Effect Controls -->
+        <div class="controls hidden" id="ctrl-doppler">
+            <h3>Doppler Effect</h3>
+            <p class="ctrl-hint">A moving source emits waves. Observe compression ahead and stretching behind.</p>
+            <label>Source Speed: <span id="val-srcSpeed">2.0</span>
+                <input type="range" id="srcSpeed" min="0" max="5" value="2.0" step="0.1">
+            </label>
+            <label>Wave Speed: <span id="val-waveSpeed">5.0</span>
+                <input type="range" id="waveSpeed" min="2" max="10" value="5.0" step="0.5">
+            </label>
+            <label>Emission Rate: <span id="val-emitRate">8</span>
+                <input type="range" id="emitRate" min="3" max="20" value="8">
+            </label>
+            <div class="btn-row">
+                <button id="btn-doppler-toggle">Pause</button>
+                <button id="btn-doppler-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Inclined Plane Controls -->
+        <div class="controls hidden" id="ctrl-incline">
+            <h3>Inclined Plane / Forces</h3>
+            <label>Angle: <span id="val-incAngle">30</span>&deg;
+                <input type="range" id="incAngle" min="5" max="75" value="30">
+            </label>
+            <label>Mass: <span id="val-incMass">5.0</span> kg
+                <input type="range" id="incMass" min="1" max="20" value="5.0" step="0.5">
+            </label>
+            <label>Friction (&mu;): <span id="val-friction">0.3</span>
+                <input type="range" id="friction" min="0" max="1.0" value="0.3" step="0.05">
+            </label>
+            <div class="btn-row">
+                <button id="btn-inc-release">Release</button>
+                <button id="btn-inc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- RC Circuit Controls -->
+        <div class="controls hidden" id="ctrl-circuit">
+            <h3>RC Circuit (Charge / Discharge)</h3>
+            <label>Resistance (R): <span id="val-resistance">1000</span> &Omega;
+                <input type="range" id="resistance" min="100" max="5000" value="1000" step="100">
+            </label>
+            <label>Capacitance (C): <span id="val-capacitance">100</span> &mu;F
+                <input type="range" id="capacitance" min="10" max="500" value="100" step="10">
+            </label>
+            <label>Voltage (V): <span id="val-voltage">12</span> V
+                <input type="range" id="rcVoltage" min="3" max="24" value="12">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rc-charge">Charge</button>
+                <button id="btn-rc-discharge">Discharge</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-rc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Diffusion Controls -->
+        <div class="controls hidden" id="ctrl-diffusion">
+            <h3>Particle Diffusion</h3>
+            <p class="ctrl-hint">Watch particles diffuse from high concentration to low through a membrane.</p>
+            <label>Particles: <span id="val-diffParts">200</span>
+                <input type="range" id="diffParts" min="50" max="500" value="200">
+            </label>
+            <label>Membrane Permeability: <span id="val-perm">0.05</span>
+                <input type="range" id="perm" min="0.01" max="0.20" value="0.05" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-diff-start">Start</button>
+                <button id="btn-diff-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Pendulum Wave Controls -->
+        <div class="controls hidden" id="ctrl-pendwave">
+            <h3>Pendulum Wave</h3>
+            <p class="ctrl-hint">Pendulums of varying lengths create mesmerizing wave patterns.</p>
+            <label>Number of Pendulums: <span id="val-numPend">20</span>
+                <input type="range" id="numPend" min="8" max="36" value="20">
+            </label>
+            <label>Speed: <span id="val-pwSpeed">1.0</span>x
+                <input type="range" id="pwSpeed" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pw-toggle">Pause</button>
+                <button id="btn-pw-reset">Reset</button>
             </div>
         </div>
 

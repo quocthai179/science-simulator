@@ -42,6 +42,11 @@
             case "nbody":       initNBody();        break;
             case "decay":       initDecay();        break;
             case "thermo":      initThermo();       break;
+            case "doppler":     initDoppler();      break;
+            case "incline":     initIncline();      break;
+            case "circuit":     initCircuit();      break;
+            case "diffusion":   initDiffusion();    break;
+            case "pendwave":    initPendWave();     break;
         }
     }
 
@@ -2238,6 +2243,878 @@
         }
     });
     document.getElementById("btn-thermo-reset").addEventListener("click", initThermo);
+
+    // ═══════════════════════════════════════════════════════
+    // 15. DOPPLER EFFECT
+    // ═══════════════════════════════════════════════════════
+    let dopplerState = {};
+
+    function initDoppler() {
+        dopplerState = { t: 0, running: true, waves: [], srcX: 100 };
+        document.getElementById("btn-doppler-toggle").textContent = "Pause";
+        drawDoppler();
+    }
+
+    function drawDoppler() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const srcSpd = +document.getElementById("srcSpeed").value;
+        const waveSpd = +document.getElementById("waveSpeed").value;
+        const emitRate = +document.getElementById("emitRate").value;
+        const srcY = H / 2;
+
+        if (dopplerState.running) {
+            dopplerState.t++;
+            dopplerState.srcX += srcSpd;
+            if (dopplerState.srcX > W + 50) dopplerState.srcX = -50;
+
+            // Emit new wave
+            if (dopplerState.t % Math.max(1, Math.round(60 / emitRate)) === 0) {
+                dopplerState.waves.push({ x: dopplerState.srcX, y: srcY, r: 0 });
+            }
+
+            // Expand waves
+            dopplerState.waves.forEach(w => { w.r += waveSpd; });
+            dopplerState.waves = dopplerState.waves.filter(w => w.r < W);
+        }
+
+        // Draw waves
+        dopplerState.waves.forEach(w => {
+            const alpha = Math.max(0.05, 0.4 - w.r / W);
+            ctx.beginPath();
+            ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(100, 200, 255, ${alpha})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        });
+
+        // Source
+        const grad = ctx.createRadialGradient(dopplerState.srcX, srcY, 3, dopplerState.srcX, srcY, 16);
+        grad.addColorStop(0, "#ff6ec7");
+        grad.addColorStop(1, "rgba(255,110,199,0.1)");
+        ctx.beginPath();
+        ctx.arc(dopplerState.srcX, srcY, 16, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dopplerState.srcX, srcY, 8, 0, Math.PI * 2);
+        ctx.fillStyle = "#ff6ec7";
+        ctx.fill();
+
+        // Velocity arrow
+        if (srcSpd > 0) {
+            ctx.beginPath();
+            ctx.moveTo(dopplerState.srcX + 20, srcY);
+            ctx.lineTo(dopplerState.srcX + 20 + srcSpd * 12, srcY);
+            ctx.strokeStyle = "#ffeb3b";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(dopplerState.srcX + 20 + srcSpd * 12, srcY);
+            ctx.lineTo(dopplerState.srcX + 12 + srcSpd * 12, srcY - 5);
+            ctx.lineTo(dopplerState.srcX + 12 + srcSpd * 12, srcY + 5);
+            ctx.closePath();
+            ctx.fillStyle = "#ffeb3b";
+            ctx.fill();
+        }
+
+        // Observer markers
+        const obs1X = 100, obs2X = W - 100;
+        [obs1X, obs2X].forEach((ox, idx) => {
+            ctx.beginPath();
+            ctx.arc(ox, H - 60, 10, 0, Math.PI * 2);
+            ctx.fillStyle = "#4caf50";
+            ctx.fill();
+            ctx.fillStyle = "#aab";
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(idx === 0 ? "Observer A" : "Observer B", ox, H - 40);
+        });
+
+        // Frequency info
+        const mach = srcSpd / waveSpd;
+        const fApproach = mach < 1 ? (1 / (1 - mach)).toFixed(2) : "\u221e";
+        const fRecede = (1 / (1 + mach)).toFixed(2);
+
+        // Frequency labels near observers
+        ctx.font = "12px sans-serif";
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText(`f = ${fRecede}f\u2080`, obs1X, H - 80);
+        ctx.fillStyle = "#ef5350";
+        ctx.fillText(`f = ${fApproach}f\u2080`, obs2X, H - 80);
+        ctx.textAlign = "start";
+
+        // Mach indicator
+        if (mach >= 1) {
+            ctx.fillStyle = "#ff5252";
+            ctx.font = "bold 14px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("SUPERSONIC! (Mach " + mach.toFixed(1) + ")", W / 2, 30);
+            ctx.textAlign = "start";
+
+            // Shock cone
+            if (mach > 1) {
+                const halfAngle = Math.asin(1 / mach);
+                ctx.beginPath();
+                ctx.moveTo(dopplerState.srcX, srcY);
+                ctx.lineTo(dopplerState.srcX - 300, srcY - 300 * Math.tan(halfAngle));
+                ctx.moveTo(dopplerState.srcX, srcY);
+                ctx.lineTo(dopplerState.srcX - 300, srcY + 300 * Math.tan(halfAngle));
+                ctx.strokeStyle = "rgba(255, 82, 82, 0.4)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#ff6ec7">Doppler Effect</b><br>` +
+            `Source speed: ${srcSpd.toFixed(1)}<br>` +
+            `Wave speed: ${waveSpd.toFixed(1)}<br>` +
+            `Mach: ${mach.toFixed(2)}<br>` +
+            `Waves: ${dopplerState.waves.length}`;
+
+        if (dopplerState.running) {
+            animId = requestAnimationFrame(drawDoppler);
+        }
+    }
+
+    bindSlider("srcSpeed", "val-srcSpeed");
+    bindSlider("waveSpeed", "val-waveSpeed");
+    bindSlider("emitRate", "val-emitRate");
+
+    document.getElementById("btn-doppler-toggle").addEventListener("click", () => {
+        dopplerState.running = !dopplerState.running;
+        document.getElementById("btn-doppler-toggle").textContent = dopplerState.running ? "Pause" : "Resume";
+        if (dopplerState.running) drawDoppler();
+    });
+    document.getElementById("btn-doppler-reset").addEventListener("click", initDoppler);
+
+    // ═══════════════════════════════════════════════════════
+    // 16. INCLINED PLANE
+    // ═══════════════════════════════════════════════════════
+    let incState = {};
+
+    function initIncline() {
+        incState = { pos: 0, vel: 0, running: false };
+        drawIncline();
+    }
+
+    function drawIncline() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const angleDeg = +document.getElementById("incAngle").value;
+        const mass = +document.getElementById("incMass").value;
+        const mu = +document.getElementById("friction").value;
+        const angle = angleDeg * Math.PI / 180;
+        const g = 9.8;
+
+        // Ramp geometry
+        const rampLen = 500;
+        const baseX = 120, baseY = H - 80;
+        const topX = baseX + rampLen * Math.cos(angle);
+        const topY = baseY - rampLen * Math.sin(angle);
+
+        // Draw ground
+        ctx.fillStyle = "#1a2a1a";
+        ctx.fillRect(0, baseY, W, H - baseY);
+
+        // Draw ramp
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(topX, topY);
+        ctx.lineTo(topX, baseY);
+        ctx.closePath();
+        ctx.fillStyle = "#263238";
+        ctx.fill();
+        ctx.strokeStyle = "#546e7a";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Angle arc
+        ctx.beginPath();
+        ctx.arc(baseX, baseY, 50, -angle, 0);
+        ctx.strokeStyle = "#ffeb3b";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = "#ffeb3b";
+        ctx.font = "13px sans-serif";
+        ctx.fillText(`${angleDeg}\u00b0`, baseX + 55, baseY - 8);
+
+        // Physics
+        if (incState.running) {
+            const gParallel = g * Math.sin(angle);
+            const gNormal = g * Math.cos(angle);
+            const frictionForce = mu * mass * gNormal;
+            const netAccel = gParallel - frictionForce / mass;
+
+            if (netAccel > 0 || incState.vel > 0) {
+                incState.vel += netAccel * 0.016;
+                if (incState.vel < 0) incState.vel = 0;
+                incState.pos += incState.vel * 0.016 * 60;
+            }
+            if (incState.pos > rampLen - 30) {
+                incState.pos = rampLen - 30;
+                incState.running = false;
+            }
+        }
+
+        // Block on ramp
+        const blockDist = rampLen - 30 - incState.pos;
+        const bx = baseX + blockDist * Math.cos(angle);
+        const by = baseY - blockDist * Math.sin(angle);
+        const blockSize = 24 + mass;
+
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(-angle);
+        // Block
+        const bGrad = ctx.createLinearGradient(-blockSize / 2, -blockSize, blockSize / 2, 0);
+        bGrad.addColorStop(0, "#42a5f5");
+        bGrad.addColorStop(1, "#1565c0");
+        ctx.fillStyle = bGrad;
+        ctx.fillRect(-blockSize / 2, -blockSize, blockSize, blockSize);
+        ctx.strokeStyle = "#90caf9";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-blockSize / 2, -blockSize, blockSize, blockSize);
+
+        // Force arrows (in rotated frame)
+        const arrowScale = 3;
+        const gPar = mass * g * Math.sin(angle);
+        const gPerp = mass * g * Math.cos(angle);
+        const fFric = mu * mass * g * Math.cos(angle);
+        const normal = mass * g * Math.cos(angle);
+
+        // Weight component parallel (down the slope)
+        ctx.beginPath();
+        ctx.moveTo(0, -blockSize / 2);
+        ctx.lineTo(gPar * arrowScale, -blockSize / 2);
+        ctx.strokeStyle = "#ef5350";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = "#ef5350";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("mg sin\u03b8", gPar * arrowScale + 5, -blockSize / 2 + 4);
+
+        // Normal force (perpendicular, up from surface)
+        ctx.beginPath();
+        ctx.moveTo(0, -blockSize / 2);
+        ctx.lineTo(0, -blockSize / 2 - normal * arrowScale);
+        ctx.strokeStyle = "#66bb6a";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = "#66bb6a";
+        ctx.fillText("N", 5, -blockSize / 2 - normal * arrowScale - 4);
+
+        // Friction (up the slope, opposing motion)
+        if (mu > 0) {
+            ctx.beginPath();
+            ctx.moveTo(0, -blockSize / 2);
+            ctx.lineTo(-fFric * arrowScale, -blockSize / 2);
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            ctx.fillStyle = "#ff9800";
+            ctx.fillText("f", -fFric * arrowScale - 14, -blockSize / 2 + 4);
+        }
+
+        ctx.restore();
+
+        // Weight (straight down)
+        ctx.beginPath();
+        ctx.moveTo(bx, by - blockSize / 2);
+        ctx.lineTo(bx, by - blockSize / 2 + mass * g * arrowScale);
+        ctx.strokeStyle = "#ab47bc";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#ab47bc";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("mg", bx + 5, by - blockSize / 2 + mass * g * arrowScale + 4);
+
+        // Legend
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "left";
+        const legX = W - 160, legY = 20;
+        ctx.fillStyle = "#ef5350"; ctx.fillText("mg sin\u03b8 (parallel)", legX, legY);
+        ctx.fillStyle = "#66bb6a"; ctx.fillText("N (normal)", legX, legY + 16);
+        ctx.fillStyle = "#ff9800"; ctx.fillText("f (friction)", legX, legY + 32);
+        ctx.fillStyle = "#ab47bc"; ctx.fillText("mg (weight)", legX, legY + 48);
+
+        const netForce = mass * g * Math.sin(angle) - fFric;
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">Inclined Plane</b><br>` +
+            `\u03b8: ${angleDeg}\u00b0 | m: ${mass} kg<br>` +
+            `\u03bc: ${mu}<br>` +
+            `F_net: ${netForce.toFixed(1)} N<br>` +
+            `a: ${(netForce / mass).toFixed(2)} m/s\u00b2<br>` +
+            `v: ${incState.vel.toFixed(1)} m/s<br>` +
+            `${netForce <= 0 ? "Static (no slide)" : ""}`;
+
+        if (incState.running) {
+            animId = requestAnimationFrame(drawIncline);
+        }
+    }
+
+    bindSlider("incAngle", "val-incAngle", () => { if (!incState.running) drawIncline(); });
+    bindSlider("incMass", "val-incMass", () => { if (!incState.running) drawIncline(); });
+    bindSlider("friction", "val-friction", () => { if (!incState.running) drawIncline(); });
+
+    document.getElementById("btn-inc-release").addEventListener("click", () => {
+        incState = { pos: 0, vel: 0, running: true };
+        drawIncline();
+    });
+    document.getElementById("btn-inc-reset").addEventListener("click", initIncline);
+
+    // ═══════════════════════════════════════════════════════
+    // 17. RC CIRCUIT
+    // ═══════════════════════════════════════════════════════
+    let rcState = {};
+
+    function initCircuit() {
+        rcState = { charge: 0, mode: "idle", t: 0, history: [] };
+        drawCircuit();
+    }
+
+    function drawCircuit() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const R = +document.getElementById("resistance").value;
+        const C = +document.getElementById("capacitance").value / 1e6; // convert to F
+        const V = +document.getElementById("rcVoltage").value;
+        const tau = R * C;
+
+        if (rcState.mode === "charging") {
+            rcState.t += 1 / 60;
+            rcState.charge = V * (1 - Math.exp(-rcState.t / tau));
+            rcState.history.push({ t: rcState.t, v: rcState.charge });
+        } else if (rcState.mode === "discharging") {
+            rcState.t += 1 / 60;
+            rcState.charge = rcState.startV * Math.exp(-rcState.t / tau);
+            rcState.history.push({ t: rcState.t, v: rcState.charge });
+        }
+
+        // Circuit schematic
+        const cx = 200, cy = 150;
+        // Battery
+        ctx.strokeStyle = "#aab";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 80);
+        ctx.stroke();
+        // Battery symbol
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(cx - 15, cy + 80); ctx.lineTo(cx + 15, cy + 80); ctx.stroke();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx - 8, cy + 90); ctx.lineTo(cx + 8, cy + 90); ctx.stroke();
+        ctx.fillStyle = "#ffeb3b";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${V}V`, cx - 28, cy + 90);
+        ctx.fillText("+", cx + 22, cy + 78);
+        ctx.fillText("\u2212", cx + 22, cy + 95);
+
+        // Wire to resistor
+        ctx.strokeStyle = "#aab";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 90); ctx.lineTo(cx, cy + 140);
+        ctx.lineTo(cx + 60, cy + 140);
+        ctx.stroke();
+
+        // Resistor (zigzag)
+        ctx.beginPath();
+        ctx.moveTo(cx + 60, cy + 140);
+        for (let i = 0; i < 6; i++) {
+            ctx.lineTo(cx + 70 + i * 15, cy + 140 + (i % 2 === 0 ? -10 : 10));
+        }
+        ctx.lineTo(cx + 160, cy + 140);
+        ctx.strokeStyle = "#ff9800";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText(`R = ${R}\u03a9`, cx + 110, cy + 170);
+
+        // Wire to capacitor
+        ctx.strokeStyle = "#aab";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + 160, cy + 140);
+        ctx.lineTo(cx + 220, cy + 140);
+        ctx.stroke();
+
+        // Capacitor plates
+        const capX = cx + 220;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#42a5f5";
+        ctx.beginPath(); ctx.moveTo(capX, cy + 120); ctx.lineTo(capX, cy + 160); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(capX + 12, cy + 120); ctx.lineTo(capX + 12, cy + 160); ctx.stroke();
+
+        // Charge indicator between plates
+        const chargeLevel = rcState.charge / V;
+        const chargeColor = `rgba(66, 165, 245, ${chargeLevel})`;
+        ctx.fillStyle = chargeColor;
+        ctx.fillRect(capX + 1, cy + 122, 10, 36);
+
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText(`C = ${(C * 1e6).toFixed(0)}\u00b5F`, capX - 10, cy + 180);
+
+        // Wire back to battery
+        ctx.strokeStyle = "#aab";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(capX + 12, cy + 140);
+        ctx.lineTo(capX + 50, cy + 140);
+        ctx.lineTo(capX + 50, cy);
+        ctx.lineTo(cx, cy);
+        ctx.stroke();
+
+        // Current flow indicator
+        if (rcState.mode !== "idle") {
+            const current = rcState.mode === "charging"
+                ? (V / R) * Math.exp(-rcState.t / tau)
+                : -(rcState.startV / R) * Math.exp(-rcState.t / tau);
+            const absCurrent = Math.abs(current);
+            if (absCurrent > 0.0001) {
+                const numDots = Math.min(6, Math.ceil(absCurrent * R * 2));
+                for (let i = 0; i < numDots; i++) {
+                    const phase = (rcState.t * 5 + i * 0.3) % 1;
+                    // Move along circuit path
+                    let dx, dy;
+                    if (phase < 0.25) {
+                        dx = cx + phase * 4 * 220; dy = cy;
+                    } else if (phase < 0.5) {
+                        dx = cx + 220; dy = cy + (phase - 0.25) * 4 * 140;
+                    } else if (phase < 0.75) {
+                        dx = cx + 220 - (phase - 0.5) * 4 * 220; dy = cy + 140;
+                    } else {
+                        dx = cx; dy = cy + 140 - (phase - 0.75) * 4 * 140;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 235, 59, ${0.7})`;
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Voltage-time graph
+        const graphX = 50, graphY2 = 280, graphW2 = W - 100, graphH2 = 200;
+        ctx.fillStyle = "rgba(16, 20, 58, 0.8)";
+        ctx.fillRect(graphX, graphY2, graphW2, graphH2);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY2, graphW2, graphH2);
+
+        ctx.fillStyle = "#aab";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Capacitor Voltage vs Time", graphX + 8, graphY2 - 6);
+
+        // Tau markers
+        ctx.font = "9px sans-serif";
+        ctx.fillStyle = "#556";
+        ctx.textAlign = "right";
+        ctx.fillText(`${V}V`, graphX - 4, graphY2 + 10);
+        ctx.fillText("0V", graphX - 4, graphY2 + graphH2);
+
+        const maxT = Math.max(tau * 5, rcState.t + 0.5);
+        // Tau vertical lines
+        for (let i = 1; i <= 5; i++) {
+            const tauX = graphX + (tau * i / maxT) * graphW2;
+            if (tauX < graphX + graphW2) {
+                ctx.beginPath();
+                ctx.moveTo(tauX, graphY2);
+                ctx.lineTo(tauX, graphY2 + graphH2);
+                ctx.strokeStyle = "rgba(255,255,255,0.08)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.fillStyle = "#556";
+                ctx.textAlign = "center";
+                ctx.fillText(`${i}\u03c4`, tauX, graphY2 + graphH2 + 12);
+            }
+        }
+
+        // Theoretical curves
+        ctx.setLineDash([4, 4]);
+        // Charge curve
+        ctx.beginPath();
+        for (let px = 0; px < graphW2; px++) {
+            const t = (px / graphW2) * maxT;
+            const v = V * (1 - Math.exp(-t / tau));
+            const py = graphY2 + graphH2 - (v / V) * graphH2;
+            px === 0 ? ctx.moveTo(graphX + px, py) : ctx.lineTo(graphX + px, py);
+        }
+        ctx.strokeStyle = "rgba(76, 175, 80, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Actual data
+        if (rcState.history.length > 1) {
+            ctx.beginPath();
+            rcState.history.forEach((h, i) => {
+                const px = graphX + (h.t / maxT) * graphW2;
+                const py = graphY2 + graphH2 - (h.v / V) * graphH2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = rcState.mode === "charging" ? "#4caf50" : "#ef5350";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#42a5f5">RC Circuit</b><br>` +
+            `V_c: ${rcState.charge.toFixed(2)} V<br>` +
+            `\u03c4 = RC = ${(tau * 1000).toFixed(0)} ms<br>` +
+            `t: ${rcState.t.toFixed(2)} s<br>` +
+            `Mode: ${rcState.mode}`;
+
+        if (rcState.mode !== "idle" && rcState.t < tau * 6) {
+            animId = requestAnimationFrame(drawCircuit);
+        }
+    }
+
+    bindSlider("resistance", "val-resistance", () => { if (rcState.mode === "idle") drawCircuit(); });
+    bindSlider("capacitance", "val-capacitance", () => { if (rcState.mode === "idle") drawCircuit(); });
+    bindSlider("rcVoltage", "val-voltage", () => { if (rcState.mode === "idle") drawCircuit(); });
+
+    document.getElementById("btn-rc-charge").addEventListener("click", () => {
+        rcState = { charge: 0, mode: "charging", t: 0, history: [] };
+        drawCircuit();
+    });
+    document.getElementById("btn-rc-discharge").addEventListener("click", () => {
+        const V = +document.getElementById("rcVoltage").value;
+        rcState = { charge: V, startV: V, mode: "discharging", t: 0, history: [] };
+        drawCircuit();
+    });
+    document.getElementById("btn-rc-reset").addEventListener("click", initCircuit);
+
+    // ═══════════════════════════════════════════════════════
+    // 18. PARTICLE DIFFUSION
+    // ═══════════════════════════════════════════════════════
+    let diffState = {};
+
+    function initDiffusion() {
+        const n = +document.getElementById("diffParts").value;
+        const W = canvas.width, H = canvas.height;
+        const particles = [];
+        // All particles start on the left side
+        for (let i = 0; i < n; i++) {
+            particles.push({
+                x: 30 + Math.random() * (W / 2 - 50),
+                y: 30 + Math.random() * (H - 60),
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                side: "left"
+            });
+        }
+        diffState = { particles, running: false, t: 0, history: [] };
+        drawDiffusion();
+    }
+
+    function drawDiffusion() {
+        const W = canvas.width, H = canvas.height;
+        const perm = +document.getElementById("perm").value;
+        ctx.clearRect(0, 0, W, H);
+
+        const wall = 20;
+        const midX = W / 2;
+
+        // Container
+        ctx.strokeStyle = "#3949ab";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(wall, wall, W - wall * 2, H - wall * 2);
+
+        // Membrane (dashed line in middle)
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.moveTo(midX, wall);
+        ctx.lineTo(midX, H - wall);
+        ctx.strokeStyle = "#7986cb";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#7986cb";
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Membrane", midX, wall - 6);
+
+        let leftCount = 0, rightCount = 0;
+
+        if (diffState.running) {
+            diffState.t += 1 / 60;
+        }
+
+        diffState.particles.forEach(p => {
+            if (diffState.running) {
+                // Random walk
+                p.vx += (Math.random() - 0.5) * 0.5;
+                p.vy += (Math.random() - 0.5) * 0.5;
+                p.vx *= 0.95;
+                p.vy *= 0.95;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Wall bouncing
+                if (p.x < wall + 4) { p.x = wall + 4; p.vx *= -1; }
+                if (p.x > W - wall - 4) { p.x = W - wall - 4; p.vx *= -1; }
+                if (p.y < wall + 4) { p.y = wall + 4; p.vy *= -1; }
+                if (p.y > H - wall - 4) { p.y = H - wall - 4; p.vy *= -1; }
+
+                // Membrane crossing (probabilistic)
+                if (Math.abs(p.x - midX) < 5) {
+                    if (Math.random() > perm) {
+                        // Bounce off membrane
+                        p.vx *= -1;
+                        p.x += p.vx * 2;
+                    }
+                }
+            }
+
+            // Count sides
+            if (p.x < midX) leftCount++; else rightCount++;
+
+            // Draw particle
+            const hue = p.x < midX ? 200 : 30;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+            ctx.fill();
+        });
+
+        // Record history
+        if (diffState.running && diffState.t > 0) {
+            if (diffState.history.length === 0 || diffState.t - diffState.history[diffState.history.length - 1].t > 0.1) {
+                diffState.history.push({ t: diffState.t, left: leftCount, right: rightCount });
+            }
+        }
+
+        // Concentration graph
+        const graphX = 50, graphY2 = H - 140, graphW2 = W - 100, graphH2 = 110;
+        ctx.fillStyle = "rgba(16, 20, 58, 0.85)";
+        ctx.fillRect(graphX, graphY2, graphW2, graphH2);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY2, graphW2, graphH2);
+
+        ctx.fillStyle = "#aab";
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Particle Count vs Time", graphX + 8, graphY2 - 4);
+
+        // Equilibrium line
+        const eqY = graphY2 + graphH2 / 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(graphX, eqY);
+        ctx.lineTo(graphX + graphW2, eqY);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#556";
+        ctx.font = "9px sans-serif";
+        ctx.fillText("equilibrium", graphX + graphW2 - 55, eqY - 4);
+
+        if (diffState.history.length > 1) {
+            const maxT = diffState.history[diffState.history.length - 1].t;
+            const total = diffState.particles.length;
+
+            // Left side line
+            ctx.beginPath();
+            diffState.history.forEach((h, i) => {
+                const px = graphX + (h.t / maxT) * graphW2;
+                const py = graphY2 + graphH2 - (h.left / total) * graphH2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#42a5f5";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Right side line
+            ctx.beginPath();
+            diffState.history.forEach((h, i) => {
+                const px = graphX + (h.t / maxT) * graphW2;
+                const py = graphY2 + graphH2 - (h.right / total) * graphH2;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            });
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("Left", graphX + graphW2 - 80, graphY2 + 14);
+        ctx.fillStyle = "#ff9800"; ctx.fillText("Right", graphX + graphW2 - 40, graphY2 + 14);
+
+        ctx.textAlign = "center";
+        ctx.font = "14px sans-serif";
+        ctx.fillStyle = "#42a5f5";
+        ctx.fillText(`Left: ${leftCount}`, midX / 2, wall + 20);
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText(`Right: ${rightCount}`, midX + midX / 2, wall + 20);
+        ctx.textAlign = "start";
+
+        overlay.innerHTML =
+            `<b style="color:#7986cb">Diffusion</b><br>` +
+            `Left: ${leftCount}<br>` +
+            `Right: ${rightCount}<br>` +
+            `Perm: ${perm}<br>` +
+            `t: ${diffState.t.toFixed(1)} s`;
+
+        if (diffState.running) {
+            animId = requestAnimationFrame(drawDiffusion);
+        }
+    }
+
+    bindSlider("diffParts", "val-diffParts", () => initDiffusion());
+    bindSlider("perm", "val-perm");
+
+    document.getElementById("btn-diff-start").addEventListener("click", () => {
+        if (!diffState.running) {
+            diffState.running = true;
+            drawDiffusion();
+        }
+    });
+    document.getElementById("btn-diff-reset").addEventListener("click", initDiffusion);
+
+    // ═══════════════════════════════════════════════════════
+    // 19. PENDULUM WAVE
+    // ═══════════════════════════════════════════════════════
+    let pwState = { t: 0, running: true };
+
+    function initPendWave() {
+        pwState = { t: 0, running: true };
+        document.getElementById("btn-pw-toggle").textContent = "Pause";
+        drawPendWave();
+    }
+
+    function drawPendWave() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const numPend = +document.getElementById("numPend").value;
+        const speed = +document.getElementById("pwSpeed").value;
+
+        // Support bar
+        ctx.fillStyle = "#2a2f6e";
+        ctx.fillRect(40, 30, W - 80, 10);
+
+        const startX = 80;
+        const endX = W - 80;
+        const spacing = (endX - startX) / (numPend - 1);
+        const baseLen = 120;
+        const lenIncrement = 10;
+        const pivotY = 40;
+        const maxAngle = 0.6;
+
+        if (pwState.running) {
+            pwState.t += 0.02 * speed;
+        }
+
+        // Draw each pendulum
+        for (let i = 0; i < numPend; i++) {
+            const x = startX + i * spacing;
+            const len = baseLen + i * lenIncrement;
+            const freq = Math.sqrt(980 / len);
+            const angle = maxAngle * Math.sin(freq * pwState.t);
+
+            const bobX = x + len * Math.sin(angle);
+            const bobY = pivotY + len * Math.cos(angle);
+
+            // String
+            ctx.beginPath();
+            ctx.moveTo(x, pivotY);
+            ctx.lineTo(bobX, bobY);
+            ctx.strokeStyle = "rgba(136,136,170,0.6)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Bob
+            const hue = (i / numPend) * 300;
+            ctx.beginPath();
+            ctx.arc(bobX, bobY, 8, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${hue}, 75%, 60%)`;
+            ctx.fill();
+
+            // Glow
+            ctx.beginPath();
+            ctx.arc(bobX, bobY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${hue}, 75%, 60%, 0.15)`;
+            ctx.fill();
+        }
+
+        // Draw wave pattern connecting bobs
+        ctx.beginPath();
+        for (let i = 0; i < numPend; i++) {
+            const x = startX + i * spacing;
+            const len = baseLen + i * lenIncrement;
+            const freq = Math.sqrt(980 / len);
+            const angle = maxAngle * Math.sin(freq * pwState.t);
+            const bobX = x + len * Math.sin(angle);
+            const bobY = pivotY + len * Math.cos(angle);
+            i === 0 ? ctx.moveTo(bobX, bobY) : ctx.lineTo(bobX, bobY);
+        }
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Phase diagram at bottom
+        const phaseY = H - 90, phaseH = 60;
+        ctx.fillStyle = "rgba(16, 20, 58, 0.7)";
+        ctx.fillRect(40, phaseY, W - 80, phaseH);
+        ctx.strokeStyle = "#2a2f6e";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(40, phaseY, W - 80, phaseH);
+
+        ctx.fillStyle = "#aab";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("Phase Diagram", 50, phaseY - 4);
+
+        for (let i = 0; i < numPend; i++) {
+            const x = startX + i * spacing;
+            const len = baseLen + i * lenIncrement;
+            const freq = Math.sqrt(980 / len);
+            const angle = maxAngle * Math.sin(freq * pwState.t);
+            const barH = (angle / maxAngle) * (phaseH / 2);
+            const hue = (i / numPend) * 300;
+            ctx.fillStyle = `hsl(${hue}, 75%, 55%)`;
+            ctx.fillRect(x - 3, phaseY + phaseH / 2, 6, -barH * 0.9);
+        }
+
+        // Center line
+        ctx.beginPath();
+        ctx.moveTo(40, phaseY + phaseH / 2);
+        ctx.lineTo(W - 40, phaseY + phaseH / 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        overlay.innerHTML =
+            `<b style="color:#ce93d8">Pendulum Wave</b><br>` +
+            `Pendulums: ${numPend}<br>` +
+            `Speed: ${speed}x<br>` +
+            `t: ${pwState.t.toFixed(1)}`;
+
+        if (pwState.running) {
+            animId = requestAnimationFrame(drawPendWave);
+        }
+    }
+
+    bindSlider("numPend", "val-numPend", () => { /* live */ });
+    bindSlider("pwSpeed", "val-pwSpeed");
+
+    document.getElementById("btn-pw-toggle").addEventListener("click", () => {
+        pwState.running = !pwState.running;
+        document.getElementById("btn-pw-toggle").textContent = pwState.running ? "Pause" : "Resume";
+        if (pwState.running) drawPendWave();
+    });
+    document.getElementById("btn-pw-reset").addEventListener("click", initPendWave);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
