@@ -67,6 +67,11 @@
             case "chemeq":      initChemEq();       break;
             case "epidemic":    initEpidemic();     break;
             case "bernoulli":   initBernoulli();    break;
+            case "gravlens":    initGravLens();     break;
+            case "standing":    initStanding();     break;
+            case "protein":     initProtein();      break;
+            case "carbon":      initCarbon();       break;
+            case "spectral":    initSpectral();     break;
         }
     }
 
@@ -7143,6 +7148,965 @@
         if (bernState.running) drawBernoulli();
     });
     document.getElementById("btn-bern-reset").addEventListener("click", initBernoulli);
+
+    // ═══════════════════════════════════════════════════════
+    // 40. GRAVITATIONAL LENSING
+    // ═══════════════════════════════════════════════════════
+
+    function initGravLens() {
+        drawGravLens();
+    }
+
+    function drawGravLens() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const mass = +document.getElementById("lensMass").value;
+        const srcDist = +document.getElementById("srcDist").value;
+        const showPaths = document.getElementById("showPaths").checked;
+        const cx = W / 2, cy = H / 2;
+
+        // Starfield background
+        for (let i = 0; i < 150; i++) {
+            const sx = (i * 137.5) % W;
+            const sy = (i * 83.3 + i * i * 0.1) % H;
+            const bright = 0.2 + (i % 5) * 0.15;
+            ctx.beginPath(); ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(200,200,255,${bright})`;
+            ctx.fill();
+        }
+
+        const einsteinR = mass * 18;
+
+        // Distort background stars near lens
+        for (let i = 0; i < 80; i++) {
+            const sx = (i * 97.3 + 50) % W;
+            const sy = (i * 61.7 + 30) % H;
+            const dx = sx - cx, dy = sy - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < einsteinR * 3 && dist > 20) {
+                const deflection = einsteinR * einsteinR / dist;
+                const angle = Math.atan2(dy, dx);
+                const newX = sx + deflection * Math.cos(angle);
+                const newY = sy + deflection * Math.sin(angle);
+                const stretch = 1 + deflection / dist * 0.3;
+
+                ctx.beginPath();
+                ctx.ellipse(newX, newY, 1.5 * stretch, 1, angle, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(200,220,255,${Math.min(0.8, 0.3 + deflection * 0.01)})`;
+                ctx.fill();
+            }
+        }
+
+        // Background source (galaxy/star)
+        const srcX = cx, srcY = cy + srcDist;
+        // Actual source position indicator
+        ctx.beginPath(); ctx.arc(srcX, Math.min(srcY, H - 20), 6, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,200,50,0.3)";
+        ctx.fill();
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(srcX, Math.min(srcY, H - 20)); ctx.lineTo(srcX, cy + 30);
+        ctx.strokeStyle = "rgba(255,200,50,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Einstein ring (when perfectly aligned)
+        const alignment = 1 - Math.abs(srcX - cx) / 100;
+        if (alignment > 0.5) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, einsteinR, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(100, 180, 255, ${(alignment - 0.5) * 0.8})`;
+            ctx.lineWidth = 3 + mass * 0.3;
+            ctx.stroke();
+
+            // Glow
+            const rGrad = ctx.createRadialGradient(cx, cy, einsteinR - 5, cx, cy, einsteinR + 10);
+            rGrad.addColorStop(0, "rgba(100, 180, 255, 0)");
+            rGrad.addColorStop(0.5, `rgba(100, 180, 255, ${(alignment - 0.5) * 0.3})`);
+            rGrad.addColorStop(1, "rgba(100, 180, 255, 0)");
+            ctx.beginPath(); ctx.arc(cx, cy, einsteinR + 10, 0, Math.PI * 2);
+            ctx.fillStyle = rGrad; ctx.fill();
+        }
+
+        // Lensed images (arcs)
+        const numArcs = 4;
+        for (let i = 0; i < numArcs; i++) {
+            const angle = (i / numArcs) * Math.PI * 2 + Math.PI / 4;
+            const arcR = einsteinR * (0.9 + Math.sin(angle * 2) * 0.2);
+            const arcLen = 0.3 + (1 - Math.abs(srcDist - 200) / 200) * 0.4;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, arcR, angle - arcLen, angle + arcLen);
+            ctx.strokeStyle = `rgba(255, 200, 100, ${0.4 + Math.sin(i) * 0.2})`;
+            ctx.lineWidth = 2 + mass * 0.2;
+            ctx.stroke();
+        }
+
+        // Light paths
+        if (showPaths) {
+            const numRays = 12;
+            for (let i = 0; i < numRays; i++) {
+                const startAngle = (i / numRays) * Math.PI * 2;
+                const startX = cx + 250 * Math.cos(startAngle);
+                const startY = cy + 250 * Math.sin(startAngle);
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+
+                // Ray bending toward center then deflecting
+                const steps = 50;
+                let rx = startX, ry = startY;
+                for (let s = 0; s < steps; s++) {
+                    const ddx = cx - rx, ddy = cy - ry;
+                    const dd = Math.sqrt(ddx * ddx + ddy * ddy);
+                    if (dd < 15) break;
+                    const bend = mass * 5 / (dd * dd);
+                    const dirX = (ddx / dd) * bend + (cx - startX) / 250 * -0.5;
+                    const dirY = (ddy / dd) * bend + (cy - startY) / 250 * -0.5;
+                    rx += dirX * 8 - (startX - cx) / 250 * 3;
+                    ry += dirY * 8 - (startY - cy) / 250 * 3;
+                    ctx.lineTo(rx, ry);
+                }
+                ctx.strokeStyle = `rgba(255, 235, 59, 0.08)`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+
+        // Lensing mass (galaxy cluster)
+        const lensGrad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 25 + mass * 2);
+        lensGrad.addColorStop(0, "rgba(255,200,150,0.8)");
+        lensGrad.addColorStop(0.4, "rgba(200,150,100,0.4)");
+        lensGrad.addColorStop(1, "rgba(100,80,60,0)");
+        ctx.beginPath(); ctx.arc(cx, cy, 25 + mass * 2, 0, Math.PI * 2);
+        ctx.fillStyle = lensGrad; ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,220,180,0.9)"; ctx.fill();
+
+        // Einstein radius indicator
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.arc(cx, cy, einsteinR, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Labels
+        ctx.fillStyle = "#ffeb3b"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Einstein Radius", cx, cy - einsteinR - 8);
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText("Lensing Mass", cx, cy + 35 + mass * 2);
+        ctx.fillStyle = "rgba(255,200,50,0.6)"; ctx.font = "10px sans-serif";
+        ctx.fillText("Background Source", srcX, Math.min(srcY + 20, H - 8));
+
+        // Info
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(20, H - 80, 280, 65);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(20, H - 80, 280, 65);
+        ctx.fillStyle = "#ccc"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`Einstein radius: ${einsteinR.toFixed(0)} px`, 30, H - 60);
+        ctx.fillText(`\u03b8_E = \u221a(4GM/c\u00b2 \u00b7 D_LS/D_L\u00b7D_S)`, 30, H - 42);
+        ctx.fillText(`Lens mass: ${mass}x | Source dist: ${srcDist}`, 30, H - 24);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#64b5f6">Grav. Lensing</b><br>` +
+            `Mass: ${mass}x<br>` +
+            `\u03b8_E: ${einsteinR.toFixed(0)} px<br>` +
+            `Src dist: ${srcDist}`;
+    }
+
+    bindSlider("lensMass", "val-lensMass", () => { if (currentSim === "gravlens") drawGravLens(); });
+    bindSlider("srcDist", "val-srcDist", () => { if (currentSim === "gravlens") drawGravLens(); });
+    document.getElementById("showPaths").addEventListener("change", () => { if (currentSim === "gravlens") drawGravLens(); });
+    document.getElementById("btn-gl-reset").addEventListener("click", initGravLens);
+
+    // ═══════════════════════════════════════════════════════
+    // 41. STANDING WAVES
+    // ═══════════════════════════════════════════════════════
+    let swState = { t: 0, running: true };
+
+    function initStanding() {
+        swState = { t: 0, running: true };
+        document.getElementById("btn-sw-toggle").textContent = "Pause";
+        drawStanding();
+    }
+
+    function drawStanding() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const n = +document.getElementById("harmonic").value;
+        const amp = +document.getElementById("swAmp").value;
+        const showComp = document.getElementById("showComponents").checked;
+        const cy = H / 2 - 40;
+        const startX = 60, endX = W - 60;
+        const L = endX - startX;
+
+        if (swState.running) {
+            swState.t += 0.04;
+        }
+
+        // Fixed endpoints
+        ctx.fillStyle = "#78909c";
+        ctx.fillRect(startX - 6, cy - 15, 6, 30);
+        ctx.fillRect(endX, cy - 15, 6, 30);
+
+        // Axis
+        ctx.beginPath(); ctx.moveTo(startX, cy); ctx.lineTo(endX, cy);
+        ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.stroke();
+
+        // Component travelling waves
+        if (showComp) {
+            // Right-travelling wave
+            ctx.beginPath();
+            for (let x = startX; x <= endX; x++) {
+                const frac = (x - startX) / L;
+                const y = cy + amp * 0.5 * Math.sin(n * Math.PI * frac - swState.t);
+                x === startX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = "rgba(239, 83, 80, 0.3)"; ctx.lineWidth = 1; ctx.stroke();
+
+            // Left-travelling wave
+            ctx.beginPath();
+            for (let x = startX; x <= endX; x++) {
+                const frac = (x - startX) / L;
+                const y = cy + amp * 0.5 * Math.sin(n * Math.PI * frac + swState.t);
+                x === startX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = "rgba(66, 165, 245, 0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        // Standing wave (sum)
+        ctx.beginPath();
+        for (let x = startX; x <= endX; x++) {
+            const frac = (x - startX) / L;
+            const y = cy + amp * Math.sin(n * Math.PI * frac) * Math.cos(swState.t);
+            x === startX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 3; ctx.stroke();
+
+        // Envelope
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        for (let x = startX; x <= endX; x++) {
+            const frac = (x - startX) / L;
+            const y = cy + amp * Math.sin(n * Math.PI * frac);
+            x === startX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath();
+        for (let x = startX; x <= endX; x++) {
+            const frac = (x - startX) / L;
+            const y = cy - amp * Math.sin(n * Math.PI * frac);
+            x === startX ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Nodes and antinodes
+        for (let i = 0; i <= n; i++) {
+            const nx = startX + (i / n) * L;
+            ctx.beginPath(); ctx.arc(nx, cy, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#ef5350"; ctx.fill();
+            ctx.fillStyle = "#ef5350"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            if (i === 0 || i === n) ctx.fillText("N", nx, cy + 18);
+            else ctx.fillText("N", nx, cy + 18);
+        }
+        for (let i = 0; i < n; i++) {
+            const ax = startX + ((i + 0.5) / n) * L;
+            ctx.beginPath(); ctx.arc(ax, cy, 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#42a5f5"; ctx.fill();
+            ctx.fillStyle = "#42a5f5"; ctx.font = "9px sans-serif";
+            ctx.fillText("A", ax, cy + 18);
+        }
+
+        // Info section
+        const freq = n;
+        const wavelength = 2 * L / n;
+
+        ctx.fillStyle = "rgba(16,20,58,0.8)";
+        ctx.fillRect(50, H - 160, W - 100, 130);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(50, H - 160, W - 100, 130);
+
+        ctx.fillStyle = "#66bb6a"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`Harmonic n = ${n}`, W / 2, H - 138);
+
+        ctx.font = "13px sans-serif"; ctx.fillStyle = "#ccc";
+        ctx.fillText(`\u03bb = 2L/n = ${wavelength.toFixed(0)} px`, W / 2, H - 115);
+        ctx.fillText(`f_n = n \u00b7 f\u2081  (${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"} harmonic)`, W / 2, H - 95);
+        ctx.fillText(`Nodes: ${n + 1}  |  Antinodes: ${n}`, W / 2, H - 75);
+
+        // Harmonic series visualization
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText("Harmonic Series:", W / 2, H - 52);
+        for (let h = 1; h <= 8; h++) {
+            const hx = W / 2 - 140 + (h - 1) * 40;
+            ctx.fillStyle = h === n ? "#66bb6a" : "#444";
+            ctx.fillRect(hx, H - 42, 30, 14);
+            ctx.fillStyle = h === n ? "#fff" : "#888";
+            ctx.font = "10px sans-serif";
+            ctx.fillText(`n=${h}`, hx + 15, H - 32);
+        }
+
+        // Legend
+        ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#ef5350"; ctx.fillText("\u25cf Node (zero displacement)", 60, H - 168);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("\u25cf Antinode (max displacement)", 280, H - 168);
+        if (showComp) {
+            ctx.fillStyle = "rgba(239,83,80,0.5)"; ctx.fillText("\u2014 Right wave", 530, H - 168);
+            ctx.fillStyle = "rgba(66,165,245,0.5)"; ctx.fillText("\u2014 Left wave", 650, H - 168);
+        }
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#66bb6a">Standing Wave</b><br>` +
+            `n: ${n}<br>` +
+            `\u03bb: ${wavelength.toFixed(0)} px<br>` +
+            `Nodes: ${n + 1}`;
+
+        if (swState.running) {
+            animId = requestAnimationFrame(drawStanding);
+        }
+    }
+
+    bindSlider("harmonic", "val-harmonic");
+    bindSlider("swAmp", "val-swAmp");
+    document.getElementById("showComponents").addEventListener("change", () => { /* live */ });
+
+    document.getElementById("btn-sw-toggle").addEventListener("click", () => {
+        swState.running = !swState.running;
+        document.getElementById("btn-sw-toggle").textContent = swState.running ? "Pause" : "Resume";
+        if (swState.running) drawStanding();
+    });
+    document.getElementById("btn-sw-reset").addEventListener("click", initStanding);
+
+    // ═══════════════════════════════════════════════════════
+    // 42. PROTEIN FOLDING
+    // ═══════════════════════════════════════════════════════
+    let protState = {};
+
+    const aminoAcids = [
+        { code: "A", name: "Ala", hydro: 1.8, color: "#ff9800" },
+        { code: "V", name: "Val", hydro: 4.2, color: "#ff5722" },
+        { code: "L", name: "Leu", hydro: 3.8, color: "#f44336" },
+        { code: "G", name: "Gly", hydro: -0.4, color: "#42a5f5" },
+        { code: "S", name: "Ser", hydro: -0.8, color: "#29b6f6" },
+        { code: "K", name: "Lys", hydro: -3.9, color: "#7c4dff" },
+        { code: "D", name: "Asp", hydro: -3.5, color: "#651fff" },
+        { code: "P", name: "Pro", hydro: -1.6, color: "#66bb6a" }
+    ];
+
+    function initProtein() {
+        const len = +document.getElementById("chainLen").value;
+        const W = canvas.width, H = canvas.height;
+        const chain = [];
+        for (let i = 0; i < len; i++) {
+            chain.push({
+                x: 80 + (i / len) * (W - 160),
+                y: H / 2 + (Math.random() - 0.5) * 20,
+                vx: 0, vy: 0,
+                aa: aminoAcids[Math.floor(Math.random() * aminoAcids.length)]
+            });
+        }
+        protState = { chain, running: false, t: 0, energy: 0 };
+        drawProtein();
+    }
+
+    function drawProtein() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const temp = +document.getElementById("foldTemp").value;
+        const bondLen = 20;
+
+        if (protState.running) {
+            protState.t += 0.016;
+            const chain = protState.chain;
+
+            // Forces
+            chain.forEach(a => { a.vx = 0; a.vy = 0; });
+
+            // Bond constraints (spring)
+            for (let i = 0; i < chain.length - 1; i++) {
+                const a = chain[i], b = chain[i + 1];
+                const dx = b.x - a.x, dy = b.y - a.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const force = (dist - bondLen) * 0.1;
+                const nx = dx / dist * force, ny = dy / dist * force;
+                a.vx += nx; a.vy += ny;
+                b.vx -= nx; b.vy -= ny;
+            }
+
+            // Hydrophobic collapse (attract hydrophobic residues to center)
+            let cx2 = 0, cy2 = 0;
+            chain.forEach(a => { cx2 += a.x; cy2 += a.y; });
+            cx2 /= chain.length; cy2 /= chain.length;
+
+            chain.forEach(a => {
+                if (a.aa.hydro > 0) {
+                    // Pull toward center
+                    a.vx += (cx2 - a.x) * 0.002 * a.aa.hydro;
+                    a.vy += (cy2 - a.y) * 0.002 * a.aa.hydro;
+                } else {
+                    // Push hydrophilic outward slightly
+                    a.vx -= (cx2 - a.x) * 0.001;
+                    a.vy -= (cy2 - a.y) * 0.001;
+                }
+            });
+
+            // Repulsion between non-bonded residues
+            for (let i = 0; i < chain.length; i++) {
+                for (let j = i + 3; j < chain.length; j++) {
+                    const dx = chain[j].x - chain[i].x;
+                    const dy = chain[j].y - chain[i].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 15) {
+                        const repel = (15 - dist) * 0.05;
+                        chain[i].vx -= (dx / dist) * repel;
+                        chain[i].vy -= (dy / dist) * repel;
+                        chain[j].vx += (dx / dist) * repel;
+                        chain[j].vy += (dy / dist) * repel;
+                    }
+                }
+            }
+
+            // Thermal noise
+            chain.forEach(a => {
+                a.vx += (Math.random() - 0.5) * temp * 0.5;
+                a.vy += (Math.random() - 0.5) * temp * 0.5;
+                a.x += a.vx;
+                a.y += a.vy;
+                // Bounds
+                a.x = Math.max(20, Math.min(W - 20, a.x));
+                a.y = Math.max(20, Math.min(H - 60, a.y));
+            });
+
+            // Calculate energy
+            let energy = 0;
+            for (let i = 0; i < chain.length; i++) {
+                const dx = chain[i].x - cx2, dy = chain[i].y - cy2;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                energy += chain[i].aa.hydro > 0 ? dist * 0.01 : -dist * 0.005;
+            }
+            protState.energy = energy;
+        }
+
+        // Draw bonds (backbone)
+        ctx.beginPath();
+        protState.chain.forEach((a, i) => {
+            i === 0 ? ctx.moveTo(a.x, a.y) : ctx.lineTo(a.x, a.y);
+        });
+        ctx.strokeStyle = "rgba(200,200,220,0.4)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw amino acids
+        protState.chain.forEach((a, i) => {
+            const r = 6 + (a.aa.hydro > 0 ? 2 : 0);
+            ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = a.aa.color; ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.lineWidth = 1; ctx.stroke();
+
+            // Label every 5th
+            if (i % 5 === 0) {
+                ctx.fillStyle = "#fff"; ctx.font = "bold 7px monospace"; ctx.textAlign = "center";
+                ctx.fillText(a.aa.code, a.x, a.y + 3);
+            }
+        });
+
+        // N and C terminus
+        const first = protState.chain[0], last = protState.chain[protState.chain.length - 1];
+        ctx.fillStyle = "#4caf50"; ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("N", first.x, first.y - 12);
+        ctx.fillStyle = "#f44336";
+        ctx.fillText("C", last.x, last.y - 12);
+
+        // Legend
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(20, H - 80, W - 40, 65);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(20, H - 80, W - 40, 65);
+
+        ctx.font = "10px sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "#ff5722"; ctx.fillText("\u25cf Hydrophobic (core)", 30, H - 62);
+        ctx.fillStyle = "#42a5f5"; ctx.fillText("\u25cf Hydrophilic (surface)", 180, H - 62);
+        ctx.fillStyle = "#7c4dff"; ctx.fillText("\u25cf Charged", 350, H - 62);
+        ctx.fillStyle = "#66bb6a"; ctx.fillText("\u25cf Special (Pro)", 460, H - 62);
+
+        ctx.fillStyle = "#ccc"; ctx.font = "11px sans-serif";
+        ctx.fillText(`Chain: ${protState.chain.length} residues  |  Energy: ${protState.energy.toFixed(1)}  |  Temp: ${temp}`, 30, H - 38);
+        ctx.fillText("Hydrophobic residues collapse to the core; hydrophilic residues face the solvent.", 30, H - 22);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Protein Folding</b><br>` +
+            `Residues: ${protState.chain.length}<br>` +
+            `Energy: ${protState.energy.toFixed(1)}<br>` +
+            `Temp: ${temp}`;
+
+        if (protState.running) {
+            animId = requestAnimationFrame(drawProtein);
+        }
+    }
+
+    bindSlider("chainLen", "val-chainLen", () => initProtein());
+    bindSlider("foldTemp", "val-foldTemp");
+
+    document.getElementById("btn-prot-fold").addEventListener("click", () => {
+        if (!protState.running) {
+            protState.running = true;
+            drawProtein();
+        }
+    });
+    document.getElementById("btn-prot-reset").addEventListener("click", initProtein);
+
+    // ═══════════════════════════════════════════════════════
+    // 43. CARBON CYCLE
+    // ═══════════════════════════════════════════════════════
+    let carbState = { t: 0, running: true, particles: [],
+        atm: 400, bio: 550, ocean: 900, litho: 60000 };
+
+    function initCarbon() {
+        carbState = { t: 0, running: true, particles: [],
+            atm: 400, bio: 550, ocean: 900, litho: 60000 };
+        document.getElementById("btn-carb-toggle").textContent = "Pause";
+        drawCarbon();
+    }
+
+    function drawCarbon() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const emissions = +document.getElementById("emissions").value / 100;
+        const deforest = +document.getElementById("deforest").value / 100;
+        const oceanAbs = +document.getElementById("oceanAbs").value / 100;
+
+        if (carbState.running) {
+            carbState.t += 0.016;
+
+            // Carbon fluxes (simplified)
+            const photosynth = 120 * (1 - deforest * 0.5);
+            const respiration = 110;
+            const oceanUptake = 90 * oceanAbs;
+            const oceanRelease = 80;
+            const fossilFuel = 10 * emissions;
+            const volcanism = 0.1;
+
+            const dt = 0.001;
+            carbState.atm += (respiration - photosynth + fossilFuel + volcanism - oceanUptake + oceanRelease) * dt;
+            carbState.bio += (photosynth - respiration - deforest * 5) * dt;
+            carbState.ocean += (oceanUptake - oceanRelease) * dt;
+
+            carbState.atm = Math.max(200, carbState.atm);
+            carbState.bio = Math.max(100, carbState.bio);
+
+            // Particles for visualization
+            if (Math.random() < 0.1) {
+                const types = ["photo", "resp", "fossil", "ocean_in", "ocean_out"];
+                const type = types[Math.floor(Math.random() * types.length)];
+                let p = { type, progress: 0, speed: 0.01 + Math.random() * 0.01 };
+                carbState.particles.push(p);
+            }
+            carbState.particles.forEach(p => { p.progress += p.speed; });
+            carbState.particles = carbState.particles.filter(p => p.progress < 1);
+            if (carbState.particles.length > 40) carbState.particles.splice(0, 10);
+        }
+
+        // Reservoirs
+        // Atmosphere (top)
+        const atmGrad = ctx.createLinearGradient(0, 0, 0, 120);
+        atmGrad.addColorStop(0, `rgba(100, 149, 237, ${0.15 + carbState.atm / 2000})`);
+        atmGrad.addColorStop(1, "rgba(100, 149, 237, 0.02)");
+        ctx.fillStyle = atmGrad;
+        ctx.fillRect(0, 0, W, 120);
+        ctx.fillStyle = "#90caf9"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("ATMOSPHERE", W / 2, 25);
+        ctx.fillStyle = "#ccc"; ctx.font = "12px sans-serif";
+        ctx.fillText(`CO\u2082: ${carbState.atm.toFixed(0)} GtC`, W / 2, 45);
+
+        // Biosphere (left-center)
+        ctx.fillStyle = "rgba(27, 94, 32, 0.3)";
+        ctx.fillRect(30, 140, 250, 180);
+        ctx.strokeStyle = "#43a047"; ctx.lineWidth = 2;
+        ctx.strokeRect(30, 140, 250, 180);
+        // Trees
+        for (let i = 0; i < 5; i++) {
+            const tx = 60 + i * 45, ty = 200;
+            const treeH = 50 * (1 - deforest * 0.5);
+            ctx.fillStyle = "#33691e";
+            ctx.beginPath();
+            ctx.moveTo(tx, ty - treeH); ctx.lineTo(tx - 15, ty); ctx.lineTo(tx + 15, ty);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = "#4e342e";
+            ctx.fillRect(tx - 3, ty, 6, 15);
+        }
+        ctx.fillStyle = "#66bb6a"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("BIOSPHERE", 155, 158);
+        ctx.fillStyle = "#a5d6a7"; ctx.font = "11px sans-serif";
+        ctx.fillText(`${carbState.bio.toFixed(0)} GtC`, 155, 310);
+
+        // Ocean (right)
+        ctx.fillStyle = "rgba(13, 71, 161, 0.3)";
+        ctx.fillRect(320, 140, 260, 180);
+        ctx.strokeStyle = "#1565c0"; ctx.lineWidth = 2;
+        ctx.strokeRect(320, 140, 260, 180);
+        // Waves
+        ctx.beginPath();
+        for (let x = 320; x <= 580; x++) {
+            const y = 160 + Math.sin(x * 0.05 + carbState.t * 2) * 5;
+            x === 320 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = "rgba(100,180,255,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = "#42a5f5"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("OCEAN", 450, 158);
+        ctx.fillStyle = "#90caf9"; ctx.font = "11px sans-serif";
+        ctx.fillText(`${carbState.ocean.toFixed(0)} GtC`, 450, 310);
+
+        // Lithosphere (bottom)
+        ctx.fillStyle = "rgba(62, 39, 35, 0.4)";
+        ctx.fillRect(30, 360, 550, 100);
+        ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 2;
+        ctx.strokeRect(30, 360, 550, 100);
+        // Rock layers
+        for (let y = 380; y < 460; y += 20) {
+            ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(580, y);
+            ctx.strokeStyle = "rgba(121, 85, 72, 0.3)"; ctx.lineWidth = 1; ctx.stroke();
+        }
+        ctx.fillStyle = "#8d6e63"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("LITHOSPHERE (Fossil Fuels, Sediments)", 305, 378);
+        ctx.fillStyle = "#bcaaa4"; ctx.font = "11px sans-serif";
+        ctx.fillText(`~${(carbState.litho / 1000).toFixed(0)},000 GtC`, 305, 440);
+
+        // Fossil fuel icon
+        ctx.fillStyle = "#212121";
+        ctx.fillRect(620, 370, 70, 50);
+        ctx.strokeStyle = "#424242"; ctx.strokeRect(620, 370, 70, 50);
+        ctx.fillStyle = "#616161"; ctx.font = "10px sans-serif";
+        ctx.fillText("Fossil", 655, 390);
+        ctx.fillText("Fuels", 655, 405);
+
+        // Flux arrows
+        const drawFluxArrow = (x1, y1, x2, y2, label, color, amount) => {
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+            ctx.strokeStyle = color; ctx.lineWidth = 1.5 + amount * 0.02; ctx.stroke();
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            ctx.fillStyle = color; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(label, mx + 15, my);
+        };
+
+        // Photosynthesis (atm -> bio)
+        drawFluxArrow(120, 120, 120, 140, "Photosynthesis", "#66bb6a", 120 * (1 - deforest * 0.5));
+        // Respiration (bio -> atm)
+        drawFluxArrow(200, 140, 200, 120, "Respiration", "#ff9800", 110);
+        // Ocean uptake (atm -> ocean)
+        drawFluxArrow(400, 120, 400, 140, "Absorption", "#42a5f5", 90 * oceanAbs);
+        // Ocean release (ocean -> atm)
+        drawFluxArrow(500, 140, 500, 120, "Release", "#90caf9", 80);
+        // Fossil fuel emissions
+        drawFluxArrow(655, 370, 655, 120, `Emissions`, "#ef5350", 10 * emissions);
+        // Decomposition to lithosphere
+        drawFluxArrow(155, 320, 155, 360, "Burial", "#8d6e63", 1);
+
+        // Particles along paths
+        carbState.particles.forEach(p => {
+            let px, py;
+            const pr = p.progress;
+            if (p.type === "photo") {
+                px = 120; py = 120 + pr * 20;
+                ctx.fillStyle = "rgba(102, 187, 106, 0.7)";
+            } else if (p.type === "resp") {
+                px = 200; py = 140 - pr * 20;
+                ctx.fillStyle = "rgba(255, 152, 0, 0.7)";
+            } else if (p.type === "fossil") {
+                px = 655; py = 370 - pr * 250;
+                ctx.fillStyle = "rgba(239, 83, 80, 0.7)";
+            } else if (p.type === "ocean_in") {
+                px = 400; py = 120 + pr * 20;
+                ctx.fillStyle = "rgba(66, 165, 245, 0.7)";
+            } else {
+                px = 500; py = 140 - pr * 20;
+                ctx.fillStyle = "rgba(144, 202, 249, 0.7)";
+            }
+            ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+        });
+
+        // CO2 trend
+        const ppm = 280 + (carbState.atm - 400) * 0.5 + emissions * 140;
+        ctx.fillStyle = "rgba(16,20,58,0.85)";
+        ctx.fillRect(620, 140, 170, 60);
+        ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(620, 140, 170, 60);
+        ctx.fillStyle = carbState.atm > 500 ? "#ef5350" : "#ffeb3b";
+        ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`~${ppm.toFixed(0)} ppm CO\u2082`, 705, 165);
+        ctx.fillStyle = "#aab"; ctx.font = "10px sans-serif";
+        ctx.fillText(carbState.atm > 500 ? "Above safe levels!" : "Pre-industrial: 280 ppm", 705, 185);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#90caf9">Carbon Cycle</b><br>` +
+            `Atm: ${carbState.atm.toFixed(0)} GtC<br>` +
+            `Bio: ${carbState.bio.toFixed(0)} GtC<br>` +
+            `Ocean: ${carbState.ocean.toFixed(0)} GtC`;
+
+        if (carbState.running) {
+            animId = requestAnimationFrame(drawCarbon);
+        }
+    }
+
+    bindSlider("emissions", "val-emissions");
+    bindSlider("deforest", "val-deforest");
+    bindSlider("oceanAbs", "val-oceanAbs");
+
+    document.getElementById("btn-carb-toggle").addEventListener("click", () => {
+        carbState.running = !carbState.running;
+        document.getElementById("btn-carb-toggle").textContent = carbState.running ? "Pause" : "Resume";
+        if (carbState.running) drawCarbon();
+    });
+    document.getElementById("btn-carb-reset").addEventListener("click", initCarbon);
+
+    // ═══════════════════════════════════════════════════════
+    // 44. ATOMIC EMISSION SPECTRA
+    // ═══════════════════════════════════════════════════════
+
+    const spectralData = {
+        hydrogen: {
+            name: "Hydrogen (H)",
+            lines: [
+                { wl: 410, series: "Balmer", transition: "6\u21922" },
+                { wl: 434, series: "Balmer", transition: "5\u21922" },
+                { wl: 486, series: "Balmer", transition: "4\u21922" },
+                { wl: 656, series: "Balmer", transition: "3\u21922" }
+            ],
+            levels: [-13.6, -3.4, -1.51, -0.85, -0.54, -0.38]
+        },
+        helium: {
+            name: "Helium (He)",
+            lines: [
+                { wl: 388, series: "", transition: "" },
+                { wl: 447, series: "", transition: "" },
+                { wl: 471, series: "", transition: "" },
+                { wl: 492, series: "", transition: "" },
+                { wl: 501, series: "", transition: "" },
+                { wl: 587, series: "", transition: "" },
+                { wl: 668, series: "", transition: "" },
+                { wl: 706, series: "", transition: "" }
+            ],
+            levels: [-24.6, -4.77, -3.62, -1.87, -0.85]
+        },
+        neon: {
+            name: "Neon (Ne)",
+            lines: [
+                { wl: 540, series: "", transition: "" },
+                { wl: 585, series: "", transition: "" },
+                { wl: 603, series: "", transition: "" },
+                { wl: 616, series: "", transition: "" },
+                { wl: 626, series: "", transition: "" },
+                { wl: 640, series: "", transition: "" },
+                { wl: 650, series: "", transition: "" },
+                { wl: 660, series: "", transition: "" },
+                { wl: 693, series: "", transition: "" }
+            ],
+            levels: [-21.6, -5.1, -4.9, -4.0, -1.5]
+        },
+        sodium: {
+            name: "Sodium (Na)",
+            lines: [
+                { wl: 330, series: "", transition: "" },
+                { wl: 498, series: "", transition: "" },
+                { wl: 569, series: "", transition: "" },
+                { wl: 589, series: "D-line", transition: "3p\u21923s" },
+                { wl: 590, series: "D-line", transition: "3p\u21923s" },
+                { wl: 616, series: "", transition: "" },
+                { wl: 819, series: "", transition: "" }
+            ],
+            levels: [-5.14, -3.04, -1.95, -1.02, -0.51]
+        },
+        mercury: {
+            name: "Mercury (Hg)",
+            lines: [
+                { wl: 365, series: "", transition: "" },
+                { wl: 405, series: "", transition: "" },
+                { wl: 436, series: "", transition: "" },
+                { wl: 546, series: "", transition: "" },
+                { wl: 577, series: "", transition: "" },
+                { wl: 579, series: "", transition: "" }
+            ],
+            levels: [-10.4, -5.77, -4.89, -3.73, -2.48]
+        }
+    };
+
+    function wlToRGB(wl) {
+        let r = 0, g = 0, b = 0;
+        if (wl >= 380 && wl < 440) { r = -(wl - 440) / 60; b = 1; }
+        else if (wl >= 440 && wl < 490) { g = (wl - 440) / 50; b = 1; }
+        else if (wl >= 490 && wl < 510) { g = 1; b = -(wl - 510) / 20; }
+        else if (wl >= 510 && wl < 580) { r = (wl - 510) / 70; g = 1; }
+        else if (wl >= 580 && wl < 645) { r = 1; g = -(wl - 645) / 65; }
+        else if (wl >= 645 && wl <= 780) { r = 1; }
+        return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+    }
+
+    function initSpectral() {
+        drawSpectral();
+    }
+
+    function drawSpectral() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const elem = document.getElementById("element").value;
+        const showLevels = document.getElementById("showELevels").checked;
+        const data = spectralData[elem];
+
+        // Title
+        ctx.fillStyle = "#ccc"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(`Emission Spectrum: ${data.name}`, W / 2, 25);
+
+        // Continuous spectrum reference
+        const specY = 50, specH = 40;
+        for (let x = 60; x < W - 60; x++) {
+            const wl = 380 + ((x - 60) / (W - 120)) * 400;
+            ctx.fillStyle = wlToRGB(wl);
+            ctx.fillRect(x, specY, 1, specH);
+        }
+        ctx.strokeStyle = "#555"; ctx.lineWidth = 1;
+        ctx.strokeRect(60, specY, W - 120, specH);
+        ctx.fillStyle = "#aab"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Continuous Spectrum (reference)", W / 2, specY - 6);
+
+        // Emission spectrum (dark background with bright lines)
+        const emY = 110, emH = 60;
+        ctx.fillStyle = "#0a0a14";
+        ctx.fillRect(60, emY, W - 120, emH);
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 1;
+        ctx.strokeRect(60, emY, W - 120, emH);
+
+        data.lines.forEach(line => {
+            if (line.wl >= 380 && line.wl <= 780) {
+                const x = 60 + ((line.wl - 380) / 400) * (W - 120);
+                ctx.fillStyle = wlToRGB(line.wl);
+                ctx.fillRect(x - 1.5, emY, 3, emH);
+                // Glow
+                const glow = ctx.createLinearGradient(x - 8, 0, x + 8, 0);
+                glow.addColorStop(0, "rgba(0,0,0,0)");
+                glow.addColorStop(0.5, wlToRGB(line.wl).replace("rgb", "rgba").replace(")", ",0.15)"));
+                glow.addColorStop(1, "rgba(0,0,0,0)");
+                ctx.fillStyle = glow;
+                ctx.fillRect(x - 8, emY, 16, emH);
+            }
+        });
+
+        ctx.fillStyle = "#aab"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Emission Spectrum", W / 2, emY - 6);
+
+        // Wavelength labels
+        data.lines.forEach(line => {
+            if (line.wl >= 380 && line.wl <= 780) {
+                const x = 60 + ((line.wl - 380) / 400) * (W - 120);
+                ctx.fillStyle = wlToRGB(line.wl);
+                ctx.font = "9px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`${line.wl}`, x, emY + emH + 12);
+                if (line.series) {
+                    ctx.fillStyle = "#667";
+                    ctx.fillText(line.series, x, emY + emH + 24);
+                }
+            }
+        });
+
+        // Wavelength axis
+        ctx.fillStyle = "#556"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+        for (let wl = 400; wl <= 750; wl += 50) {
+            const x = 60 + ((wl - 380) / 400) * (W - 120);
+            ctx.fillText(`${wl}`, x, emY + emH + 38);
+        }
+        ctx.fillText("Wavelength (nm)", W / 2, emY + emH + 52);
+
+        // Energy level diagram
+        if (showLevels) {
+            const lvlX = 100, lvlY = 230, lvlW = W - 200, lvlH = 250;
+            ctx.fillStyle = "rgba(16,20,58,0.7)";
+            ctx.fillRect(lvlX - 40, lvlY, lvlW + 80, lvlH);
+            ctx.strokeStyle = "#2a2f6e"; ctx.strokeRect(lvlX - 40, lvlY, lvlW + 80, lvlH);
+
+            ctx.fillStyle = "#aab"; ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Energy Level Diagram", W / 2, lvlY - 8);
+
+            const minE = data.levels[0];
+            const maxE = 0;
+            const eRange = maxE - minE;
+
+            // Draw levels
+            data.levels.forEach((e, i) => {
+                const y = lvlY + lvlH - 20 - ((e - minE) / eRange) * (lvlH - 40);
+                ctx.beginPath(); ctx.moveTo(lvlX, y); ctx.lineTo(lvlX + lvlW, y);
+                ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1.5; ctx.stroke();
+
+                ctx.fillStyle = "#ccc"; ctx.font = "10px sans-serif";
+                ctx.textAlign = "right";
+                ctx.fillText(`n=${i + 1}`, lvlX - 8, y + 4);
+                ctx.textAlign = "left";
+                ctx.fillText(`${e.toFixed(2)} eV`, lvlX + lvlW + 8, y + 4);
+            });
+
+            // Draw transitions for hydrogen (Balmer series)
+            if (elem === "hydrogen") {
+                const transitions = [
+                    { from: 2, to: 0, wl: 656 },
+                    { from: 3, to: 0, wl: 486 },
+                    { from: 4, to: 0, wl: 434 },
+                    { from: 5, to: 0, wl: 410 }
+                ];
+                transitions.forEach((tr, i) => {
+                    if (tr.from < data.levels.length && tr.to < data.levels.length) {
+                        const fromIdx = tr.from;
+                        const toIdx = 1; // n=2 for Balmer
+                        const y1 = lvlY + lvlH - 20 - ((data.levels[fromIdx] - minE) / eRange) * (lvlH - 40);
+                        const y2 = lvlY + lvlH - 20 - ((data.levels[toIdx] - minE) / eRange) * (lvlH - 40);
+                        const x = lvlX + 60 + i * 80;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y1);
+                        ctx.lineTo(x, y2);
+                        ctx.strokeStyle = wlToRGB(tr.wl);
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        // Arrow
+                        ctx.beginPath();
+                        ctx.moveTo(x, y2);
+                        ctx.lineTo(x - 4, y2 - 8);
+                        ctx.lineTo(x + 4, y2 - 8);
+                        ctx.closePath();
+                        ctx.fillStyle = wlToRGB(tr.wl);
+                        ctx.fill();
+                        ctx.font = "8px sans-serif"; ctx.textAlign = "center";
+                        ctx.fillText(`${tr.wl}nm`, x, (y1 + y2) / 2);
+                    }
+                });
+            }
+
+            // Ionization level
+            const ionY = lvlY + 20;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(lvlX, ionY); ctx.lineTo(lvlX + lvlW, ionY);
+            ctx.strokeStyle = "rgba(239, 83, 80, 0.3)"; ctx.lineWidth = 1; ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "#ef5350"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Ionization (0 eV)", W / 2, ionY - 5);
+        }
+
+        // Bohr model equation
+        ctx.fillStyle = "#ccc"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("E_n = -13.6/n\u00b2 eV (hydrogen)  |  \u0394E = hf = hc/\u03bb", W / 2, H - 15);
+
+        ctx.textAlign = "start";
+        overlay.innerHTML =
+            `<b style="color:#64b5f6">Spectral Lines</b><br>` +
+            `Element: ${data.name}<br>` +
+            `Lines: ${data.lines.length}<br>` +
+            `Levels: ${data.levels.length}`;
+    }
+
+    document.getElementById("element").addEventListener("change", () => { if (currentSim === "spectral") drawSpectral(); });
+    document.getElementById("showELevels").addEventListener("change", () => { if (currentSim === "spectral") drawSpectral(); });
+    document.getElementById("btn-spec-reset").addEventListener("click", initSpectral);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
