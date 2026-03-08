@@ -82,6 +82,11 @@
             case "stressstrain":initStressStrain(); break;
             case "reactiondiff":initReactionDiff(); break;
             case "fluidflow":   initFluidFlow();    break;
+            case "phasespace":  initPhaseSpace();   break;
+            case "radiocarbon": initRadiocarbon();  break;
+            case "mandelbrot":  initMandelbrot();   break;
+            case "shm":         initSHM();          break;
+            case "vector":      initVectorField();  break;
         }
     }
 
@@ -9795,6 +9800,684 @@
     bindSlider("flow-speed", "val-flow-speed");
     bindSlider("viscosity", "val-viscosity");
     document.getElementById("btn-flow-reset").addEventListener("click", initFluidFlow);
+
+    // ── 55. Phase Space ────────────────────────────────────
+    let psState = {};
+    function initPhaseSpace() {
+        cancelAnimationFrame(animId);
+        currentSim = "phasespace";
+        psState = {
+            theta: 2.5, omega: 0, t: 0,
+            trail: [],
+            pendTrail: []
+        };
+        drawPhaseSpace();
+    }
+    function drawPhaseSpace() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const damp = parseFloat(document.getElementById("ps-damp").value);
+        const drive = parseFloat(document.getElementById("ps-drive").value);
+        const driveFreq = parseFloat(document.getElementById("ps-freq").value);
+        const dt = 0.02;
+
+        // RK4 integration for damped driven pendulum
+        for (let i = 0; i < 3; i++) {
+            psState.t += dt;
+            const f = (th, om, t2) => {
+                return -Math.sin(th) - damp * om + drive * Math.cos(driveFreq * t2);
+            };
+            const th = psState.theta, om = psState.omega, t = psState.t;
+            const k1v = f(th, om, t) * dt;
+            const k1x = om * dt;
+            const k2v = f(th + k1x / 2, om + k1v / 2, t + dt / 2) * dt;
+            const k2x = (om + k1v / 2) * dt;
+            const k3v = f(th + k2x / 2, om + k2v / 2, t + dt / 2) * dt;
+            const k3x = (om + k2v / 2) * dt;
+            const k4v = f(th + k3x, om + k3v, t + dt) * dt;
+            const k4x = (om + k3v) * dt;
+            psState.theta += (k1x + 2 * k2x + 2 * k3x + k4x) / 6;
+            psState.omega += (k1v + 2 * k2v + 2 * k3v + k4v) / 6;
+        }
+
+        // Wrap theta to [-PI, PI]
+        while (psState.theta > Math.PI) psState.theta -= 2 * Math.PI;
+        while (psState.theta < -Math.PI) psState.theta += 2 * Math.PI;
+
+        psState.trail.push({ x: psState.theta, y: psState.omega });
+        if (psState.trail.length > 3000) psState.trail.shift();
+
+        // Phase space plot (right side)
+        const px = 400, py = 30, pw = 470, ph = 460;
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px, py, pw, ph);
+
+        // Axes
+        const pcx = px + pw / 2, pcy = py + ph / 2;
+        ctx.strokeStyle = "#444";
+        ctx.beginPath(); ctx.moveTo(px, pcy); ctx.lineTo(px + pw, pcy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pcx, py); ctx.lineTo(pcx, py + ph); ctx.stroke();
+
+        ctx.fillStyle = "#888";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("θ", pcx + pw / 2 - 10, pcy + 15);
+        ctx.fillText("ω", pcx + 10, py + 12);
+        ctx.fillText("-π", px + 5, pcy + 15);
+        ctx.fillText("π", px + pw - 5, pcy + 15);
+
+        // Draw trail
+        const scaleX = pw / (2 * Math.PI);
+        const maxOmega = 5;
+        const scaleY = ph / (2 * maxOmega);
+        for (let i = 1; i < psState.trail.length; i++) {
+            const p1 = psState.trail[i - 1], p2 = psState.trail[i];
+            // Don't draw wrap-around lines
+            if (Math.abs(p2.x - p1.x) > 3) continue;
+            const sx1 = pcx + p1.x * scaleX, sy1 = pcy - p1.y * scaleY;
+            const sx2 = pcx + p2.x * scaleX, sy2 = pcy - p2.y * scaleY;
+            const alpha = 0.3 + 0.7 * (i / psState.trail.length);
+            const hue = (i / psState.trail.length) * 270;
+            ctx.beginPath();
+            ctx.moveTo(sx1, sy1);
+            ctx.lineTo(sx2, sy2);
+            ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Current point
+        const cx2 = pcx + psState.theta * scaleX;
+        const cy2 = pcy - psState.omega * scaleY;
+        ctx.beginPath();
+        ctx.arc(cx2, cy2, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+
+        // Pendulum visualization (left side)
+        const pendCX = 180, pendCY = 200, pendL = 120;
+        const bobX = pendCX + pendL * Math.sin(psState.theta);
+        const bobY = pendCY + pendL * Math.cos(psState.theta);
+
+        ctx.strokeStyle = "#556";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(pendCX, pendCY); ctx.lineTo(bobX, bobY); ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(bobX, bobY, 15, 0, Math.PI * 2);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fill();
+        ctx.strokeStyle = "#29b6f6";
+        ctx.stroke();
+
+        // Pivot
+        ctx.beginPath();
+        ctx.arc(pendCX, pendCY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#888";
+        ctx.fill();
+
+        // Drive indicator
+        if (drive > 0) {
+            const driveY = pendCY + 30 * Math.cos(driveFreq * psState.t);
+            ctx.fillStyle = "rgba(255,200,0,0.5)";
+            ctx.fillRect(pendCX - 40, driveY - 2, 80, 4);
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">Phase Space</b><br>` +
+            `θ: ${psState.theta.toFixed(3)} | ω: ${psState.omega.toFixed(3)}<br>` +
+            `Damping: ${damp} | Drive: ${drive}`;
+
+        animId = requestAnimationFrame(drawPhaseSpace);
+    }
+    bindSlider("ps-damp", "val-ps-damp");
+    bindSlider("ps-drive", "val-ps-drive");
+    bindSlider("ps-freq", "val-ps-freq");
+    document.getElementById("btn-ps-clear").addEventListener("click", () => { psState.trail = []; });
+    document.getElementById("btn-ps-reset").addEventListener("click", initPhaseSpace);
+
+    // ── 56. Radiocarbon Dating ───────────────────────────────
+    let rcState = {};
+    function initRadiocarbon() {
+        cancelAnimationFrame(animId);
+        currentSim = "radiocarbon";
+        rcState = { elapsed: 0, atoms: [] };
+        const initCount = parseInt(document.getElementById("rc-init").value);
+        for (let i = 0; i < initCount; i++) {
+            rcState.atoms.push({
+                x: 520 + Math.random() * 340,
+                y: 60 + Math.random() * 400,
+                alive: true,
+                decayTime: -5730 * Math.log(Math.random()),
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5
+            });
+        }
+        drawRadiocarbon();
+    }
+    function drawRadiocarbon() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const sampleAge = parseInt(document.getElementById("rc-age").value);
+        const speed = parseFloat(document.getElementById("rc-speed").value);
+        const halfLife = 5730; // years
+
+        rcState.elapsed += 20 * speed;
+
+        // Decay curve (left side)
+        const gx = 40, gy = 40, gw = 420, gh = 420;
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        // Grid
+        const maxT = Math.max(sampleAge * 1.5, 30000);
+        const initCount = rcState.atoms.length;
+        for (let i = 0; i <= 5; i++) {
+            const yy = gy + (i / 5) * gh;
+            ctx.strokeStyle = "rgba(100,100,100,0.2)";
+            ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + gw, yy); ctx.stroke();
+            ctx.fillStyle = "#888";
+            ctx.font = "10px monospace";
+            ctx.textAlign = "right";
+            ctx.fillText(((5 - i) / 5 * 100).toFixed(0) + "%", gx - 5, yy + 4);
+        }
+        for (let i = 0; i <= 5; i++) {
+            const xx = gx + (i / 5) * gw;
+            ctx.strokeStyle = "rgba(100,100,100,0.2)";
+            ctx.beginPath(); ctx.moveTo(xx, gy); ctx.lineTo(xx, gy + gh); ctx.stroke();
+            ctx.fillStyle = "#888";
+            ctx.textAlign = "center";
+            ctx.fillText((i / 5 * maxT / 1000).toFixed(0) + "k", xx, gy + gh + 15);
+        }
+
+        // Theoretical curve
+        ctx.beginPath();
+        for (let px = 0; px <= gw; px++) {
+            const t = (px / gw) * maxT;
+            const frac = Math.pow(0.5, t / halfLife);
+            const py = gy + gh - frac * gh;
+            if (px === 0) ctx.moveTo(gx + px, py);
+            else ctx.lineTo(gx + px, py);
+        }
+        ctx.strokeStyle = "#4fc3f7";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Half-life markers
+        ctx.setLineDash([4, 4]);
+        for (let n = 1; n <= 5; n++) {
+            const hl = n * halfLife;
+            if (hl > maxT) break;
+            const hlx = gx + (hl / maxT) * gw;
+            const hly = gy + gh - Math.pow(0.5, n) * gh;
+            ctx.strokeStyle = "rgba(255,200,0,0.3)";
+            ctx.beginPath(); ctx.moveTo(hlx, gy); ctx.lineTo(hlx, gy + gh); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(gx, hly); ctx.lineTo(gx + gw, hly); ctx.stroke();
+            ctx.fillStyle = "#cc9";
+            ctx.textAlign = "center";
+            ctx.font = "9px monospace";
+            ctx.fillText(`t½×${n}`, hlx, gy - 5);
+        }
+        ctx.setLineDash([]);
+
+        // Current time marker
+        const elapsedClamped = Math.min(rcState.elapsed, maxT);
+        const curX = gx + (elapsedClamped / maxT) * gw;
+        const curFrac = Math.pow(0.5, elapsedClamped / halfLife);
+        const curY = gy + gh - curFrac * gh;
+        ctx.beginPath();
+        ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#ff0";
+        ctx.fill();
+
+        // Sample age line
+        const sampleX = gx + (sampleAge / maxT) * gw;
+        ctx.strokeStyle = "#f44";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 3]);
+        ctx.beginPath(); ctx.moveTo(sampleX, gy); ctx.lineTo(sampleX, gy + gh); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#f44";
+        ctx.textAlign = "center";
+        ctx.font = "11px monospace";
+        ctx.fillText(`Sample: ${sampleAge}y`, sampleX, gy - 8);
+
+        // Atom visualization (right side)
+        const alive = rcState.atoms.filter(a => a.alive && rcState.elapsed < a.decayTime).length;
+        for (const atom of rcState.atoms) {
+            atom.x += atom.vx;
+            atom.y += atom.vy;
+            if (atom.x < 510 || atom.x > 890) atom.vx *= -1;
+            if (atom.y < 50 || atom.y > 470) atom.vy *= -1;
+
+            const isAlive = atom.alive && rcState.elapsed < atom.decayTime;
+            ctx.beginPath();
+            ctx.arc(atom.x, atom.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = isAlive ? "#4fc3f7" : "rgba(100,60,60,0.3)";
+            ctx.fill();
+        }
+
+        // Box outline
+        ctx.strokeStyle = "#445";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(505, 45, 390, 430);
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Sample Atoms", 700, 490);
+
+        const pctRemaining = (alive / initCount * 100).toFixed(1);
+        const estimatedAge = alive > 0 && alive < initCount ?
+            (-halfLife * Math.log(alive / initCount) / Math.log(2)).toFixed(0) : "N/A";
+
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">Radiocarbon Dating</b><br>` +
+            `Elapsed: ${(rcState.elapsed).toFixed(0)}y | C-14: ${pctRemaining}%<br>` +
+            `Remaining: ${alive}/${initCount} | Est. Age: ${estimatedAge}y<br>` +
+            `Half-life: ${halfLife}y`;
+
+        animId = requestAnimationFrame(drawRadiocarbon);
+    }
+    bindSlider("rc-age", "val-rc-age");
+    bindSlider("rc-init", "val-rc-init");
+    bindSlider("rc-speed", "val-rc-speed");
+    document.getElementById("btn-rc-reset").addEventListener("click", initRadiocarbon);
+
+    // ── 57. Mandelbrot Set ───────────────────────────────────
+    let mbState = {};
+    function initMandelbrot() {
+        cancelAnimationFrame(animId);
+        currentSim = "mandelbrot";
+        mbState = {
+            centerX: -0.5, centerY: 0, zoom: 1.5,
+            needsRender: true
+        };
+        canvas.addEventListener("click", mbClick);
+        drawMandelbrot();
+    }
+    function mbClick(e) {
+        if (currentSim !== "mandelbrot") return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) / rect.width;
+        const my = (e.clientY - rect.top) / rect.height;
+        const W = canvas.width, H2 = canvas.height;
+        const aspect = W / H2;
+        mbState.centerX += (mx - 0.5) * 2 * mbState.zoom * aspect;
+        mbState.centerY += (my - 0.5) * 2 * mbState.zoom;
+        mbState.zoom *= 0.5;
+        mbState.needsRender = true;
+    }
+    function mandelbrotColor(iter, maxIter, scheme) {
+        if (iter === maxIter) return [0, 0, 0];
+        const t = iter / maxIter;
+        if (scheme === "fire") return [Math.min(255, t * 600), Math.min(255, t * 300), Math.min(255, t * 100)];
+        if (scheme === "ocean") return [Math.min(255, t * 100), Math.min(255, t * 300), Math.min(255, 50 + t * 400)];
+        if (scheme === "grayscale") { const v = Math.floor(t * 255); return [v, v, v]; }
+        // classic
+        const hue = t * 360;
+        const s = 0.8, l = t < 1 ? 0.5 : 0;
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
+        const m = l - c / 2;
+        let r, g, b;
+        if (hue < 60) { r = c; g = x; b = 0; }
+        else if (hue < 120) { r = x; g = c; b = 0; }
+        else if (hue < 180) { r = 0; g = c; b = x; }
+        else if (hue < 240) { r = 0; g = x; b = c; }
+        else if (hue < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+        return [Math.floor((r + m) * 255), Math.floor((g + m) * 255), Math.floor((b + m) * 255)];
+    }
+    function drawMandelbrot() {
+        const W = canvas.width, H2 = canvas.height;
+
+        if (mbState.needsRender) {
+            mbState.needsRender = false;
+            const maxIter = parseInt(document.getElementById("mb-iter").value);
+            const scheme = document.getElementById("sel-mb-color").value;
+            const aspect = W / H2;
+            const imgData = ctx.createImageData(W, H2);
+
+            for (let py = 0; py < H2; py++) {
+                for (let px = 0; px < W; px++) {
+                    const x0 = mbState.centerX + (px / W - 0.5) * 2 * mbState.zoom * aspect;
+                    const y0 = mbState.centerY + (py / H2 - 0.5) * 2 * mbState.zoom;
+                    let x = 0, y = 0, iter = 0;
+                    while (x * x + y * y <= 4 && iter < maxIter) {
+                        const xt = x * x - y * y + x0;
+                        y = 2 * x * y + y0;
+                        x = xt;
+                        iter++;
+                    }
+                    // Smooth coloring
+                    let smoothIter = iter;
+                    if (iter < maxIter) {
+                        const log_zn = Math.log(x * x + y * y) / 2;
+                        const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+                        smoothIter = iter + 1 - nu;
+                    }
+                    const [r, g, b] = mandelbrotColor(smoothIter, maxIter, scheme);
+                    const idx = (py * W + px) * 4;
+                    imgData.data[idx] = r;
+                    imgData.data[idx + 1] = g;
+                    imgData.data[idx + 2] = b;
+                    imgData.data[idx + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // Info box
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(5, 5, 250, 50);
+        ctx.fillStyle = "#fff";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`Center: (${mbState.centerX.toFixed(8)}, ${mbState.centerY.toFixed(8)})`, 10, 22);
+        ctx.fillText(`Zoom: ${(1 / mbState.zoom).toFixed(2)}x  |  Click to zoom in`, 10, 40);
+
+        overlay.innerHTML =
+            `<b style="color:#e040fb">Mandelbrot Set</b><br>` +
+            `Zoom: ${(1 / mbState.zoom).toFixed(1)}x<br>` +
+            `Click canvas to zoom in`;
+
+        animId = requestAnimationFrame(drawMandelbrot);
+    }
+    bindSlider("mb-iter", "val-mb-iter", () => { mbState.needsRender = true; });
+    document.getElementById("sel-mb-color").addEventListener("change", () => { mbState.needsRender = true; });
+    document.getElementById("btn-mb-reset").addEventListener("click", () => {
+        mbState.centerX = -0.5; mbState.centerY = 0; mbState.zoom = 1.5;
+        mbState.needsRender = true;
+    });
+    document.getElementById("btn-mb-zoomout").addEventListener("click", () => {
+        mbState.zoom *= 2;
+        mbState.needsRender = true;
+    });
+
+    // ── 58. SHM Comparison ───────────────────────────────────
+    let shmState = {};
+    function initSHM() {
+        cancelAnimationFrame(animId);
+        currentSim = "shm";
+        shmState = { t: 0, trails: [[], [], []] };
+        drawSHM();
+    }
+    function drawSHM() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const freq = parseFloat(document.getElementById("shm-freq").value);
+        const amp = parseFloat(document.getElementById("shm-amp").value);
+        const phaseOff = parseFloat(document.getElementById("shm-phase").value) * Math.PI / 180;
+        shmState.t += 0.03;
+
+        const omega = 2 * Math.PI * freq;
+        const y1 = amp * Math.sin(omega * shmState.t); // spring
+        const y2 = amp * Math.sin(omega * shmState.t + phaseOff); // pendulum
+        const y3 = amp * Math.sin(omega * shmState.t + phaseOff * 2); // circular projection
+
+        const sections = [
+            { label: "Spring-Mass", x: 120, color: "#4fc3f7", y: y1 },
+            { label: "Pendulum", x: 330, color: "#66bb6a", y: y2 },
+            { label: "Circular Motion", x: 540, color: "#ffa726", y: y3 }
+        ];
+
+        const centerY = H / 2;
+
+        sections.forEach((sec, idx) => {
+            // Section header
+            ctx.fillStyle = sec.color;
+            ctx.font = "14px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(sec.label, sec.x, 25);
+
+            const bobY = centerY + sec.y;
+
+            if (idx === 0) {
+                // Spring visualization
+                const springTop = 50, nCoils = 12;
+                const springLen = bobY - springTop - 15;
+                ctx.beginPath();
+                ctx.moveTo(sec.x, springTop);
+                for (let i = 0; i <= nCoils; i++) {
+                    const sy = springTop + (i / nCoils) * springLen;
+                    const sx = sec.x + (i % 2 === 0 ? -15 : 15);
+                    ctx.lineTo(sx, sy);
+                }
+                ctx.lineTo(sec.x, bobY - 15);
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // Mount
+                ctx.fillStyle = "#666";
+                ctx.fillRect(sec.x - 30, springTop - 5, 60, 5);
+            } else if (idx === 1) {
+                // Pendulum
+                const pivotY = 55;
+                const angle = Math.asin(Math.max(-1, Math.min(1, sec.y / amp)));
+                const pLen = 150;
+                const pbX = sec.x + pLen * Math.sin(angle);
+                const pbY = pivotY + pLen * Math.cos(angle);
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(sec.x, pivotY); ctx.lineTo(pbX, pbY); ctx.stroke();
+                ctx.beginPath(); ctx.arc(sec.x, pivotY, 5, 0, Math.PI * 2); ctx.fillStyle = "#888"; ctx.fill();
+                ctx.beginPath(); ctx.arc(pbX, pbY, 12, 0, Math.PI * 2); ctx.fillStyle = sec.color; ctx.fill();
+            } else {
+                // Circular motion with projection
+                const circR = amp;
+                const circCY = centerY;
+                const angle = omega * shmState.t + phaseOff * 2;
+                const dotX = sec.x + circR * Math.cos(angle);
+                const dotY = circCY - circR * Math.sin(angle);
+                ctx.strokeStyle = "rgba(255,167,38,0.3)";
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(sec.x, circCY, circR, 0, Math.PI * 2); ctx.stroke();
+                // Projection line
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = "rgba(255,167,38,0.5)";
+                ctx.beginPath(); ctx.moveTo(dotX, dotY); ctx.lineTo(sec.x + circR + 40, dotY); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.beginPath(); ctx.arc(dotX, dotY, 8, 0, Math.PI * 2); ctx.fillStyle = sec.color; ctx.fill();
+                // Radius line
+                ctx.strokeStyle = sec.color;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(sec.x, circCY); ctx.lineTo(dotX, dotY); ctx.stroke();
+            }
+
+            if (idx === 0) {
+                // Bob for spring
+                ctx.beginPath();
+                ctx.arc(sec.x, bobY, 15, 0, Math.PI * 2);
+                ctx.fillStyle = sec.color;
+                ctx.fill();
+            }
+
+            // Trail / waveform on the right
+            shmState.trails[idx].push(sec.y);
+            if (shmState.trails[idx].length > 200) shmState.trails[idx].shift();
+        });
+
+        // Combined waveform on the right
+        const waveX = 680, waveW = 200;
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(waveX, 50, waveW, H - 100);
+        ctx.beginPath(); ctx.moveTo(waveX, centerY); ctx.lineTo(waveX + waveW, centerY);
+        ctx.strokeStyle = "#333"; ctx.stroke();
+
+        ctx.fillStyle = "#888";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Displacement vs Time", waveX + waveW / 2, 40);
+
+        sections.forEach((sec, idx) => {
+            const trail = shmState.trails[idx];
+            ctx.beginPath();
+            for (let i = 0; i < trail.length; i++) {
+                const tx = waveX + waveW - (trail.length - i) * (waveW / 200);
+                const ty = centerY + trail[i];
+                if (i === 0) ctx.moveTo(tx, ty);
+                else ctx.lineTo(tx, ty);
+            }
+            ctx.strokeStyle = sec.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        });
+
+        // Equilibrium line for spring and pendulum
+        ctx.setLineDash([3, 5]);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(600, centerY); ctx.stroke();
+        ctx.setLineDash([]);
+
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">SHM Comparison</b><br>` +
+            `f: ${freq} Hz | A: ${amp} px<br>` +
+            `ω: ${omega.toFixed(2)} rad/s | T: ${(1/freq).toFixed(2)} s`;
+
+        animId = requestAnimationFrame(drawSHM);
+    }
+    bindSlider("shm-freq", "val-shm-freq");
+    bindSlider("shm-amp", "val-shm-amp");
+    bindSlider("shm-phase", "val-shm-phase");
+
+    // ── 59. Vector Fields ────────────────────────────────────
+    let vfState = {};
+    function initVectorField() {
+        cancelAnimationFrame(animId);
+        currentSim = "vector";
+        const particles = [];
+        for (let i = 0; i < 300; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                age: Math.random() * 80
+            });
+        }
+        vfState = { particles, t: 0 };
+        drawVectorField();
+    }
+    function getFieldVector(x, y, type, str) {
+        const W = canvas.width, H = canvas.height;
+        const cx = W / 2, cy = H / 2;
+        const dx = x - cx, dy = y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+        const s = str * 0.5;
+        if (type === "radial") {
+            return { vx: s * dx / dist, vy: s * dy / dist };
+        }
+        if (type === "vortex") {
+            return { vx: -s * dy / dist, vy: s * dx / dist };
+        }
+        if (type === "dipole") {
+            const r3 = dist * dist * dist;
+            return {
+                vx: s * (2 * dx * dy) / r3 * 1000,
+                vy: s * (dy * dy - dx * dx) / r3 * 1000
+            };
+        }
+        // saddle
+        return { vx: s * dx / dist, vy: -s * dy / dist };
+    }
+    function drawVectorField() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const type = document.getElementById("sel-vf-type").value;
+        const str = parseFloat(document.getElementById("vf-str").value);
+        const showParts = document.getElementById("sel-vf-particles").value === "yes";
+        vfState.t += 0.02;
+
+        // Draw vector arrows on grid
+        const spacing = 40;
+        for (let gx = spacing; gx < W; gx += spacing) {
+            for (let gy = spacing; gy < H; gy += spacing) {
+                const { vx, vy } = getFieldVector(gx, gy, type, str);
+                const mag = Math.sqrt(vx * vx + vy * vy);
+                const maxLen = spacing * 0.4;
+                const scale = Math.min(maxLen / (mag + 0.01), maxLen);
+                const ex = gx + vx * scale;
+                const ey = gy + vy * scale;
+
+                const hue = Math.min(mag * 30, 240);
+                const alpha = Math.min(0.3 + mag * 0.1, 0.9);
+                ctx.strokeStyle = `hsla(${240 - hue}, 80%, 60%, ${alpha})`;
+                ctx.lineWidth = 1.2;
+
+                ctx.beginPath();
+                ctx.moveTo(gx, gy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+
+                // Arrowhead
+                if (mag > 0.1) {
+                    const angle = Math.atan2(vy, vx);
+                    const headLen = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(ex, ey);
+                    ctx.lineTo(ex - headLen * Math.cos(angle - 0.4), ey - headLen * Math.sin(angle - 0.4));
+                    ctx.moveTo(ex, ey);
+                    ctx.lineTo(ex - headLen * Math.cos(angle + 0.4), ey - headLen * Math.sin(angle + 0.4));
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Particles
+        if (showParts) {
+            for (const p of vfState.particles) {
+                const { vx, vy } = getFieldVector(p.x, p.y, type, str);
+                p.x += vx * 0.5;
+                p.y += vy * 0.5;
+                p.age++;
+
+                if (p.x < 0 || p.x > W || p.y < 0 || p.y > H || p.age > 100) {
+                    p.x = Math.random() * W;
+                    p.y = Math.random() * H;
+                    p.age = 0;
+                }
+
+                const pAlpha = Math.min(1, p.age / 10) * Math.max(0, 1 - p.age / 100);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 220, 100, ${pAlpha})`;
+                ctx.fill();
+            }
+        }
+
+        // Center marker
+        ctx.beginPath();
+        ctx.arc(W / 2, H / 2, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#f44";
+        ctx.fill();
+        ctx.strokeStyle = "#f88";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        const labels = { radial: "Source/Sink", vortex: "Curl/Vortex", dipole: "Dipole", saddle: "Saddle Point" };
+        overlay.innerHTML =
+            `<b style="color:#ffd54f">Vector Field</b><br>` +
+            `Type: ${labels[type]}<br>` +
+            `Strength: ${str} | ∇·F, ∇×F visualization`;
+
+        animId = requestAnimationFrame(drawVectorField);
+    }
+    bindSlider("vf-str", "val-vf-str");
+    document.getElementById("btn-vf-reset").addEventListener("click", () => {
+        for (const p of vfState.particles) {
+            p.x = Math.random() * canvas.width;
+            p.y = Math.random() * canvas.height;
+            p.age = 0;
+        }
+    });
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

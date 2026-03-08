@@ -67,6 +67,11 @@
         <button class="nav-btn" data-sim="stressstrain">Stress-Strain</button>
         <button class="nav-btn" data-sim="reactiondiff">Reaction-Diffusion</button>
         <button class="nav-btn" data-sim="fluidflow">Fluid Flow</button>
+        <button class="nav-btn" data-sim="phasespace">Phase Space</button>
+        <button class="nav-btn" data-sim="radiocarbon">Radiocarbon Dating</button>
+        <button class="nav-btn" data-sim="mandelbrot">Mandelbrot Set</button>
+        <button class="nav-btn" data-sim="shm">SHM Comparison</button>
+        <button class="nav-btn" data-sim="vector">Vector Fields</button>
     </nav>
 
     <main>
@@ -1060,6 +1065,105 @@
             </label>
             <div class="btn-row">
                 <button id="btn-flow-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Phase Space Controls -->
+        <div class="controls hidden" id="ctrl-phasespace">
+            <h3>Phase Space</h3>
+            <p class="ctrl-hint">Visualize the phase portrait of a damped pendulum: angle vs angular velocity.</p>
+            <label>Damping: <span id="val-ps-damp">0.1</span>
+                <input type="range" id="ps-damp" min="0" max="1" value="0.1" step="0.01">
+            </label>
+            <label>Drive Force: <span id="val-ps-drive">0</span>
+                <input type="range" id="ps-drive" min="0" max="2" value="0" step="0.05">
+            </label>
+            <label>Drive Freq: <span id="val-ps-freq">0.67</span>
+                <input type="range" id="ps-freq" min="0.1" max="2" value="0.67" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ps-clear">Clear Trails</button>
+                <button id="btn-ps-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Radiocarbon Dating Controls -->
+        <div class="controls hidden" id="ctrl-radiocarbon">
+            <h3>Radiocarbon Dating</h3>
+            <p class="ctrl-hint">Watch C-14 decay over millennia and estimate the age of archaeological samples.</p>
+            <label>Sample Age: <span id="val-rc-age">5000</span> years
+                <input type="range" id="rc-age" min="100" max="50000" value="5000" step="100">
+            </label>
+            <label>Initial C-14: <span id="val-rc-init">1000</span> atoms
+                <input type="range" id="rc-init" min="100" max="5000" value="1000" step="100">
+            </label>
+            <label>Speed: <span id="val-rc-speed">1</span>x
+                <input type="range" id="rc-speed" min="0.5" max="5" value="1" step="0.5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Mandelbrot Set Controls -->
+        <div class="controls hidden" id="ctrl-mandelbrot">
+            <h3>Mandelbrot Set</h3>
+            <p class="ctrl-hint">Explore the fractal boundary of the Mandelbrot set. Click to zoom in.</p>
+            <label>Max Iterations: <span id="val-mb-iter">100</span>
+                <input type="range" id="mb-iter" min="20" max="500" value="100" step="10">
+            </label>
+            <label>Color Scheme:
+                <select id="sel-mb-color">
+                    <option value="classic">Classic</option>
+                    <option value="fire">Fire</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="grayscale">Grayscale</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-mb-reset">Reset View</button>
+                <button id="btn-mb-zoomout">Zoom Out</button>
+            </div>
+        </div>
+
+        <!-- SHM Comparison Controls -->
+        <div class="controls hidden" id="ctrl-shm">
+            <h3>SHM Comparison</h3>
+            <p class="ctrl-hint">Compare spring, pendulum, and circular motion side by side to show SHM equivalence.</p>
+            <label>Frequency: <span id="val-shm-freq">1</span> Hz
+                <input type="range" id="shm-freq" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <label>Amplitude: <span id="val-shm-amp">80</span> px
+                <input type="range" id="shm-amp" min="20" max="150" value="80">
+            </label>
+            <label>Phase Offset: <span id="val-shm-phase">0</span>&deg;
+                <input type="range" id="shm-phase" min="0" max="360" value="0">
+            </label>
+        </div>
+
+        <!-- Vector Fields Controls -->
+        <div class="controls hidden" id="ctrl-vector">
+            <h3>Vector Fields</h3>
+            <p class="ctrl-hint">Visualize common vector fields: gradient, curl, divergence, and combinations.</p>
+            <label>Field Type:
+                <select id="sel-vf-type">
+                    <option value="radial">Radial (Source)</option>
+                    <option value="vortex">Vortex (Curl)</option>
+                    <option value="dipole">Dipole</option>
+                    <option value="saddle">Saddle Point</option>
+                </select>
+            </label>
+            <label>Strength: <span id="val-vf-str">5</span>
+                <input type="range" id="vf-str" min="1" max="15" value="5">
+            </label>
+            <label>Show Particles:
+                <select id="sel-vf-particles">
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-vf-reset">Reset Particles</button>
             </div>
         </div>
 
