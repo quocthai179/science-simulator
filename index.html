@@ -77,6 +77,11 @@
         <button class="nav-btn" data-sim="brownian">Brownian Motion</button>
         <button class="nav-btn" data-sim="wavepacket">Wave Packet</button>
         <button class="nav-btn" data-sim="trebuchet">Trebuchet</button>
+        <button class="nav-btn" data-sim="kepler">Kepler's Laws</button>
+        <button class="nav-btn" data-sim="refraction">Refraction</button>
+        <button class="nav-btn" data-sim="centripetal">Centripetal Force</button>
+        <button class="nav-btn" data-sim="faraday">Faraday's Law</button>
+        <button class="nav-btn" data-sim="chaosgame">Chaos Game</button>
     </nav>
 
     <main>
@@ -1260,6 +1265,96 @@
             <div class="btn-row">
                 <button id="btn-treb-fire">Fire!</button>
                 <button id="btn-treb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Kepler's Laws Controls -->
+        <div class="controls hidden" id="ctrl-kepler">
+            <h3>Kepler's Laws</h3>
+            <p class="ctrl-hint">Elliptical orbits demonstrating equal areas in equal times and the period-radius relationship.</p>
+            <label>Eccentricity: <span id="val-kep-ecc">0.5</span>
+                <input type="range" id="kep-ecc" min="0" max="0.95" value="0.5" step="0.01">
+            </label>
+            <label>Semi-Major Axis: <span id="val-kep-a">180</span>
+                <input type="range" id="kep-a" min="80" max="230" value="180">
+            </label>
+            <label>Speed: <span id="val-kep-speed">1</span>x
+                <input type="range" id="kep-speed" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-kep-area">Show Swept Area</button>
+                <button id="btn-kep-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Refraction Controls -->
+        <div class="controls hidden" id="ctrl-refraction">
+            <h3>Snell's Law (Refraction)</h3>
+            <p class="ctrl-hint">Light bending at a boundary between two media. Observe total internal reflection.</p>
+            <label>n₁ (top): <span id="val-ref-n1">1.00</span>
+                <input type="range" id="ref-n1" min="1" max="2.5" value="1" step="0.01">
+            </label>
+            <label>n₂ (bottom): <span id="val-ref-n2">1.50</span>
+                <input type="range" id="ref-n2" min="1" max="2.5" value="1.5" step="0.01">
+            </label>
+            <label>Incident Angle: <span id="val-ref-angle">30</span>&deg;
+                <input type="range" id="ref-angle" min="0" max="89" value="30">
+            </label>
+        </div>
+
+        <!-- Centripetal Force Controls -->
+        <div class="controls hidden" id="ctrl-centripetal">
+            <h3>Centripetal Force</h3>
+            <p class="ctrl-hint">Object in circular motion with force vectors, velocity tangent, and acceleration toward center.</p>
+            <label>Radius: <span id="val-cent-r">150</span> px
+                <input type="range" id="cent-r" min="50" max="220" value="150">
+            </label>
+            <label>Angular Speed: <span id="val-cent-omega">2</span> rad/s
+                <input type="range" id="cent-omega" min="0.5" max="6" value="2" step="0.1">
+            </label>
+            <label>Mass: <span id="val-cent-m">5</span> kg
+                <input type="range" id="cent-m" min="1" max="20" value="5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-cent-release">Release Object</button>
+                <button id="btn-cent-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Faraday's Law Controls -->
+        <div class="controls hidden" id="ctrl-faraday">
+            <h3>Faraday's Law</h3>
+            <p class="ctrl-hint">Move a magnet through a coil to induce EMF. Faster motion = greater voltage.</p>
+            <label>Coil Turns: <span id="val-far-turns">20</span>
+                <input type="range" id="far-turns" min="5" max="50" value="20">
+            </label>
+            <label>Magnet Strength: <span id="val-far-str">5</span>
+                <input type="range" id="far-str" min="1" max="10" value="5">
+            </label>
+            <label>Speed: <span id="val-far-speed">1</span>x
+                <input type="range" id="far-speed" min="0.2" max="4" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-far-mode">Auto Oscillate</button>
+                <button id="btn-far-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Chaos Game Controls -->
+        <div class="controls hidden" id="ctrl-chaosgame">
+            <h3>Chaos Game</h3>
+            <p class="ctrl-hint">Iteratively jump fractional distances toward random vertices to generate fractals.</p>
+            <label>Vertices: <span id="val-cg-verts">3</span>
+                <input type="range" id="cg-verts" min="3" max="8" value="3">
+            </label>
+            <label>Jump Ratio: <span id="val-cg-ratio">0.50</span>
+                <input type="range" id="cg-ratio" min="0.2" max="0.8" value="0.5" step="0.01">
+            </label>
+            <label>Points/Frame: <span id="val-cg-pps">50</span>
+                <input type="range" id="cg-pps" min="1" max="200" value="50">
+            </label>
+            <div class="btn-row">
+                <button id="btn-cg-reset">Reset</button>
             </div>
         </div>
 

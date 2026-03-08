@@ -92,6 +92,11 @@
             case "brownian":    initBrownian();     break;
             case "wavepacket":  initWavePacket();   break;
             case "trebuchet":   initTrebuchet();    break;
+            case "kepler":      initKepler();       break;
+            case "refraction":  initRefraction();   break;
+            case "centripetal": initCentripetal();   break;
+            case "faraday":     initFaraday();      break;
+            case "chaosgame":   initChaosGame();    break;
         }
     }
 
@@ -11385,6 +11390,819 @@
         setTimeout(() => { trebState.phase = "swinging"; }, 50);
     });
     document.getElementById("btn-treb-reset").addEventListener("click", initTrebuchet);
+
+    // ── 65. Kepler's Laws ──────────────────────────────────
+    let kepState = {};
+    function initKepler() {
+        cancelAnimationFrame(animId);
+        currentSim = "kepler";
+        kepState = { theta: 0, showArea: false, areaStart: 0, areaSlices: [], trail: [] };
+        drawKepler();
+    }
+    function drawKepler() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const ecc = parseFloat(document.getElementById("kep-ecc").value);
+        const a = parseFloat(document.getElementById("kep-a").value);
+        const speed = parseFloat(document.getElementById("kep-speed").value);
+        const b = a * Math.sqrt(1 - ecc * ecc);
+        const c = a * ecc; // focus offset
+
+        const cx = W / 2, cy = H / 2;
+
+        // Kepler's equation: solve M = E - e*sin(E)
+        // M advances uniformly, E gives position
+        kepState.theta += 0.01 * speed;
+        const M = kepState.theta; // mean anomaly
+        // Newton's method for E
+        let E = M;
+        for (let i = 0; i < 10; i++) {
+            E = E - (E - ecc * Math.sin(E) - M) / (1 - ecc * Math.cos(E));
+        }
+        // True anomaly
+        const trueAnom = 2 * Math.atan2(Math.sqrt(1 + ecc) * Math.sin(E / 2), Math.sqrt(1 - ecc) * Math.cos(E / 2));
+        const r = a * (1 - ecc * Math.cos(E));
+
+        // Planet position (focus at origin)
+        const px = cx + r * Math.cos(trueAnom);
+        const py = cy + r * Math.sin(trueAnom);
+
+        // Draw orbit ellipse
+        ctx.beginPath();
+        for (let th = 0; th <= Math.PI * 2 + 0.01; th += 0.02) {
+            let E2 = th;
+            for (let i = 0; i < 10; i++) {
+                E2 = E2 - (E2 - ecc * Math.sin(E2) - th) / (1 - ecc * Math.cos(E2));
+            }
+            const ta = 2 * Math.atan2(Math.sqrt(1 + ecc) * Math.sin(E2 / 2), Math.sqrt(1 - ecc) * Math.cos(E2 / 2));
+            const rr = a * (1 - ecc * Math.cos(E2));
+            const ox = cx + rr * Math.cos(ta);
+            const oy = cy + rr * Math.sin(ta);
+            if (th === 0) ctx.moveTo(ox, oy);
+            else ctx.lineTo(ox, oy);
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Trail
+        kepState.trail.push({ x: px, y: py });
+        if (kepState.trail.length > 300) kepState.trail.shift();
+        if (kepState.trail.length > 1) {
+            ctx.beginPath();
+            for (let i = 0; i < kepState.trail.length; i++) {
+                const alpha = i / kepState.trail.length;
+                if (i === 0) ctx.moveTo(kepState.trail[i].x, kepState.trail[i].y);
+                else ctx.lineTo(kepState.trail[i].x, kepState.trail[i].y);
+            }
+            ctx.strokeStyle = "rgba(79,195,247,0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Swept area visualization
+        if (kepState.showArea) {
+            kepState.areaSlices.push({ x: px, y: py });
+            if (kepState.areaSlices.length > 60) {
+                // Draw two equal-time area wedges
+                const mid = Math.floor(kepState.areaSlices.length / 2);
+                // First half
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                for (let i = 0; i <= mid; i++) {
+                    ctx.lineTo(kepState.areaSlices[i].x, kepState.areaSlices[i].y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = "rgba(76,175,80,0.2)";
+                ctx.fill();
+                ctx.strokeStyle = "#4caf50";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Second half
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                for (let i = mid; i < kepState.areaSlices.length; i++) {
+                    ctx.lineTo(kepState.areaSlices[i].x, kepState.areaSlices[i].y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = "rgba(255,152,0,0.2)";
+                ctx.fill();
+                ctx.strokeStyle = "#ff9800";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                kepState.areaSlices = [];
+            }
+        }
+
+        // Sun at focus
+        const sunGrad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 25);
+        sunGrad.addColorStop(0, "#fff176");
+        sunGrad.addColorStop(0.5, "#ffb300");
+        sunGrad.addColorStop(1, "rgba(255,179,0,0)");
+        ctx.beginPath();
+        ctx.arc(cx, cy, 25, 0, Math.PI * 2);
+        ctx.fillStyle = sunGrad;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff176";
+        ctx.fill();
+
+        // Radius line
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Planet
+        ctx.beginPath();
+        ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fill();
+        ctx.strokeStyle = "#29b6f6";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Velocity arrow (tangent)
+        const dE = 0.01;
+        const E_next = E + dE;
+        const ta_next = 2 * Math.atan2(Math.sqrt(1 + ecc) * Math.sin(E_next / 2), Math.sqrt(1 - ecc) * Math.cos(E_next / 2));
+        const r_next = a * (1 - ecc * Math.cos(E_next));
+        const px2 = cx + r_next * Math.cos(ta_next);
+        const py2 = cy + r_next * Math.sin(ta_next);
+        const vx = (px2 - px) / dE, vy = (py2 - py) / dE;
+        const vMag = Math.sqrt(vx * vx + vy * vy);
+        const vScale = 40 / (vMag + 1);
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + vx * vScale, py + vy * vScale);
+        ctx.strokeStyle = "#ff5722";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // arrowhead
+        const vAngle = Math.atan2(vy, vx);
+        ctx.beginPath();
+        ctx.moveTo(px + vx * vScale, py + vy * vScale);
+        ctx.lineTo(px + vx * vScale - 8 * Math.cos(vAngle - 0.4), py + vy * vScale - 8 * Math.sin(vAngle - 0.4));
+        ctx.moveTo(px + vx * vScale, py + vy * vScale);
+        ctx.lineTo(px + vx * vScale - 8 * Math.cos(vAngle + 0.4), py + vy * vScale - 8 * Math.sin(vAngle + 0.4));
+        ctx.stroke();
+
+        // Info
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`Semi-major: ${a} | Semi-minor: ${b.toFixed(0)}`, 10, H - 40);
+        ctx.fillText(`Eccentricity: ${ecc} | r: ${r.toFixed(1)}`, 10, H - 22);
+        const T = Math.pow(a, 1.5);
+        ctx.fillText(`T ∝ a^(3/2) = ${T.toFixed(0)}`, 10, H - 4);
+
+        overlay.innerHTML =
+            `<b style="color:#ffb300">Kepler's Laws</b><br>` +
+            `e: ${ecc} | a: ${a} | r: ${r.toFixed(1)}<br>` +
+            `Speed: ${vMag.toFixed(1)} | Equal areas in equal times`;
+
+        animId = requestAnimationFrame(drawKepler);
+    }
+    bindSlider("kep-ecc", "val-kep-ecc");
+    bindSlider("kep-a", "val-kep-a");
+    bindSlider("kep-speed", "val-kep-speed");
+    document.getElementById("btn-kep-area").addEventListener("click", () => {
+        kepState.showArea = !kepState.showArea;
+        kepState.areaSlices = [];
+        document.getElementById("btn-kep-area").textContent = kepState.showArea ? "Hide Area" : "Show Swept Area";
+    });
+    document.getElementById("btn-kep-reset").addEventListener("click", initKepler);
+
+    // ── 66. Refraction (Snell's Law) ────────────────────────
+    function initRefraction() {
+        cancelAnimationFrame(animId);
+        currentSim = "refraction";
+        drawRefraction();
+    }
+    function drawRefraction() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const n1 = parseFloat(document.getElementById("ref-n1").value);
+        const n2 = parseFloat(document.getElementById("ref-n2").value);
+        const incAngleDeg = parseFloat(document.getElementById("ref-angle").value);
+        const incAngle = incAngleDeg * Math.PI / 180;
+
+        const boundary = H / 2;
+        const hitX = W / 2, hitY = boundary;
+
+        // Media backgrounds
+        ctx.fillStyle = `rgba(135,206,250,${0.05 * n1})`;
+        ctx.fillRect(0, 0, W, boundary);
+        ctx.fillStyle = `rgba(0,100,200,${0.05 * n2})`;
+        ctx.fillRect(0, boundary, W, H);
+
+        // Boundary line
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, boundary); ctx.lineTo(W, boundary); ctx.stroke();
+
+        // Normal (dashed)
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(hitX, 20); ctx.lineTo(hitX, H - 20); ctx.stroke();
+        ctx.setLineDash([]);
+
+        const rayLen = 250;
+
+        // Incident ray
+        const incStartX = hitX - rayLen * Math.sin(incAngle);
+        const incStartY = hitY - rayLen * Math.cos(incAngle);
+        ctx.strokeStyle = "#ffeb3b";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(incStartX, incStartY); ctx.lineTo(hitX, hitY); ctx.stroke();
+        // Arrow
+        const iAng = Math.atan2(hitY - incStartY, hitX - incStartX);
+        ctx.beginPath();
+        ctx.moveTo(hitX - 20 * Math.cos(iAng), hitY - 20 * Math.sin(iAng));
+        ctx.lineTo(hitX - 20 * Math.cos(iAng) - 10 * Math.cos(iAng - 0.4), hitY - 20 * Math.sin(iAng) - 10 * Math.sin(iAng - 0.4));
+        ctx.moveTo(hitX - 20 * Math.cos(iAng), hitY - 20 * Math.sin(iAng));
+        ctx.lineTo(hitX - 20 * Math.cos(iAng) - 10 * Math.cos(iAng + 0.4), hitY - 20 * Math.sin(iAng) - 10 * Math.sin(iAng + 0.4));
+        ctx.stroke();
+
+        // Reflected ray
+        const refStartX = hitX + rayLen * Math.sin(incAngle);
+        const refStartY = hitY - rayLen * Math.cos(incAngle);
+        ctx.strokeStyle = "rgba(255,235,59,0.4)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(hitX, hitY); ctx.lineTo(refStartX, refStartY); ctx.stroke();
+
+        // Snell's law: n1*sin(θ1) = n2*sin(θ2)
+        const sinTheta2 = n1 * Math.sin(incAngle) / n2;
+        let totalInternal = false;
+
+        if (Math.abs(sinTheta2) <= 1) {
+            const theta2 = Math.asin(sinTheta2);
+            // Refracted ray
+            const refracEndX = hitX + rayLen * Math.sin(theta2);
+            const refracEndY = hitY + rayLen * Math.cos(theta2);
+            ctx.strokeStyle = "#f44336";
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(hitX, hitY); ctx.lineTo(refracEndX, refracEndY); ctx.stroke();
+
+            // Angle arcs
+            ctx.strokeStyle = "#ffeb3b";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(hitX, hitY, 50, -Math.PI / 2, -Math.PI / 2 + incAngle);
+            ctx.stroke();
+            ctx.strokeStyle = "#f44336";
+            ctx.beginPath();
+            ctx.arc(hitX, hitY, 40, Math.PI / 2 - theta2, Math.PI / 2);
+            ctx.stroke();
+
+            // Angle labels
+            ctx.fillStyle = "#ffeb3b";
+            ctx.font = "13px monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(`θ₁=${incAngleDeg}°`, hitX + 55, hitY - 30);
+            ctx.fillStyle = "#f44336";
+            ctx.fillText(`θ₂=${(theta2 * 180 / Math.PI).toFixed(1)}°`, hitX + 45, hitY + 40);
+
+            // Wavelength visualization
+            const waveCount1 = 15;
+            for (let i = 0; i < waveCount1; i++) {
+                const frac = i / waveCount1;
+                const wx = incStartX + (hitX - incStartX) * frac;
+                const wy = incStartY + (hitY - incStartY) * frac;
+                const perp = Math.PI / 2 + iAng;
+                const wLen = 8 / n1;
+                ctx.strokeStyle = "rgba(255,235,59,0.2)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(wx - wLen * Math.cos(perp), wy - wLen * Math.sin(perp));
+                ctx.lineTo(wx + wLen * Math.cos(perp), wy + wLen * Math.sin(perp));
+                ctx.stroke();
+            }
+
+            overlay.innerHTML =
+                `<b style="color:#ffeb3b">Snell's Law</b><br>` +
+                `n₁: ${n1.toFixed(2)} | n₂: ${n2.toFixed(2)}<br>` +
+                `θ₁: ${incAngleDeg}° | θ₂: ${(theta2 * 180 / Math.PI).toFixed(1)}°<br>` +
+                `n₁sinθ₁ = n₂sinθ₂ = ${(n1 * Math.sin(incAngle)).toFixed(3)}`;
+        } else {
+            totalInternal = true;
+            // Total internal reflection - stronger reflected ray
+            ctx.strokeStyle = "#ffeb3b";
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(hitX, hitY); ctx.lineTo(refStartX, refStartY); ctx.stroke();
+
+            ctx.fillStyle = "#ff5722";
+            ctx.font = "18px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("TOTAL INTERNAL REFLECTION", W / 2, boundary + 50);
+
+            const critAngle = Math.asin(n2 / n1) * 180 / Math.PI;
+            overlay.innerHTML =
+                `<b style="color:#ff5722">Total Internal Reflection</b><br>` +
+                `n₁: ${n1.toFixed(2)} | n₂: ${n2.toFixed(2)}<br>` +
+                `θ₁: ${incAngleDeg}° > θ_c: ${critAngle.toFixed(1)}°<br>` +
+                `Critical angle exceeded!`;
+        }
+
+        // Media labels
+        ctx.fillStyle = "#8af";
+        ctx.font = "14px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`Medium 1: n₁ = ${n1.toFixed(2)}`, 15, 30);
+        ctx.fillStyle = "#48f";
+        ctx.fillText(`Medium 2: n₂ = ${n2.toFixed(2)}`, 15, boundary + 25);
+
+        // Critical angle indicator
+        if (n1 > n2) {
+            const critAngle = Math.asin(n2 / n1);
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = "rgba(255,87,34,0.4)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(hitX, hitY, 70, -Math.PI / 2, -Math.PI / 2 + critAngle);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(255,87,34,0.6)";
+            ctx.font = "10px monospace";
+            ctx.fillText(`θc=${(critAngle * 180 / Math.PI).toFixed(1)}°`, hitX + 72, hitY - 20);
+        }
+
+        animId = requestAnimationFrame(drawRefraction);
+    }
+    bindSlider("ref-n1", "val-ref-n1");
+    bindSlider("ref-n2", "val-ref-n2");
+    bindSlider("ref-angle", "val-ref-angle");
+
+    // ── 67. Centripetal Force ────────────────────────────────
+    let centState = {};
+    function initCentripetal() {
+        cancelAnimationFrame(animId);
+        currentSim = "centripetal";
+        centState = { theta: 0, released: false, relTheta: 0, relVX: 0, relVY: 0, relX: 0, relY: 0, trail: [] };
+        drawCentripetal();
+    }
+    function drawCentripetal() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const R = parseFloat(document.getElementById("cent-r").value);
+        const omega = parseFloat(document.getElementById("cent-omega").value);
+        const mass = parseFloat(document.getElementById("cent-m").value);
+        const cx = 320, cy = H / 2;
+
+        centState.theta += omega * 0.02;
+
+        // Circular path
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        let objX, objY;
+        if (!centState.released) {
+            objX = cx + R * Math.cos(centState.theta);
+            objY = cy + R * Math.sin(centState.theta);
+
+            // String
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(objX, objY);
+            ctx.strokeStyle = "#888";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Velocity vector (tangent)
+            const v = omega * R;
+            const vScale = v * 0.3;
+            const vx = -vScale * Math.sin(centState.theta);
+            const vy = vScale * Math.cos(centState.theta);
+            ctx.beginPath(); ctx.moveTo(objX, objY); ctx.lineTo(objX + vx, objY + vy);
+            ctx.strokeStyle = "#4caf50";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            // arrowhead
+            const vAng = Math.atan2(vy, vx);
+            ctx.beginPath();
+            ctx.moveTo(objX + vx, objY + vy);
+            ctx.lineTo(objX + vx - 8 * Math.cos(vAng - 0.4), objY + vy - 8 * Math.sin(vAng - 0.4));
+            ctx.moveTo(objX + vx, objY + vy);
+            ctx.lineTo(objX + vx - 8 * Math.cos(vAng + 0.4), objY + vy - 8 * Math.sin(vAng + 0.4));
+            ctx.stroke();
+
+            // Centripetal acceleration vector (toward center)
+            const ac = omega * omega * R;
+            const aScale = Math.min(ac * 0.2, 60);
+            const ax = -aScale * Math.cos(centState.theta);
+            const ay = -aScale * Math.sin(centState.theta);
+            ctx.beginPath(); ctx.moveTo(objX, objY); ctx.lineTo(objX + ax, objY + ay);
+            ctx.strokeStyle = "#f44336";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            const aAng = Math.atan2(ay, ax);
+            ctx.beginPath();
+            ctx.moveTo(objX + ax, objY + ay);
+            ctx.lineTo(objX + ax - 8 * Math.cos(aAng - 0.4), objY + ay - 8 * Math.sin(aAng - 0.4));
+            ctx.moveTo(objX + ax, objY + ay);
+            ctx.lineTo(objX + ax - 8 * Math.cos(aAng + 0.4), objY + ay - 8 * Math.sin(aAng + 0.4));
+            ctx.stroke();
+
+            // Force magnitude label
+            const Fc = mass * omega * omega * R;
+            ctx.fillStyle = "#f44336";
+            ctx.font = "12px monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(`F_c = ${Fc.toFixed(1)} N`, objX + ax - 10, objY + ay - 10);
+            ctx.fillStyle = "#4caf50";
+            ctx.fillText(`v = ${v.toFixed(1)} m/s`, objX + vx + 5, objY + vy);
+        } else {
+            // Object flies off tangentially
+            centState.relX += centState.relVX * 0.5;
+            centState.relY += centState.relVY * 0.5;
+            objX = centState.relX;
+            objY = centState.relY;
+
+            centState.trail.push({ x: objX, y: objY });
+            if (centState.trail.length > 200) centState.trail.shift();
+
+            // Draw trail
+            ctx.beginPath();
+            for (let i = 0; i < centState.trail.length; i++) {
+                if (i === 0) ctx.moveTo(centState.trail[i].x, centState.trail[i].y);
+                else ctx.lineTo(centState.trail[i].x, centState.trail[i].y);
+            }
+            ctx.strokeStyle = "rgba(79,195,247,0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Object
+        const sz = 6 + mass;
+        ctx.beginPath();
+        ctx.arc(objX, objY, sz, 0, Math.PI * 2);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fill();
+        ctx.strokeStyle = "#29b6f6";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Center
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+
+        // Legend
+        ctx.font = "12px monospace";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#4caf50";
+        ctx.fillText("→ Velocity (tangent)", 630, 30);
+        ctx.fillStyle = "#f44336";
+        ctx.fillText("→ Centripetal accel.", 630, 50);
+        ctx.fillStyle = "#888";
+        ctx.fillText("── String tension", 630, 70);
+
+        // Formulas
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        const v = omega * R;
+        const ac = omega * omega * R;
+        const Fc = mass * ac;
+        ctx.fillText(`a_c = ω²r = ${ac.toFixed(1)} m/s²`, 630, 110);
+        ctx.fillText(`F_c = ma_c = ${Fc.toFixed(1)} N`, 630, 130);
+        ctx.fillText(`v = ωr = ${v.toFixed(1)} m/s`, 630, 150);
+        ctx.fillText(`T = 2π/ω = ${(2 * Math.PI / omega).toFixed(2)} s`, 630, 170);
+
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">Centripetal Force</b><br>` +
+            `ω: ${omega} rad/s | R: ${R} px | m: ${mass} kg<br>` +
+            `F_c: ${Fc.toFixed(1)} N | v: ${v.toFixed(1)} m/s`;
+
+        animId = requestAnimationFrame(drawCentripetal);
+    }
+    bindSlider("cent-r", "val-cent-r");
+    bindSlider("cent-omega", "val-cent-omega");
+    bindSlider("cent-m", "val-cent-m");
+    document.getElementById("btn-cent-release").addEventListener("click", () => {
+        if (centState.released) return;
+        centState.released = true;
+        const R = parseFloat(document.getElementById("cent-r").value);
+        const omega = parseFloat(document.getElementById("cent-omega").value);
+        const cx = 320, cy = canvas.height / 2;
+        centState.relX = cx + R * Math.cos(centState.theta);
+        centState.relY = cy + R * Math.sin(centState.theta);
+        const v = omega * R;
+        centState.relVX = -v * Math.sin(centState.theta) * 0.3;
+        centState.relVY = v * Math.cos(centState.theta) * 0.3;
+        centState.trail = [];
+    });
+    document.getElementById("btn-cent-reset").addEventListener("click", initCentripetal);
+
+    // ── 68. Faraday's Law ───────────────────────────────────
+    let farState = {};
+    function initFaraday() {
+        cancelAnimationFrame(animId);
+        currentSim = "faraday";
+        farState = { magX: 150, magVel: 0, auto: false, t: 0, emfHistory: [], fluxHistory: [] };
+        drawFaraday();
+    }
+    function drawFaraday() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const turns = parseInt(document.getElementById("far-turns").value);
+        const strength = parseFloat(document.getElementById("far-str").value);
+        const speed = parseFloat(document.getElementById("far-speed").value);
+        farState.t += 0.02;
+
+        const coilX = W / 2, coilY = H * 0.4;
+        const coilW = 80, coilH = 100;
+
+        // Auto oscillate
+        if (farState.auto) {
+            farState.magX = coilX + 200 * Math.sin(farState.t * speed * 2);
+        }
+
+        // Previous flux for EMF calculation
+        const prevFlux = farState.lastFlux || 0;
+        const dx = farState.magX - coilX;
+        const flux = strength * turns * 100 / (dx * dx + 400);
+        const emf = -(flux - prevFlux) / 0.02 * 0.5;
+        farState.lastFlux = flux;
+
+        farState.emfHistory.push(emf);
+        farState.fluxHistory.push(flux);
+        if (farState.emfHistory.length > 300) farState.emfHistory.shift();
+        if (farState.fluxHistory.length > 300) farState.fluxHistory.shift();
+
+        // Draw coil (side view)
+        ctx.strokeStyle = "#ff9800";
+        ctx.lineWidth = 2;
+        for (let i = 0; i < turns; i++) {
+            const yOff = (i / turns - 0.5) * coilH;
+            ctx.beginPath();
+            ctx.ellipse(coilX, coilY + yOff, coilW / 2, 8, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255,152,0,${0.3 + 0.7 * Math.abs(emf) / 5})`;
+            ctx.stroke();
+        }
+        ctx.fillStyle = "#ff9800";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${turns} turns`, coilX, coilY + coilH / 2 + 20);
+
+        // Draw magnet
+        const magW = 100, magH = 30;
+        const magY = coilY - 5;
+        // N pole (red)
+        ctx.fillStyle = "#f44336";
+        ctx.fillRect(farState.magX - magW / 2, magY - magH / 2, magW / 2, magH);
+        // S pole (blue)
+        ctx.fillStyle = "#2196f3";
+        ctx.fillRect(farState.magX, magY - magH / 2, magW / 2, magH);
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("N", farState.magX - magW / 4, magY + 5);
+        ctx.fillText("S", farState.magX + magW / 4, magY + 5);
+
+        // Field lines from magnet
+        for (let i = 0; i < 5; i++) {
+            const fy = magY - magH / 2 + (i + 0.5) * magH / 5;
+            const fLen = strength * 15;
+            ctx.strokeStyle = "rgba(200,200,200,0.15)";
+            ctx.lineWidth = 1;
+            // From N pole
+            ctx.beginPath();
+            ctx.moveTo(farState.magX - magW / 2, fy);
+            const cpx = farState.magX - magW / 2 - fLen;
+            const cpy = magY;
+            ctx.quadraticCurveTo(cpx, fy - fLen * 0.5, farState.magX + magW / 2, fy);
+            ctx.stroke();
+        }
+
+        // Galvanometer / EMF display
+        const gx = coilX, gy = H * 0.4 + coilH / 2 + 60;
+        ctx.beginPath();
+        ctx.arc(gx, gy, 30, 0, Math.PI * 2);
+        ctx.strokeStyle = "#666";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#111";
+        ctx.fill();
+        // Needle
+        const needleAngle = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, emf * 0.3));
+        ctx.beginPath();
+        ctx.moveTo(gx, gy);
+        ctx.lineTo(gx + 25 * Math.sin(needleAngle), gy - 25 * Math.cos(needleAngle));
+        ctx.strokeStyle = "#f44";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#aaa";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("EMF", gx, gy + 45);
+
+        // Wires from coil to galvanometer
+        ctx.strokeStyle = "#666";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(coilX - coilW / 2, coilY + coilH / 2);
+        ctx.lineTo(coilX - coilW / 2, gy);
+        ctx.lineTo(gx - 30, gy);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(coilX + coilW / 2, coilY + coilH / 2);
+        ctx.lineTo(coilX + coilW / 2, gy);
+        ctx.lineTo(gx + 30, gy);
+        ctx.stroke();
+
+        // EMF graph (right side)
+        const graphX = 560, graphY = 30, graphW = 310, graphH = 200;
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY, graphW, graphH);
+        ctx.beginPath(); ctx.moveTo(graphX, graphY + graphH / 2);
+        ctx.lineTo(graphX + graphW, graphY + graphH / 2); ctx.strokeStyle = "#333"; ctx.stroke();
+
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("EMF (Induced Voltage)", graphX + graphW / 2, graphY - 5);
+
+        if (farState.emfHistory.length > 1) {
+            const maxEmf = Math.max(3, ...farState.emfHistory.map(Math.abs));
+            ctx.beginPath();
+            for (let i = 0; i < farState.emfHistory.length; i++) {
+                const px = graphX + (i / farState.emfHistory.length) * graphW;
+                const py = graphY + graphH / 2 - (farState.emfHistory[i] / maxEmf) * graphH / 2;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = "#ff5722";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Flux graph
+        const fluxGY = graphY + graphH + 40;
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, fluxGY, graphW, graphH);
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Magnetic Flux (Φ)", graphX + graphW / 2, fluxGY - 5);
+
+        if (farState.fluxHistory.length > 1) {
+            const maxFlux = Math.max(1, ...farState.fluxHistory);
+            ctx.beginPath();
+            for (let i = 0; i < farState.fluxHistory.length; i++) {
+                const px = graphX + (i / farState.fluxHistory.length) * graphW;
+                const py = fluxGY + graphH - (farState.fluxHistory[i] / maxFlux) * graphH * 0.9;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = "#4fc3f7";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#ff5722">Faraday's Law</b><br>` +
+            `EMF: ${emf.toFixed(2)} | Φ: ${flux.toFixed(3)}<br>` +
+            `ε = -N dΦ/dt | N: ${turns}`;
+
+        animId = requestAnimationFrame(drawFaraday);
+    }
+    bindSlider("far-turns", "val-far-turns");
+    bindSlider("far-str", "val-far-str");
+    bindSlider("far-speed", "val-far-speed");
+    document.getElementById("btn-far-mode").addEventListener("click", () => {
+        farState.auto = !farState.auto;
+        document.getElementById("btn-far-mode").textContent = farState.auto ? "Manual" : "Auto Oscillate";
+    });
+    document.getElementById("btn-far-reset").addEventListener("click", initFaraday);
+    // Drag magnet with mouse
+    canvas.addEventListener("mousemove", (e) => {
+        if (currentSim !== "faraday" || farState.auto) return;
+        if (e.buttons === 1) {
+            const rect = canvas.getBoundingClientRect();
+            farState.magX = (e.clientX - rect.left) / rect.width * canvas.width;
+        }
+    });
+
+    // ── 69. Chaos Game ──────────────────────────────────────
+    let cgState = {};
+    function initChaosGame() {
+        cancelAnimationFrame(animId);
+        currentSim = "chaosgame";
+        const n = parseInt(document.getElementById("cg-verts").value);
+        const cx = canvas.width / 2, cy = canvas.height / 2 + 10;
+        const R = 230;
+        const vertices = [];
+        for (let i = 0; i < n; i++) {
+            const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+            vertices.push({ x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) });
+        }
+        cgState = {
+            vertices,
+            px: cx, py: cy,
+            totalPoints: 0,
+            imgData: ctx.createImageData(canvas.width, canvas.height)
+        };
+        // Fill black
+        for (let i = 3; i < cgState.imgData.data.length; i += 4) {
+            cgState.imgData.data[i] = 255;
+        }
+        drawChaosGame();
+    }
+    function drawChaosGame() {
+        const W = canvas.width, H = canvas.height;
+        const n = parseInt(document.getElementById("cg-verts").value);
+        const ratio = parseFloat(document.getElementById("cg-ratio").value);
+        const pps = parseInt(document.getElementById("cg-pps").value);
+
+        // Rebuild vertices if count changed
+        if (n !== cgState.vertices.length) {
+            initChaosGame();
+            return;
+        }
+
+        // Add points
+        for (let i = 0; i < pps; i++) {
+            const vIdx = Math.floor(Math.random() * n);
+            const v = cgState.vertices[vIdx];
+            cgState.px = cgState.px + (v.x - cgState.px) * ratio;
+            cgState.py = cgState.py + (v.y - cgState.py) * ratio;
+            cgState.totalPoints++;
+
+            const ix = Math.floor(cgState.px);
+            const iy = Math.floor(cgState.py);
+            if (ix >= 0 && ix < W && iy >= 0 && iy < H) {
+                const idx = (iy * W + ix) * 4;
+                const hue = (vIdx / n) * 360;
+                // HSL to RGB approximation
+                const s = 0.8, l = 0.55;
+                const c = (1 - Math.abs(2 * l - 1)) * s;
+                const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
+                const m = l - c / 2;
+                let r, g, b;
+                if (hue < 60) { r = c; g = x; b = 0; }
+                else if (hue < 120) { r = x; g = c; b = 0; }
+                else if (hue < 180) { r = 0; g = c; b = x; }
+                else if (hue < 240) { r = 0; g = x; b = c; }
+                else if (hue < 300) { r = x; g = 0; b = c; }
+                else { r = c; g = 0; b = x; }
+                cgState.imgData.data[idx] = Math.floor((r + m) * 255);
+                cgState.imgData.data[idx + 1] = Math.floor((g + m) * 255);
+                cgState.imgData.data[idx + 2] = Math.floor((b + m) * 255);
+                cgState.imgData.data[idx + 3] = 255;
+            }
+        }
+
+        ctx.putImageData(cgState.imgData, 0, 0);
+
+        // Draw vertices
+        for (let i = 0; i < cgState.vertices.length; i++) {
+            const v = cgState.vertices[i];
+            ctx.beginPath();
+            ctx.arc(v.x, v.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${(i / n) * 360}, 80%, 60%)`;
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Info box
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(5, 5, 220, 35);
+        ctx.fillStyle = "#fff";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`Points: ${cgState.totalPoints} | Vertices: ${n}`, 10, 22);
+        ctx.fillText(`Jump ratio: ${ratio}`, 10, 36);
+
+        const names = { 3: "Sierpiński Triangle", 4: "Carpet variant", 5: "Pentagon fractal", 6: "Hexagon fractal" };
+        overlay.innerHTML =
+            `<b style="color:#e040fb">Chaos Game</b><br>` +
+            `${names[n] || n + "-gon fractal"}<br>` +
+            `Points: ${cgState.totalPoints} | Ratio: ${ratio}`;
+
+        animId = requestAnimationFrame(drawChaosGame);
+    }
+    bindSlider("cg-verts", "val-cg-verts");
+    bindSlider("cg-ratio", "val-cg-ratio");
+    bindSlider("cg-pps", "val-cg-pps");
+    document.getElementById("btn-cg-reset").addEventListener("click", initChaosGame);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
