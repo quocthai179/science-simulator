@@ -72,6 +72,11 @@
         <button class="nav-btn" data-sim="mandelbrot">Mandelbrot Set</button>
         <button class="nav-btn" data-sim="shm">SHM Comparison</button>
         <button class="nav-btn" data-sim="vector">Vector Fields</button>
+        <button class="nav-btn" data-sim="capacitor">Capacitor</button>
+        <button class="nav-btn" data-sim="brachistochrone">Brachistochrone</button>
+        <button class="nav-btn" data-sim="brownian">Brownian Motion</button>
+        <button class="nav-btn" data-sim="wavepacket">Wave Packet</button>
+        <button class="nav-btn" data-sim="trebuchet">Trebuchet</button>
     </nav>
 
     <main>
@@ -1164,6 +1169,97 @@
             </label>
             <div class="btn-row">
                 <button id="btn-vf-reset">Reset Particles</button>
+            </div>
+        </div>
+
+        <!-- Capacitor Controls -->
+        <div class="controls hidden" id="ctrl-capacitor">
+            <h3>Capacitor Charging</h3>
+            <p class="ctrl-hint">Watch a parallel-plate capacitor charge and discharge through a resistor (RC circuit dynamics).</p>
+            <label>Capacitance: <span id="val-cap-c">100</span> &mu;F
+                <input type="range" id="cap-c" min="10" max="500" value="100" step="10">
+            </label>
+            <label>Resistance: <span id="val-cap-r">10</span> k&Omega;
+                <input type="range" id="cap-r" min="1" max="50" value="10">
+            </label>
+            <label>Voltage: <span id="val-cap-v">12</span> V
+                <input type="range" id="cap-v" min="3" max="24" value="12">
+            </label>
+            <div class="btn-row">
+                <button id="btn-cap-charge">Charge</button>
+                <button id="btn-cap-discharge">Discharge</button>
+                <button id="btn-cap-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Brachistochrone Controls -->
+        <div class="controls hidden" id="ctrl-brachistochrone">
+            <h3>Brachistochrone</h3>
+            <p class="ctrl-hint">Compare paths of fastest descent: straight line, parabola, and the optimal cycloid curve.</p>
+            <label>Gravity: <span id="val-bra-g">9.8</span> m/s&sup2;
+                <input type="range" id="bra-g" min="1" max="25" value="9.8" step="0.1">
+            </label>
+            <label>End Height: <span id="val-bra-h">300</span> px
+                <input type="range" id="bra-h" min="100" max="450" value="300">
+            </label>
+            <div class="btn-row">
+                <button id="btn-bra-go">Race!</button>
+                <button id="btn-bra-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Brownian Motion Controls -->
+        <div class="controls hidden" id="ctrl-brownian">
+            <h3>Brownian Motion</h3>
+            <p class="ctrl-hint">A large pollen grain buffeted by thousands of tiny water molecules, demonstrating random walks.</p>
+            <label>Temperature: <span id="val-bm-temp">300</span> K
+                <input type="range" id="bm-temp" min="50" max="800" value="300">
+            </label>
+            <label>Molecules: <span id="val-bm-count">200</span>
+                <input type="range" id="bm-count" min="50" max="500" value="200">
+            </label>
+            <label>Trail Length: <span id="val-bm-trail">200</span>
+                <input type="range" id="bm-trail" min="10" max="500" value="200">
+            </label>
+            <div class="btn-row">
+                <button id="btn-bm-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Wave Packet Controls -->
+        <div class="controls hidden" id="ctrl-wavepacket">
+            <h3>Wave Packet</h3>
+            <p class="ctrl-hint">Gaussian wave packet propagation showing dispersion and group vs phase velocity.</p>
+            <label>Central k: <span id="val-wp-k">5</span>
+                <input type="range" id="wp-k" min="1" max="15" value="5" step="0.5">
+            </label>
+            <label>Width (&sigma;): <span id="val-wp-sigma">30</span>
+                <input type="range" id="wp-sigma" min="10" max="80" value="30">
+            </label>
+            <label>Dispersion: <span id="val-wp-disp">0.5</span>
+                <input type="range" id="wp-disp" min="0" max="2" value="0.5" step="0.05">
+            </label>
+            <div class="btn-row">
+                <button id="btn-wp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Trebuchet Controls -->
+        <div class="controls hidden" id="ctrl-trebuchet">
+            <h3>Trebuchet Physics</h3>
+            <p class="ctrl-hint">Medieval siege engine: counterweight-powered arm launches a projectile via lever mechanics.</p>
+            <label>Counterweight: <span id="val-treb-cw">500</span> kg
+                <input type="range" id="treb-cw" min="100" max="2000" value="500" step="50">
+            </label>
+            <label>Arm Ratio: <span id="val-treb-ratio">3.5</span>
+                <input type="range" id="treb-ratio" min="2" max="6" value="3.5" step="0.1">
+            </label>
+            <label>Projectile Mass: <span id="val-treb-pm">10</span> kg
+                <input type="range" id="treb-pm" min="1" max="100" value="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-treb-fire">Fire!</button>
+                <button id="btn-treb-reset">Reset</button>
             </div>
         </div>
 
