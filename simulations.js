@@ -102,6 +102,11 @@
             case "rutherford":  initRutherford();   break;
             case "logistic":    initLogistic();     break;
             case "heatcond":    initHeatCond();     break;
+            case "compton":     initCompton();      break;
+            case "harmonics":   initHarmonics();    break;
+            case "archimedes":  initArchimedes();   break;
+            case "hrdiagram":   initHRDiagram();    break;
+            case "coupled":     initCoupled();      break;
         }
     }
 
@@ -12843,6 +12848,846 @@
         }
     });
     document.getElementById("btn-hc-reset").addEventListener("click", initHeatCond);
+
+    // ── 75. Compton Scattering ──────────────────────────────
+    let compState = {};
+    function initCompton() {
+        cancelAnimationFrame(animId);
+        currentSim = "compton";
+        compState = { animating: false, t: 0, photonX: 0, photonY: 0, electronX: 0, electronY: 0, scattered: false };
+        drawCompton();
+    }
+    function drawCompton() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const E0 = parseFloat(document.getElementById("comp-e").value); // keV
+        const thetaDeg = parseFloat(document.getElementById("comp-theta").value);
+        const theta = thetaDeg * Math.PI / 180;
+        const me = 511; // electron rest mass keV/c²
+        const E1 = E0 / (1 + (E0 / me) * (1 - Math.cos(theta)));
+        const lambda0 = 1240 / E0; // nm (approximate)
+        const lambda1 = 1240 / E1;
+        const deltaLambda = 0.00243 * (1 - Math.cos(theta)); // nm (Compton wavelength)
+
+        // Electron recoil
+        const cosPhi = (E0 - E1 * Math.cos(theta)) / Math.sqrt(E0 * E0 + E1 * E1 - 2 * E0 * E1 * Math.cos(theta) + 0.001);
+        const phi = Math.acos(Math.max(-1, Math.min(1, cosPhi)));
+
+        const cx = 350, cy = H / 2;
+
+        // Animation
+        if (compState.animating) {
+            compState.t += 0.02;
+            if (compState.t < 1) {
+                // Incoming photon
+                compState.photonX = 50 + (cx - 50) * compState.t;
+                compState.photonY = cy;
+            } else if (compState.t < 2) {
+                const frac = compState.t - 1;
+                compState.scattered = true;
+                // Scattered photon
+                compState.photonX = cx + frac * 250 * Math.cos(-theta);
+                compState.photonY = cy + frac * 250 * Math.sin(-theta);
+                // Recoil electron
+                compState.electronX = cx + frac * 150 * Math.cos(phi);
+                compState.electronY = cy + frac * 150 * Math.sin(phi);
+            } else {
+                compState.animating = false;
+            }
+        }
+
+        // Draw target electron (before scatter)
+        if (!compState.scattered) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+            ctx.fillStyle = "#4fc3f7";
+            ctx.fill();
+            ctx.strokeStyle = "#29b6f6";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = "#fff";
+            ctx.font = "10px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("e⁻", cx, cy + 4);
+        }
+
+        // Draw photon
+        if (compState.animating || compState.scattered) {
+            // Incoming photon wave
+            const waveColor = compState.scattered ? `hsl(${Math.min(360, 240 + (E1 / E0) * 120)}, 80%, 60%)` : "#ffeb3b";
+            ctx.beginPath();
+            ctx.arc(compState.photonX, compState.photonY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = waveColor;
+            ctx.fill();
+            // Wavy trail
+            if (!compState.scattered) {
+                ctx.beginPath();
+                for (let px = 50; px < compState.photonX; px += 2) {
+                    const py = cy + 8 * Math.sin((px - compState.photonX) * 0.1);
+                    if (px === 50) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = "rgba(255,235,59,0.5)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            if (compState.scattered) {
+                // Scattered photon trail
+                ctx.beginPath();
+                for (let i = 0; i <= 30; i++) {
+                    const frac = i / 30;
+                    const tx = cx + (compState.photonX - cx) * frac;
+                    const ty = cy + (compState.photonY - cy) * frac;
+                    const perp = Math.atan2(compState.photonY - cy, compState.photonX - cx) + Math.PI / 2;
+                    const wave = 6 * Math.sin(i * 0.8);
+                    const wx = tx + wave * Math.cos(perp);
+                    const wy = ty + wave * Math.sin(perp);
+                    if (i === 0) ctx.moveTo(wx, wy);
+                    else ctx.lineTo(wx, wy);
+                }
+                ctx.strokeStyle = "rgba(255,100,100,0.5)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Recoil electron
+                ctx.beginPath();
+                ctx.arc(compState.electronX, compState.electronY, 10, 0, Math.PI * 2);
+                ctx.fillStyle = "#4fc3f7";
+                ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.font = "9px monospace";
+                ctx.textAlign = "center";
+                ctx.fillText("e⁻", compState.electronX, compState.electronY + 3);
+            }
+        }
+
+        // Angle arc at scatter point
+        if (compState.scattered) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 50, -theta, 0);
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = "#ff9800";
+            ctx.font = "12px monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(`θ=${thetaDeg}°`, cx + 55, cy - 10);
+
+            if (phi > 0.01) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, 35, 0, phi);
+                ctx.strokeStyle = "#4fc3f7";
+                ctx.stroke();
+                ctx.fillStyle = "#4fc3f7";
+                ctx.fillText(`φ=${(phi * 180 / Math.PI).toFixed(1)}°`, cx + 40, cy + 25);
+            }
+        }
+
+        // Incoming beam label
+        ctx.fillStyle = "#ffeb3b";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Incoming γ", 50, cy - 30);
+        ctx.fillText(`E₀ = ${E0} keV`, 50, cy - 15);
+
+        // Info panel (right)
+        const ix = 580, iy = 50;
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(ix - 10, iy - 10, 310, 250);
+        ctx.fillStyle = "#fff";
+        ctx.font = "13px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Compton Scattering", ix, iy + 10);
+        ctx.font = "11px monospace";
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fillText(`Incident Energy:  ${E0.toFixed(1)} keV`, ix, iy + 40);
+        ctx.fillStyle = "#f44336";
+        ctx.fillText(`Scattered Energy: ${E1.toFixed(1)} keV`, ix, iy + 60);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText(`Energy Transfer:  ${(E0 - E1).toFixed(1)} keV`, ix, iy + 80);
+        ctx.fillStyle = "#aaa";
+        ctx.fillText(`Scatter angle θ:  ${thetaDeg}°`, ix, iy + 110);
+        ctx.fillText(`Recoil angle φ:   ${(phi * 180 / Math.PI).toFixed(1)}°`, ix, iy + 130);
+        ctx.fillText(`Δλ = ${deltaLambda.toFixed(5)} nm`, ix, iy + 160);
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText(`Δλ = λ_c(1 - cosθ)`, ix, iy + 185);
+        ctx.fillText(`λ_c = 0.00243 nm`, ix, iy + 205);
+
+        // Wavelength comparison bar
+        const barY2 = iy + 220;
+        const maxLam = lambda1 * 1.2;
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fillRect(ix, barY2, (lambda0 / maxLam) * 250, 8);
+        ctx.fillStyle = "#f44336";
+        ctx.fillRect(ix, barY2 + 14, (lambda1 / maxLam) * 250, 8);
+        ctx.fillStyle = "#888";
+        ctx.font = "9px monospace";
+        ctx.fillText("λ₀", ix + (lambda0 / maxLam) * 250 + 5, barY2 + 7);
+        ctx.fillText("λ'", ix + (lambda1 / maxLam) * 250 + 5, barY2 + 21);
+
+        overlay.innerHTML =
+            `<b style="color:#ffeb3b">Compton Scattering</b><br>` +
+            `E₀: ${E0} keV → E': ${E1.toFixed(1)} keV<br>` +
+            `θ: ${thetaDeg}° | Δλ: ${deltaLambda.toFixed(5)} nm`;
+
+        animId = requestAnimationFrame(drawCompton);
+    }
+    bindSlider("comp-e", "val-comp-e");
+    bindSlider("comp-theta", "val-comp-theta");
+    document.getElementById("btn-comp-fire").addEventListener("click", () => {
+        compState.animating = true;
+        compState.t = 0;
+        compState.scattered = false;
+    });
+    document.getElementById("btn-comp-reset").addEventListener("click", initCompton);
+
+    // ── 76. Harmonic Series ─────────────────────────────────
+    let harmState = {};
+    function initHarmonics() {
+        cancelAnimationFrame(animId);
+        currentSim = "harmonics";
+        harmState = { t: 0 };
+        drawHarmonics();
+    }
+    function drawHarmonics() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const f0 = parseFloat(document.getElementById("harm-f").value);
+        const nHarm = parseInt(document.getElementById("harm-n").value);
+        const decay = parseFloat(document.getElementById("harm-decay").value);
+        harmState.t += 0.03;
+
+        const margin = 40, stringW = W - 2 * margin;
+        const rowH = (H - 80) / (nHarm + 1);
+
+        // Individual harmonics
+        for (let n = 1; n <= nHarm; n++) {
+            const cy = 30 + n * rowH;
+            const amp = 25 * Math.pow(decay, n - 1);
+            const freq = n * f0;
+            const hue = ((n - 1) / nHarm) * 300;
+
+            // Fixed endpoints
+            ctx.beginPath();
+            ctx.arc(margin, cy, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#888";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(margin + stringW, cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Equilibrium line
+            ctx.strokeStyle = "rgba(255,255,255,0.08)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(margin, cy);
+            ctx.lineTo(margin + stringW, cy);
+            ctx.stroke();
+
+            // Standing wave
+            ctx.beginPath();
+            for (let px = 0; px <= stringW; px++) {
+                const x = px / stringW;
+                const y = amp * Math.sin(n * Math.PI * x) * Math.cos(2 * Math.PI * freq * harmState.t);
+                if (px === 0) ctx.moveTo(margin + px, cy + y);
+                else ctx.lineTo(margin + px, cy + y);
+            }
+            ctx.strokeStyle = `hsl(${hue}, 80%, 60%)`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Node markers
+            for (let k = 0; k <= n; k++) {
+                const nx = margin + (k / n) * stringW;
+                ctx.beginPath();
+                ctx.arc(nx, cy, 3, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${hue}, 80%, 60%, 0.5)`;
+                ctx.fill();
+            }
+
+            // Label
+            ctx.fillStyle = `hsl(${hue}, 80%, 70%)`;
+            ctx.font = "11px monospace";
+            ctx.textAlign = "right";
+            ctx.fillText(`n=${n} (${freq.toFixed(1)}Hz)`, margin - 5, cy + 4);
+        }
+
+        // Superposition at bottom
+        const supY = 30;
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Superposition", W / 2, supY - 8);
+
+        ctx.beginPath();
+        for (let px = 0; px <= stringW; px++) {
+            const x = px / stringW;
+            let y = 0;
+            for (let n = 1; n <= nHarm; n++) {
+                const amp2 = 20 * Math.pow(decay, n - 1);
+                y += amp2 * Math.sin(n * Math.PI * x) * Math.cos(2 * Math.PI * n * f0 * harmState.t);
+            }
+            if (px === 0) ctx.moveTo(margin + px, supY + y);
+            else ctx.lineTo(margin + px, supY + y);
+        }
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Fixed endpoints for superposition
+        ctx.beginPath(); ctx.arc(margin, supY, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff"; ctx.fill();
+        ctx.beginPath(); ctx.arc(margin + stringW, supY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        overlay.innerHTML =
+            `<b style="color:#fff">Harmonic Series</b><br>` +
+            `f₀: ${f0} Hz | Harmonics: ${nHarm}<br>` +
+            `Decay: ${decay} | fₙ = n·f₀`;
+
+        animId = requestAnimationFrame(drawHarmonics);
+    }
+    bindSlider("harm-f", "val-harm-f");
+    bindSlider("harm-n", "val-harm-n");
+    bindSlider("harm-decay", "val-harm-decay");
+
+    // ── 77. Archimedes' Principle ────────────────────────────
+    let archState = {};
+    function initArchimedes() {
+        cancelAnimationFrame(animId);
+        currentSim = "archimedes";
+        archState = { objY: 100, objVY: 0 };
+        drawArchimedes();
+    }
+    function drawArchimedes() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const rhoObj = parseFloat(document.getElementById("arch-rho").value);
+        const rhoFluid = parseFloat(document.getElementById("arch-fluid").value);
+        const size = parseFloat(document.getElementById("arch-size").value);
+
+        const waterLevel = 200;
+        const tankX = 80, tankW = 400, tankH = 350;
+        const tankBottom = waterLevel + tankH - 100;
+
+        // Physics
+        const g = 0.15;
+        const submergedFrac = Math.max(0, Math.min(1, (archState.objY + size - waterLevel) / size));
+        const volume = size * size; // 2D area as proxy
+        const weight = rhoObj * volume * g * 0.0001;
+        const buoyancy = rhoFluid * volume * submergedFrac * g * 0.0001;
+        const drag = archState.objVY * 0.05;
+
+        archState.objVY += (weight - buoyancy) * 0.01 - drag;
+        archState.objY += archState.objVY;
+
+        // Clamp to tank
+        if (archState.objY + size > tankBottom) {
+            archState.objY = tankBottom - size;
+            archState.objVY *= -0.3;
+        }
+        if (archState.objY < 30) {
+            archState.objY = 30;
+            archState.objVY = 0;
+        }
+
+        const objX = tankX + tankW / 2 - size / 2;
+
+        // Water
+        ctx.fillStyle = "rgba(30,100,200,0.3)";
+        ctx.fillRect(tankX, waterLevel, tankW, tankH - 100);
+
+        // Water surface ripples
+        ctx.beginPath();
+        for (let x = tankX; x <= tankX + tankW; x += 2) {
+            const ry = waterLevel + 2 * Math.sin(x * 0.05 + archState.objVY * 5);
+            if (x === tankX) ctx.moveTo(x, ry);
+            else ctx.lineTo(x, ry);
+        }
+        ctx.lineTo(tankX + tankW, waterLevel);
+        ctx.lineTo(tankX, waterLevel);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(30,140,255,0.2)";
+        ctx.fill();
+
+        // Tank walls
+        ctx.strokeStyle = "#888";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(tankX, waterLevel - 50);
+        ctx.lineTo(tankX, tankBottom);
+        ctx.lineTo(tankX + tankW, tankBottom);
+        ctx.lineTo(tankX + tankW, waterLevel - 50);
+        ctx.stroke();
+
+        // Object
+        const objColor = rhoObj < rhoFluid ? "#66bb6a" : rhoObj > rhoFluid * 1.5 ? "#ef5350" : "#ffb74d";
+        ctx.fillStyle = objColor;
+        ctx.fillRect(objX, archState.objY, size, size);
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(objX, archState.objY, size, size);
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${rhoObj}`, objX + size / 2, archState.objY + size / 2 + 4);
+
+        // Force arrows
+        const arrowX = objX + size + 30;
+        const arrowCY = archState.objY + size / 2;
+
+        // Weight (down)
+        const wScale = Math.min(80, weight * 500);
+        ctx.beginPath(); ctx.moveTo(arrowX, arrowCY); ctx.lineTo(arrowX, arrowCY + wScale);
+        ctx.strokeStyle = "#f44336"; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(arrowX - 6, arrowCY + wScale - 8);
+        ctx.lineTo(arrowX, arrowCY + wScale);
+        ctx.lineTo(arrowX + 6, arrowCY + wScale - 8);
+        ctx.stroke();
+        ctx.fillStyle = "#f44336";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`W = ${weight.toFixed(2)}`, arrowX + 10, arrowCY + wScale / 2);
+
+        // Buoyancy (up)
+        const bScale = Math.min(80, buoyancy * 500);
+        ctx.beginPath(); ctx.moveTo(arrowX + 60, arrowCY); ctx.lineTo(arrowX + 60, arrowCY - bScale);
+        ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(arrowX + 54, arrowCY - bScale + 8);
+        ctx.lineTo(arrowX + 60, arrowCY - bScale);
+        ctx.lineTo(arrowX + 66, arrowCY - bScale + 8);
+        ctx.stroke();
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText(`F_b = ${buoyancy.toFixed(2)}`, arrowX + 70, arrowCY - bScale / 2);
+
+        // Info panel
+        const ix = 600, iy = 60;
+        ctx.fillStyle = "#fff";
+        ctx.font = "13px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Archimedes' Principle", ix, iy);
+        ctx.font = "11px monospace";
+        ctx.fillStyle = "#aaa";
+        ctx.fillText(`F_b = ρ_fluid · V_sub · g`, ix, iy + 30);
+        ctx.fillStyle = "#66bb6a";
+        ctx.fillText(`ρ_object: ${rhoObj} kg/m³`, ix, iy + 60);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText(`ρ_fluid:  ${rhoFluid} kg/m³`, ix, iy + 80);
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText(`Submerged: ${(submergedFrac * 100).toFixed(1)}%`, ix, iy + 110);
+        ctx.fillStyle = "#fff";
+        const state = rhoObj < rhoFluid ? "FLOATING" : rhoObj > rhoFluid ? "SINKING" : "NEUTRAL";
+        ctx.fillText(`State: ${state}`, ix, iy + 140);
+        ctx.fillText(`ρ_obj/ρ_fluid = ${(rhoObj / rhoFluid).toFixed(3)}`, ix, iy + 170);
+
+        // Theoretical submersion for floating
+        if (rhoObj <= rhoFluid) {
+            const theorSub = (rhoObj / rhoFluid * 100).toFixed(1);
+            ctx.fillStyle = "#ffeb3b";
+            ctx.fillText(`Theory: ${theorSub}% submerged`, ix, iy + 200);
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">Archimedes' Principle</b><br>` +
+            `ρ_obj: ${rhoObj} | ρ_fluid: ${rhoFluid}<br>` +
+            `Submerged: ${(submergedFrac * 100).toFixed(1)}% | ${state}`;
+
+        animId = requestAnimationFrame(drawArchimedes);
+    }
+    bindSlider("arch-rho", "val-arch-rho");
+    bindSlider("arch-fluid", "val-arch-fluid");
+    bindSlider("arch-size", "val-arch-size");
+
+    // ── 78. HR Diagram ──────────────────────────────────────
+    let hrState = {};
+    function initHRDiagram() {
+        cancelAnimationFrame(animId);
+        currentSim = "hrdiagram";
+        hrState = { evolving: false, phase: 0, trail: [], t: 0 };
+        drawHRDiagram();
+    }
+    function drawHRDiagram() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const mass = parseFloat(document.getElementById("hr-mass").value);
+        const speed = parseFloat(document.getElementById("hr-speed").value);
+
+        const gx = 60, gy = 40, gw = W - 120, gh = H - 100;
+
+        // HR diagram axes (temp decreasing left to right, luminosity increasing upward)
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        // Temperature axis (reversed: hot on left, cool on right)
+        const temps = [40000, 20000, 10000, 7000, 5000, 3000];
+        const colors = ["#9bb0ff", "#aabfff", "#fff4ea", "#ffd2a1", "#ffaa58", "#ff6030"];
+        ctx.fillStyle = "#888";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        for (let i = 0; i < temps.length; i++) {
+            const fx = gx + (i / (temps.length - 1)) * gw;
+            ctx.fillStyle = colors[i];
+            ctx.fillText(temps[i] >= 10000 ? (temps[i] / 1000) + "k" : temps[i] + "", fx, gy + gh + 15);
+        }
+        ctx.fillStyle = "#888";
+        ctx.fillText("Temperature (K) →  Hot                              Cool  →", gx + gw / 2, gy + gh + 30);
+
+        // Luminosity axis (log scale)
+        ctx.textAlign = "right";
+        const lumLabels = [1e-4, 1e-2, 1, 1e2, 1e4, 1e6];
+        for (let i = 0; i < lumLabels.length; i++) {
+            const fy = gy + gh - (i / (lumLabels.length - 1)) * gh;
+            ctx.fillStyle = "#888";
+            ctx.fillText(lumLabels[i] >= 1 ? lumLabels[i].toExponential(0) : lumLabels[i].toFixed(4).replace(/0+$/, ''), gx - 5, fy + 4);
+            ctx.strokeStyle = "rgba(100,100,100,0.2)";
+            ctx.beginPath(); ctx.moveTo(gx, fy); ctx.lineTo(gx + gw, fy); ctx.stroke();
+        }
+        ctx.save();
+        ctx.translate(15, gy + gh / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "center";
+        ctx.fillText("Luminosity (L☉)", 0, 0);
+        ctx.restore();
+
+        // Main sequence band
+        ctx.beginPath();
+        const msPoints = [
+            { T: 35000, L: 5 }, { T: 20000, L: 3.5 }, { T: 10000, L: 1.5 },
+            { T: 7500, L: 0.5 }, { T: 5800, L: 0 }, { T: 4000, L: -1.5 }, { T: 3000, L: -3 }
+        ];
+        function tempToX(T) { return gx + (1 - (Math.log10(T) - Math.log10(3000)) / (Math.log10(40000) - Math.log10(3000))) * gw; }
+        function lumToY(logL) { return gy + gh - ((logL + 4) / 10) * gh; }
+
+        // Draw main sequence as band
+        for (let i = 0; i < msPoints.length - 1; i++) {
+            const x1 = tempToX(msPoints[i].T), y1 = lumToY(msPoints[i].L);
+            const x2 = tempToX(msPoints[i + 1].T), y2 = lumToY(msPoints[i + 1].L);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1 - 15); ctx.lineTo(x2, y2 - 15);
+            ctx.lineTo(x2, y2 + 15); ctx.lineTo(x1, y1 + 15);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(255,255,255,0.05)";
+            ctx.fill();
+        }
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Main Sequence", tempToX(7000), lumToY(0.8));
+
+        // Region labels
+        ctx.fillStyle = "rgba(255,100,100,0.3)";
+        ctx.fillText("Red Giants", tempToX(3800), lumToY(2.5));
+        ctx.fillStyle = "rgba(100,100,255,0.3)";
+        ctx.fillText("White Dwarfs", tempToX(15000), lumToY(-3));
+        ctx.fillStyle = "rgba(255,200,100,0.3)";
+        ctx.fillText("Supergiants", tempToX(5000), lumToY(4.5));
+
+        // Background stars
+        const starSeeds = [
+            { T: 30000, L: 4.5 }, { T: 22000, L: 3.8 }, { T: 15000, L: 2 },
+            { T: 9000, L: 1.2 }, { T: 7500, L: 0.7 }, { T: 6000, L: 0.2 },
+            { T: 5000, L: -0.5 }, { T: 4000, L: -1.2 }, { T: 3500, L: -2 },
+            { T: 3800, L: 2.5 }, { T: 4200, L: 3 }, { T: 3500, L: 3.5 },
+            { T: 5500, L: 4.2 }, { T: 8000, L: 4.8 },
+            { T: 20000, L: -2.5 }, { T: 12000, L: -3 }, { T: 25000, L: -2 }
+        ];
+        for (const s of starSeeds) {
+            const sx = tempToX(s.T), sy = lumToY(s.L);
+            const frac = (Math.log10(s.T) - Math.log10(3000)) / (Math.log10(40000) - Math.log10(3000));
+            const ci = Math.floor((1 - frac) * (colors.length - 1));
+            ctx.beginPath();
+            ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+            ctx.fillStyle = colors[Math.max(0, Math.min(colors.length - 1, ci))];
+            ctx.globalAlpha = 0.4;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        // Stellar evolution
+        if (hrState.evolving) {
+            hrState.t += 0.005 * speed;
+            let T, logL, phase;
+            const msT = 5800 * Math.pow(mass, -0.2);
+            const msL = Math.log10(Math.pow(mass, 3.5));
+
+            if (hrState.t < 1) {
+                // Main sequence
+                T = msT; logL = msL;
+                phase = "Main Sequence";
+            } else if (hrState.t < 1.5) {
+                // Subgiant
+                const frac = (hrState.t - 1) / 0.5;
+                T = msT * (1 - frac * 0.3);
+                logL = msL + frac * 1.5;
+                phase = "Subgiant";
+            } else if (hrState.t < 2) {
+                // Red Giant
+                const frac = (hrState.t - 1.5) / 0.5;
+                T = msT * 0.7 * (1 - frac * 0.3);
+                logL = msL + 1.5 + frac;
+                phase = "Red Giant";
+            } else if (mass > 8) {
+                // Supernova -> neutron star
+                T = 30000;
+                logL = -2;
+                phase = "Neutron Star";
+            } else if (hrState.t < 2.5) {
+                // Planetary nebula -> White dwarf
+                const frac = (hrState.t - 2) / 0.5;
+                T = msT * 0.49 + frac * 20000;
+                logL = msL + 2.5 - frac * 5;
+                phase = "→ White Dwarf";
+            } else {
+                T = 15000; logL = -2.5;
+                phase = "White Dwarf";
+            }
+
+            const sx = tempToX(T), sy = lumToY(logL);
+            hrState.trail.push({ x: sx, y: sy });
+            if (hrState.trail.length > 500) hrState.trail.shift();
+
+            // Draw trail
+            if (hrState.trail.length > 1) {
+                ctx.beginPath();
+                for (let i = 0; i < hrState.trail.length; i++) {
+                    if (i === 0) ctx.moveTo(hrState.trail[i].x, hrState.trail[i].y);
+                    else ctx.lineTo(hrState.trail[i].x, hrState.trail[i].y);
+                }
+                ctx.strokeStyle = "rgba(255,200,0,0.6)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Current star
+            ctx.beginPath();
+            ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+            const starGrad = ctx.createRadialGradient(sx, sy, 2, sx, sy, 8);
+            starGrad.addColorStop(0, "#fff");
+            starGrad.addColorStop(1, "#ff8");
+            ctx.fillStyle = starGrad;
+            ctx.fill();
+
+            ctx.fillStyle = "#ff0";
+            ctx.font = "12px monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(`${mass}M☉ - ${phase}`, sx + 15, sy);
+        }
+
+        // Sun marker
+        const sunX = tempToX(5778), sunY = lumToY(0);
+        ctx.beginPath(); ctx.arc(sunX, sunY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffeb3b"; ctx.fill();
+        ctx.fillStyle = "#ffeb3b";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("☉ Sun", sunX + 8, sunY + 4);
+
+        overlay.innerHTML =
+            `<b style="color:#ffeb3b">HR Diagram</b><br>` +
+            `Star mass: ${mass} M☉<br>` +
+            `Luminosity vs Temperature`;
+
+        animId = requestAnimationFrame(drawHRDiagram);
+    }
+    bindSlider("hr-mass", "val-hr-mass");
+    bindSlider("hr-speed", "val-hr-speed");
+    document.getElementById("btn-hr-evolve").addEventListener("click", () => {
+        hrState.evolving = true;
+        hrState.t = 0;
+        hrState.trail = [];
+    });
+    document.getElementById("btn-hr-reset").addEventListener("click", initHRDiagram);
+
+    // ── 79. Coupled Oscillators ──────────────────────────────
+    let coState = {};
+    function initCoupled() {
+        cancelAnimationFrame(animId);
+        currentSim = "coupled";
+        const initMode = document.getElementById("sel-co-init").value;
+        let x1, x2;
+        if (initMode === "left") { x1 = 80; x2 = 0; }
+        else if (initMode === "symmetric") { x1 = 60; x2 = 60; }
+        else if (initMode === "antisymmetric") { x1 = 60; x2 = -60; }
+        else { x1 = Math.random() * 80 - 40; x2 = Math.random() * 80 - 40; }
+        coState = { x1, x2, v1: 0, v2: 0, t: 0, trail1: [], trail2: [], energy1: [], energy2: [] };
+        drawCoupled();
+    }
+    function drawCoupled() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const k1 = parseFloat(document.getElementById("co-k1").value);
+        const kc = parseFloat(document.getElementById("co-kc").value);
+        const dt = 0.05;
+        const m = 1;
+
+        coState.t += dt;
+
+        // Equations of motion
+        for (let i = 0; i < 5; i++) {
+            const a1 = (-k1 * coState.x1 - kc * (coState.x1 - coState.x2)) / m;
+            const a2 = (-k1 * coState.x2 - kc * (coState.x2 - coState.x1)) / m;
+            coState.v1 += a1 * dt;
+            coState.v2 += a2 * dt;
+            coState.x1 += coState.v1 * dt;
+            coState.x2 += coState.v2 * dt;
+        }
+
+        const wallL = 50, wallR = W - 50;
+        const springY = 180;
+        const eq1 = 250, eq2 = 550;
+        const pos1X = eq1 + coState.x1, pos2X = eq2 + coState.x2;
+        const massR = 20;
+
+        // Walls
+        ctx.fillStyle = "#555";
+        ctx.fillRect(wallL - 10, springY - 40, 10, 80);
+        ctx.fillRect(wallR, springY - 40, 10, 80);
+
+        // Draw springs (zigzag)
+        function drawSpring(x1s, x2s, y, color) {
+            const segs = 15;
+            const len = x2s - x1s;
+            ctx.beginPath();
+            ctx.moveTo(x1s, y);
+            for (let i = 1; i <= segs; i++) {
+                const sx = x1s + (i / segs) * len;
+                const sy = y + (i % 2 === 0 ? -10 : 10);
+                ctx.lineTo(sx, sy);
+            }
+            ctx.lineTo(x2s, y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Spring: wall to mass1
+        drawSpring(wallL, pos1X - massR, springY, "#ff9800");
+        // Coupling spring: mass1 to mass2
+        drawSpring(pos1X + massR, pos2X - massR, springY, "#e040fb");
+        // Spring: mass2 to wall
+        drawSpring(pos2X + massR, wallR, springY, "#ff9800");
+
+        // Masses
+        ctx.beginPath(); ctx.arc(pos1X, springY, massR, 0, Math.PI * 2);
+        ctx.fillStyle = "#4fc3f7"; ctx.fill();
+        ctx.strokeStyle = "#29b6f6"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = "#fff"; ctx.font = "12px monospace"; ctx.textAlign = "center";
+        ctx.fillText("m₁", pos1X, springY + 5);
+
+        ctx.beginPath(); ctx.arc(pos2X, springY, massR, 0, Math.PI * 2);
+        ctx.fillStyle = "#66bb6a"; ctx.fill();
+        ctx.strokeStyle = "#43a047"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.fillText("m₂", pos2X, springY + 5);
+
+        // Spring labels
+        ctx.fillStyle = "#ff9800";
+        ctx.font = "10px monospace";
+        ctx.fillText("k₁", (wallL + pos1X - massR) / 2, springY - 20);
+        ctx.fillText("k₁", (pos2X + massR + wallR) / 2, springY - 20);
+        ctx.fillStyle = "#e040fb";
+        ctx.fillText("kc", (pos1X + pos2X) / 2, springY - 20);
+
+        // Trails
+        coState.trail1.push(coState.x1);
+        coState.trail2.push(coState.x2);
+        if (coState.trail1.length > 400) coState.trail1.shift();
+        if (coState.trail2.length > 400) coState.trail2.shift();
+
+        // Displacement graph
+        const graphY = 280, graphH = 100, graphX = 60, graphW = W - 120;
+        ctx.strokeStyle = "#444"; ctx.lineWidth = 1;
+        ctx.strokeRect(graphX, graphY, graphW, graphH);
+        ctx.beginPath(); ctx.moveTo(graphX, graphY + graphH / 2);
+        ctx.lineTo(graphX + graphW, graphY + graphH / 2);
+        ctx.strokeStyle = "#333"; ctx.stroke();
+        ctx.fillStyle = "#888"; ctx.font = "10px monospace"; ctx.textAlign = "center";
+        ctx.fillText("Displacement", graphX + graphW / 2, graphY - 5);
+
+        // x1 trail
+        ctx.beginPath();
+        for (let i = 0; i < coState.trail1.length; i++) {
+            const px = graphX + (i / 400) * graphW;
+            const py = graphY + graphH / 2 - coState.trail1[i] * 0.8;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 1.5; ctx.stroke();
+
+        // x2 trail
+        ctx.beginPath();
+        for (let i = 0; i < coState.trail2.length; i++) {
+            const px = graphX + (i / 400) * graphW;
+            const py = graphY + graphH / 2 - coState.trail2[i] * 0.8;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 1.5; ctx.stroke();
+
+        // Energy graph
+        const eGraphY = 410, eGraphH = 80;
+        ctx.strokeStyle = "#444"; ctx.strokeRect(graphX, eGraphY, graphW, eGraphH);
+        ctx.fillStyle = "#888"; ctx.fillText("Energy", graphX + graphW / 2, eGraphY - 5);
+
+        const KE1 = 0.5 * m * coState.v1 * coState.v1;
+        const KE2 = 0.5 * m * coState.v2 * coState.v2;
+        const PE1 = 0.5 * k1 * coState.x1 * coState.x1;
+        const PE2 = 0.5 * k1 * coState.x2 * coState.x2;
+        const PEc = 0.5 * kc * (coState.x1 - coState.x2) ** 2;
+        const E1t = KE1 + PE1 + PEc / 2;
+        const E2t = KE2 + PE2 + PEc / 2;
+
+        coState.energy1.push(E1t);
+        coState.energy2.push(E2t);
+        if (coState.energy1.length > 400) coState.energy1.shift();
+        if (coState.energy2.length > 400) coState.energy2.shift();
+
+        const maxE = Math.max(...coState.energy1, ...coState.energy2, 1);
+        ctx.beginPath();
+        for (let i = 0; i < coState.energy1.length; i++) {
+            const px = graphX + (i / 400) * graphW;
+            const py = eGraphY + eGraphH - (coState.energy1[i] / maxE) * eGraphH * 0.9;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 1.5; ctx.stroke();
+
+        ctx.beginPath();
+        for (let i = 0; i < coState.energy2.length; i++) {
+            const px = graphX + (i / 400) * graphW;
+            const py = eGraphY + eGraphH - (coState.energy2[i] / maxE) * eGraphH * 0.9;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "#66bb6a"; ctx.lineWidth = 1.5; ctx.stroke();
+
+        // Normal mode frequencies
+        const w1 = Math.sqrt(k1 / m);
+        const w2 = Math.sqrt((k1 + 2 * kc) / m);
+
+        overlay.innerHTML =
+            `<b style="color:#e040fb">Coupled Oscillators</b><br>` +
+            `k₁: ${k1} | kc: ${kc}<br>` +
+            `ω₁: ${w1.toFixed(2)} | ω₂: ${w2.toFixed(2)} (normal modes)`;
+
+        animId = requestAnimationFrame(drawCoupled);
+    }
+    bindSlider("co-k1", "val-co-k1");
+    bindSlider("co-kc", "val-co-kc");
+    document.getElementById("btn-co-reset").addEventListener("click", initCoupled);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

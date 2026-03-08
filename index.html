@@ -87,6 +87,11 @@
         <button class="nav-btn" data-sim="rutherford">Rutherford Scattering</button>
         <button class="nav-btn" data-sim="logistic">Logistic Map</button>
         <button class="nav-btn" data-sim="heatcond">Heat Conduction</button>
+        <button class="nav-btn" data-sim="compton">Compton Scattering</button>
+        <button class="nav-btn" data-sim="harmonics">Harmonic Series</button>
+        <button class="nav-btn" data-sim="archimedes">Archimedes' Principle</button>
+        <button class="nav-btn" data-sim="hrdiagram">HR Diagram</button>
+        <button class="nav-btn" data-sim="coupled">Coupled Oscillators</button>
     </nav>
 
     <main>
@@ -1446,6 +1451,91 @@
             <div class="btn-row">
                 <button id="btn-hc-pulse">Add Heat Pulse</button>
                 <button id="btn-hc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Compton Scattering Controls -->
+        <div class="controls hidden" id="ctrl-compton">
+            <h3>Compton Scattering</h3>
+            <p class="ctrl-hint">A photon scatters off a free electron, losing energy and shifting wavelength.</p>
+            <label>Photon Energy: <span id="val-comp-e">100</span> keV
+                <input type="range" id="comp-e" min="10" max="500" value="100" step="5">
+            </label>
+            <label>Scatter Angle: <span id="val-comp-theta">90</span>&deg;
+                <input type="range" id="comp-theta" min="0" max="180" value="90">
+            </label>
+            <div class="btn-row">
+                <button id="btn-comp-fire">Scatter!</button>
+                <button id="btn-comp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Harmonic Series Controls -->
+        <div class="controls hidden" id="ctrl-harmonics">
+            <h3>Harmonic Series</h3>
+            <p class="ctrl-hint">Standing wave harmonics on a string: fundamental, overtones, and superposition.</p>
+            <label>Fundamental Freq: <span id="val-harm-f">1</span> Hz
+                <input type="range" id="harm-f" min="0.5" max="3" value="1" step="0.1">
+            </label>
+            <label>Harmonics Shown: <span id="val-harm-n">4</span>
+                <input type="range" id="harm-n" min="1" max="8" value="4">
+            </label>
+            <label>Amplitude Decay: <span id="val-harm-decay">0.7</span>
+                <input type="range" id="harm-decay" min="0.3" max="1" value="0.7" step="0.05">
+            </label>
+        </div>
+
+        <!-- Archimedes Controls -->
+        <div class="controls hidden" id="ctrl-archimedes">
+            <h3>Archimedes' Principle</h3>
+            <p class="ctrl-hint">Buoyant force equals the weight of displaced fluid. Adjust object density to sink or float.</p>
+            <label>Object Density: <span id="val-arch-rho">500</span> kg/m&sup3;
+                <input type="range" id="arch-rho" min="100" max="2000" value="500" step="10">
+            </label>
+            <label>Fluid Density: <span id="val-arch-fluid">1000</span> kg/m&sup3;
+                <input type="range" id="arch-fluid" min="500" max="3000" value="1000" step="50">
+            </label>
+            <label>Object Size: <span id="val-arch-size">60</span>
+                <input type="range" id="arch-size" min="30" max="100" value="60">
+            </label>
+        </div>
+
+        <!-- HR Diagram Controls -->
+        <div class="controls hidden" id="ctrl-hrdiagram">
+            <h3>HR Diagram</h3>
+            <p class="ctrl-hint">Hertzsprung-Russell diagram: stellar luminosity vs temperature. Watch a star evolve.</p>
+            <label>Star Mass: <span id="val-hr-mass">1</span> M&sun;
+                <input type="range" id="hr-mass" min="0.3" max="20" value="1" step="0.1">
+            </label>
+            <label>Speed: <span id="val-hr-speed">1</span>x
+                <input type="range" id="hr-speed" min="0.2" max="5" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-hr-evolve">Start Evolution</button>
+                <button id="btn-hr-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Coupled Oscillators Controls -->
+        <div class="controls hidden" id="ctrl-coupled">
+            <h3>Coupled Oscillators</h3>
+            <p class="ctrl-hint">Two masses connected by springs exchange energy through normal modes of oscillation.</p>
+            <label>Spring k₁: <span id="val-co-k1">2</span>
+                <input type="range" id="co-k1" min="0.5" max="5" value="2" step="0.1">
+            </label>
+            <label>Coupling k_c: <span id="val-co-kc">1</span>
+                <input type="range" id="co-kc" min="0" max="5" value="1" step="0.1">
+            </label>
+            <label>Initial Displace:
+                <select id="sel-co-init">
+                    <option value="left">Left only</option>
+                    <option value="symmetric">Symmetric</option>
+                    <option value="antisymmetric">Antisymmetric</option>
+                    <option value="random">Random</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-co-reset">Reset</button>
             </div>
         </div>
 
