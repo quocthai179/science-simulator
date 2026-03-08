@@ -92,6 +92,11 @@
         <button class="nav-btn" data-sim="archimedes">Archimedes' Principle</button>
         <button class="nav-btn" data-sim="hrdiagram">HR Diagram</button>
         <button class="nav-btn" data-sim="coupled">Coupled Oscillators</button>
+        <button class="nav-btn" data-sim="juliaset">Julia Set</button>
+        <button class="nav-btn" data-sim="molorbital">Molecular Orbitals</button>
+        <button class="nav-btn" data-sim="galvanic">Galvanic Cell</button>
+        <button class="nav-btn" data-sim="probdist">Probability Distributions</button>
+        <button class="nav-btn" data-sim="combustion">Combustion</button>
     </nav>
 
     <main>
@@ -1536,6 +1541,130 @@
             </label>
             <div class="btn-row">
                 <button id="btn-co-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Julia Set Controls -->
+        <div class="controls hidden" id="ctrl-juliaset">
+            <h3>Julia Set</h3>
+            <p class="ctrl-hint">Explore Julia sets by varying the complex constant c. Related to the Mandelbrot set.</p>
+            <label>Real(c): <span id="val-jul-cr">-0.70</span>
+                <input type="range" id="jul-cr" min="-1.5" max="1.5" value="-0.7" step="0.005">
+            </label>
+            <label>Imag(c): <span id="val-jul-ci">0.27</span>
+                <input type="range" id="jul-ci" min="-1.5" max="1.5" value="0.27" step="0.005">
+            </label>
+            <label>Max Iterations: <span id="val-jul-iter">150</span>
+                <input type="range" id="jul-iter" min="20" max="500" value="150" step="10">
+            </label>
+            <label>Color Scheme:
+                <select id="sel-jul-color">
+                    <option value="rainbow">Rainbow</option>
+                    <option value="ice">Ice</option>
+                    <option value="lava">Lava</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-jul-animate">Animate c</button>
+                <button id="btn-jul-reset">Reset Zoom</button>
+            </div>
+        </div>
+
+        <!-- Molecular Orbital Controls -->
+        <div class="controls hidden" id="ctrl-molorbital">
+            <h3>Molecular Orbitals</h3>
+            <p class="ctrl-hint">Visualize bonding and antibonding MOs from atomic orbital overlap (LCAO).</p>
+            <label>Bond Length: <span id="val-mo-dist">200</span> pm
+                <input type="range" id="mo-dist" min="80" max="350" value="200">
+            </label>
+            <label>Orbital Type:
+                <select id="sel-mo-type">
+                    <option value="s-s">s + s (σ bond)</option>
+                    <option value="p-p-sigma">p + p (σ bond)</option>
+                    <option value="p-p-pi">p + p (π bond)</option>
+                </select>
+            </label>
+            <label>Phase:
+                <select id="sel-mo-phase">
+                    <option value="bonding">Bonding (+/+)</option>
+                    <option value="antibonding">Antibonding (+/−)</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Galvanic Cell Controls -->
+        <div class="controls hidden" id="ctrl-galvanic">
+            <h3>Galvanic Cell</h3>
+            <p class="ctrl-hint">Electrochemistry: spontaneous redox reaction generating electric current between two half-cells.</p>
+            <label>Anode Metal:
+                <select id="sel-galv-anode">
+                    <option value="Zn">Zinc (Zn)</option>
+                    <option value="Fe">Iron (Fe)</option>
+                    <option value="Al">Aluminum (Al)</option>
+                </select>
+            </label>
+            <label>Cathode Metal:
+                <select id="sel-galv-cathode">
+                    <option value="Cu">Copper (Cu)</option>
+                    <option value="Ag">Silver (Ag)</option>
+                    <option value="Au">Gold (Au)</option>
+                </select>
+            </label>
+            <label>Speed: <span id="val-galv-speed">1</span>x
+                <input type="range" id="galv-speed" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-galv-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Probability Distributions Controls -->
+        <div class="controls hidden" id="ctrl-probdist">
+            <h3>Probability Distributions</h3>
+            <p class="ctrl-hint">Compare normal, Poisson, binomial, and exponential distributions side by side.</p>
+            <label>Distribution:
+                <select id="sel-pd-type">
+                    <option value="normal">Normal (Gaussian)</option>
+                    <option value="poisson">Poisson</option>
+                    <option value="binomial">Binomial</option>
+                    <option value="exponential">Exponential</option>
+                </select>
+            </label>
+            <label>Parameter 1: <span id="val-pd-p1">0</span>
+                <input type="range" id="pd-p1" min="-5" max="5" value="0" step="0.1">
+            </label>
+            <label>Parameter 2: <span id="val-pd-p2">1</span>
+                <input type="range" id="pd-p2" min="0.1" max="10" value="1" step="0.1">
+            </label>
+            <label>Samples: <span id="val-pd-n">500</span>
+                <input type="range" id="pd-n" min="50" max="2000" value="500" step="50">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pd-sample">Resample</button>
+            </div>
+        </div>
+
+        <!-- Combustion Controls -->
+        <div class="controls hidden" id="ctrl-combustion">
+            <h3>Combustion Reactions</h3>
+            <p class="ctrl-hint">Visualize exothermic combustion: fuel + O₂ → CO₂ + H₂O + energy.</p>
+            <label>Fuel:
+                <select id="sel-comb-fuel">
+                    <option value="methane">Methane (CH₄)</option>
+                    <option value="propane">Propane (C₃H₈)</option>
+                    <option value="hydrogen">Hydrogen (H₂)</option>
+                    <option value="ethanol">Ethanol (C₂H₅OH)</option>
+                </select>
+            </label>
+            <label>O₂ Supply: <span id="val-comb-o2">100</span>%
+                <input type="range" id="comb-o2" min="20" max="100" value="100">
+            </label>
+            <label>Temperature: <span id="val-comb-temp">500</span>&deg;C
+                <input type="range" id="comb-temp" min="200" max="1200" value="500">
+            </label>
+            <div class="btn-row">
+                <button id="btn-comb-ignite">Ignite!</button>
+                <button id="btn-comb-reset">Reset</button>
             </div>
         </div>
 

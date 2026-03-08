@@ -107,6 +107,11 @@
             case "archimedes":  initArchimedes();   break;
             case "hrdiagram":   initHRDiagram();    break;
             case "coupled":     initCoupled();      break;
+            case "juliaset":    initJuliaSet();     break;
+            case "molorbital":  initMolOrbital();   break;
+            case "galvanic":    initGalvanic();     break;
+            case "probdist":    initProbDist();     break;
+            case "combustion":  initCombustion();   break;
         }
     }
 
@@ -13688,6 +13693,851 @@
     bindSlider("co-k1", "val-co-k1");
     bindSlider("co-kc", "val-co-kc");
     document.getElementById("btn-co-reset").addEventListener("click", initCoupled);
+
+    // ── 80. Julia Set ───────────────────────────────────────
+    let julState = {};
+    function initJuliaSet() {
+        cancelAnimationFrame(animId);
+        currentSim = "juliaset";
+        julState = { zoom: 1.5, cx: 0, cy: 0, needsRender: true, animating: false, animT: 0 };
+        canvas.addEventListener("click", julClick);
+        drawJuliaSet();
+    }
+    function julClick(e) {
+        if (currentSim !== "juliaset") return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) / rect.width;
+        const my = (e.clientY - rect.top) / rect.height;
+        const W = canvas.width, H2 = canvas.height;
+        const aspect = W / H2;
+        julState.cx += (mx - 0.5) * 2 * julState.zoom * aspect;
+        julState.cy += (my - 0.5) * 2 * julState.zoom;
+        julState.zoom *= 0.5;
+        julState.needsRender = true;
+    }
+    function drawJuliaSet() {
+        const W = canvas.width, H2 = canvas.height;
+
+        if (julState.animating) {
+            julState.animT += 0.005;
+            document.getElementById("jul-cr").value = -0.7 + 0.5 * Math.sin(julState.animT);
+            document.getElementById("jul-ci").value = 0.27 + 0.3 * Math.cos(julState.animT * 1.3);
+            document.getElementById("val-jul-cr").textContent = parseFloat(document.getElementById("jul-cr").value).toFixed(3);
+            document.getElementById("val-jul-ci").textContent = parseFloat(document.getElementById("jul-ci").value).toFixed(3);
+            julState.needsRender = true;
+        }
+
+        if (julState.needsRender) {
+            julState.needsRender = false;
+            const cr = parseFloat(document.getElementById("jul-cr").value);
+            const ci = parseFloat(document.getElementById("jul-ci").value);
+            const maxIter = parseInt(document.getElementById("jul-iter").value);
+            const scheme = document.getElementById("sel-jul-color").value;
+            const aspect = W / H2;
+            const imgData = ctx.createImageData(W, H2);
+
+            for (let py = 0; py < H2; py++) {
+                for (let px = 0; px < W; px++) {
+                    let zr = julState.cx + (px / W - 0.5) * 2 * julState.zoom * aspect;
+                    let zi = julState.cy + (py / H2 - 0.5) * 2 * julState.zoom;
+                    let iter = 0;
+                    while (zr * zr + zi * zi <= 4 && iter < maxIter) {
+                        const tmp = zr * zr - zi * zi + cr;
+                        zi = 2 * zr * zi + ci;
+                        zr = tmp;
+                        iter++;
+                    }
+                    let r, g, b;
+                    if (iter === maxIter) {
+                        r = g = b = 0;
+                    } else {
+                        const t = iter / maxIter;
+                        const logSmooth = iter + 1 - Math.log(Math.log(Math.sqrt(zr * zr + zi * zi))) / Math.log(2);
+                        const ts = logSmooth / maxIter;
+                        if (scheme === "rainbow") {
+                            const h = ts * 360;
+                            const s2 = 0.85, l = 0.5;
+                            const c2 = (1 - Math.abs(2 * l - 1)) * s2;
+                            const x = c2 * (1 - Math.abs((h / 60) % 2 - 1));
+                            const m = l - c2 / 2;
+                            if (h < 60) { r = c2; g = x; b = 0; }
+                            else if (h < 120) { r = x; g = c2; b = 0; }
+                            else if (h < 180) { r = 0; g = c2; b = x; }
+                            else if (h < 240) { r = 0; g = x; b = c2; }
+                            else if (h < 300) { r = x; g = 0; b = c2; }
+                            else { r = c2; g = 0; b = x; }
+                            r = Math.floor((r + m) * 255); g = Math.floor((g + m) * 255); b = Math.floor((b + m) * 255);
+                        } else if (scheme === "ice") {
+                            r = Math.floor(ts * 100);
+                            g = Math.floor(ts * 200 + 55);
+                            b = Math.floor(200 + ts * 55);
+                        } else {
+                            r = Math.floor(Math.min(255, ts * 600));
+                            g = Math.floor(Math.min(255, ts * 200));
+                            b = Math.floor(ts * 50);
+                        }
+                    }
+                    const idx = (py * W + px) * 4;
+                    imgData.data[idx] = r; imgData.data[idx + 1] = g; imgData.data[idx + 2] = b; imgData.data[idx + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(5, 5, 300, 35);
+        ctx.fillStyle = "#fff";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`c = ${parseFloat(document.getElementById("jul-cr").value).toFixed(3)} + ${parseFloat(document.getElementById("jul-ci").value).toFixed(3)}i`, 10, 22);
+        ctx.fillText(`Zoom: ${(1 / julState.zoom).toFixed(1)}x | Click to zoom`, 10, 36);
+
+        overlay.innerHTML =
+            `<b style="color:#e040fb">Julia Set</b><br>` +
+            `c = ${parseFloat(document.getElementById("jul-cr").value).toFixed(3)} + ${parseFloat(document.getElementById("jul-ci").value).toFixed(3)}i<br>` +
+            `Zoom: ${(1 / julState.zoom).toFixed(1)}x`;
+
+        animId = requestAnimationFrame(drawJuliaSet);
+    }
+    bindSlider("jul-cr", "val-jul-cr", () => { julState.needsRender = true; });
+    bindSlider("jul-ci", "val-jul-ci", () => { julState.needsRender = true; });
+    bindSlider("jul-iter", "val-jul-iter", () => { julState.needsRender = true; });
+    document.getElementById("sel-jul-color").addEventListener("change", () => { julState.needsRender = true; });
+    document.getElementById("btn-jul-animate").addEventListener("click", () => {
+        julState.animating = !julState.animating;
+        document.getElementById("btn-jul-animate").textContent = julState.animating ? "Stop" : "Animate c";
+    });
+    document.getElementById("btn-jul-reset").addEventListener("click", () => {
+        julState.zoom = 1.5; julState.cx = 0; julState.cy = 0; julState.needsRender = true;
+    });
+
+    // ── 81. Molecular Orbitals ───────────────────────────────
+    let moState = {};
+    function initMolOrbital() {
+        cancelAnimationFrame(animId);
+        currentSim = "molorbital";
+        moState = { t: 0 };
+        drawMolOrbital();
+    }
+    function drawMolOrbital() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const bondLen = parseFloat(document.getElementById("mo-dist").value);
+        const orbType = document.getElementById("sel-mo-type").value;
+        const phase = document.getElementById("sel-mo-phase").value;
+        moState.t += 0.02;
+
+        const cx = W / 2, cy = H / 2;
+        const halfD = bondLen * 0.7;
+        const atom1X = cx - halfD, atom2X = cx + halfD;
+        const isBonding = phase === "bonding";
+
+        // Draw electron density contour map
+        const res = 3;
+        for (let y = 0; y < H; y += res) {
+            for (let x = 0; x < W; x += res) {
+                let psi1, psi2;
+                const dx1 = x - atom1X, dy1 = y - cy;
+                const dx2 = x - atom2X, dy2 = y - cy;
+                const r1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+                const r2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+                if (orbType === "s-s") {
+                    psi1 = Math.exp(-r1 / 50);
+                    psi2 = Math.exp(-r2 / 50);
+                } else if (orbType === "p-p-sigma") {
+                    psi1 = (dx1 / (r1 + 1)) * Math.exp(-r1 / 50);
+                    psi2 = (dx2 / (r2 + 1)) * Math.exp(-r2 / 50);
+                } else {
+                    psi1 = (dy1 / (r1 + 1)) * Math.exp(-r1 / 50);
+                    psi2 = (dy2 / (r2 + 1)) * Math.exp(-r2 / 50);
+                }
+
+                const psiTotal = isBonding ? psi1 + psi2 : psi1 - psi2;
+                const density = psiTotal * psiTotal;
+                const val = Math.min(1, density * 15);
+
+                if (val > 0.02) {
+                    if (psiTotal >= 0) {
+                        ctx.fillStyle = `rgba(79,195,247,${val * 0.7})`;
+                    } else {
+                        ctx.fillStyle = `rgba(244,67,54,${val * 0.7})`;
+                    }
+                    ctx.fillRect(x, y, res, res);
+                }
+            }
+        }
+
+        // Atom nuclei
+        for (const ax of [atom1X, atom2X]) {
+            ctx.beginPath();
+            ctx.arc(ax, cy, 10, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff";
+            ctx.fill();
+            ctx.strokeStyle = "#888";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Bond axis
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(50, cy); ctx.lineTo(W - 50, cy); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Nodal plane for antibonding
+        if (!isBonding) {
+            ctx.strokeStyle = "rgba(255,235,59,0.4)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath(); ctx.moveTo(cx, 30); ctx.lineTo(cx, H - 30); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "#ffeb3b";
+            ctx.font = "11px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("Nodal Plane", cx, 25);
+        }
+
+        // Energy diagram (right side)
+        const ex = W - 200, ey = 50, ew = 160, eh = H - 100;
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ex, ey, ew, eh);
+        ctx.fillStyle = "#888";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Energy", ex + ew / 2, ey - 5);
+
+        // Atomic orbital levels
+        const aoY = ey + eh / 2;
+        ctx.strokeStyle = "#888";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(ex + 10, aoY); ctx.lineTo(ex + 40, aoY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex + ew - 40, aoY); ctx.lineTo(ex + ew - 10, aoY); ctx.stroke();
+        ctx.fillStyle = "#888";
+        ctx.font = "9px monospace";
+        ctx.fillText("AO", ex + 25, aoY - 8);
+        ctx.fillText("AO", ex + ew - 25, aoY - 8);
+
+        // MO levels
+        const bondingY = aoY + eh * 0.25;
+        const antibondingY = aoY - eh * 0.25;
+        ctx.strokeStyle = "#4fc3f7";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(ex + 50, bondingY); ctx.lineTo(ex + ew - 50, bondingY); ctx.stroke();
+        ctx.strokeStyle = "#f44336";
+        ctx.beginPath(); ctx.moveTo(ex + 50, antibondingY); ctx.lineTo(ex + ew - 50, antibondingY); ctx.stroke();
+
+        // Correlation lines
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ex + 40, aoY); ctx.lineTo(ex + 50, bondingY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex + ew - 40, aoY); ctx.lineTo(ex + ew - 50, bondingY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex + 40, aoY); ctx.lineTo(ex + 50, antibondingY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex + ew - 40, aoY); ctx.lineTo(ex + ew - 50, antibondingY); ctx.stroke();
+
+        ctx.fillStyle = "#4fc3f7";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(orbType === "p-p-pi" ? "π" : "σ", ex + ew - 45, bondingY - 5);
+        ctx.fillStyle = "#f44336";
+        ctx.fillText(orbType === "p-p-pi" ? "π*" : "σ*", ex + ew - 45, antibondingY - 5);
+
+        // Highlight current
+        const highlightY = isBonding ? bondingY : antibondingY;
+        ctx.beginPath();
+        ctx.arc(ex + ew / 2, highlightY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#ff0";
+        ctx.fill();
+
+        // Labels
+        const orbLabels = { "s-s": "s-s σ", "p-p-sigma": "p-p σ", "p-p-pi": "p-p π" };
+        ctx.fillStyle = "#aaa";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`Type: ${orbLabels[orbType]}`, 15, 30);
+        ctx.fillText(`Phase: ${isBonding ? "Bonding (constructive)" : "Antibonding (destructive)"}`, 15, 48);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText("Blue = positive ψ", 15, H - 30);
+        ctx.fillStyle = "#f44336";
+        ctx.fillText("Red = negative ψ", 15, H - 12);
+
+        overlay.innerHTML =
+            `<b style="color:#4fc3f7">Molecular Orbitals</b><br>` +
+            `${orbLabels[orbType]} | ${phase}<br>` +
+            `Bond length: ${bondLen} pm | LCAO method`;
+
+        animId = requestAnimationFrame(drawMolOrbital);
+    }
+
+    // ── 82. Galvanic Cell ───────────────────────────────────
+    let galvState = {};
+    const electrodes = {
+        Zn: { name: "Zinc", E0: -0.76, color: "#a0a0a0", ionColor: "#88aacc" },
+        Fe: { name: "Iron", E0: -0.44, color: "#8a7a6a", ionColor: "#aa8866" },
+        Al: { name: "Aluminum", E0: -1.66, color: "#c0c0c0", ionColor: "#99bbdd" },
+        Cu: { name: "Copper", E0: 0.34, color: "#cd7f32", ionColor: "#55aaff" },
+        Ag: { name: "Silver", E0: 0.80, color: "#d0d0d0", ionColor: "#aaccff" },
+        Au: { name: "Gold", E0: 1.50, color: "#ffd700", ionColor: "#ffcc44" }
+    };
+    function initGalvanic() {
+        cancelAnimationFrame(animId);
+        currentSim = "galvanic";
+        galvState = { t: 0, ions: [], electrons: [], anodeWear: 0 };
+        drawGalvanic();
+    }
+    function drawGalvanic() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const anodeKey = document.getElementById("sel-galv-anode").value;
+        const cathodeKey = document.getElementById("sel-galv-cathode").value;
+        const speed = parseFloat(document.getElementById("galv-speed").value);
+        const anode = electrodes[anodeKey];
+        const cathode = electrodes[cathodeKey];
+        const cellEMF = cathode.E0 - anode.E0;
+
+        galvState.t += 0.02 * speed;
+
+        // Tank dimensions
+        const tankY = 150, tankH = 300, tankW = 300;
+        const anodeTankX = 50, cathodeTankX = W / 2 + 30;
+
+        // Solutions
+        ctx.fillStyle = "rgba(100,150,200,0.15)";
+        ctx.fillRect(anodeTankX, tankY, tankW, tankH);
+        ctx.fillStyle = "rgba(100,200,150,0.15)";
+        ctx.fillRect(cathodeTankX, tankY, tankW, tankH);
+
+        // Tanks
+        ctx.strokeStyle = "#888";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(anodeTankX, tankY, tankW, tankH);
+        ctx.strokeRect(cathodeTankX, tankY, tankW, tankH);
+
+        // Electrodes
+        const elW = 30, elH = 200;
+        const anodeX = anodeTankX + 80, cathodeX = cathodeTankX + tankW - 110;
+        const elY = tankY + 50;
+
+        // Anode (dissolving)
+        galvState.anodeWear = Math.min(15, galvState.anodeWear + 0.005 * speed);
+        ctx.fillStyle = anode.color;
+        ctx.fillRect(anodeX + galvState.anodeWear / 2, elY, elW - galvState.anodeWear, elH);
+        ctx.strokeStyle = "#aaa"; ctx.lineWidth = 1;
+        ctx.strokeRect(anodeX + galvState.anodeWear / 2, elY, elW - galvState.anodeWear, elH);
+
+        // Cathode (growing)
+        ctx.fillStyle = cathode.color;
+        ctx.fillRect(cathodeX - galvState.anodeWear / 3, elY, elW + galvState.anodeWear / 1.5, elH);
+        ctx.strokeRect(cathodeX - galvState.anodeWear / 3, elY, elW + galvState.anodeWear / 1.5, elH);
+
+        // Labels
+        ctx.fillStyle = "#f44336";
+        ctx.font = "14px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Anode (−)", anodeX + elW / 2, elY - 15);
+        ctx.fillText(`${anode.name}`, anodeX + elW / 2, elY - 30);
+        ctx.fillStyle = "#4caf50";
+        ctx.fillText("Cathode (+)", cathodeX + elW / 2, elY - 15);
+        ctx.fillText(`${cathode.name}`, cathodeX + elW / 2, elY - 30);
+
+        // Wire and voltmeter
+        const wireY = tankY - 40;
+        ctx.strokeStyle = "#cc0";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(anodeX + elW / 2, elY);
+        ctx.lineTo(anodeX + elW / 2, wireY);
+        ctx.lineTo(cathodeX + elW / 2, wireY);
+        ctx.lineTo(cathodeX + elW / 2, elY);
+        ctx.stroke();
+
+        // Voltmeter
+        const vmX = (anodeX + cathodeX) / 2 + elW / 2, vmY = wireY - 30;
+        ctx.beginPath(); ctx.arc(vmX, vmY, 25, 0, Math.PI * 2);
+        ctx.fillStyle = "#111"; ctx.fill();
+        ctx.strokeStyle = "#888"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = "#0f0";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${cellEMF.toFixed(2)}V`, vmX, vmY + 5);
+        ctx.fillStyle = "#888";
+        ctx.font = "9px monospace";
+        ctx.fillText("EMF", vmX, vmY + 18);
+
+        // Electron flow arrows on wire
+        const numArrows = 5;
+        for (let i = 0; i < numArrows; i++) {
+            const frac = ((galvState.t * 0.5 + i / numArrows) % 1);
+            let ax, ay;
+            if (frac < 0.3) {
+                ax = anodeX + elW / 2;
+                ay = elY - frac / 0.3 * (elY - wireY);
+            } else if (frac < 0.7) {
+                const f2 = (frac - 0.3) / 0.4;
+                ax = anodeX + elW / 2 + f2 * (cathodeX - anodeX);
+                ay = wireY;
+            } else {
+                const f2 = (frac - 0.7) / 0.3;
+                ax = cathodeX + elW / 2;
+                ay = wireY + f2 * (elY - wireY);
+            }
+            ctx.beginPath(); ctx.arc(ax, ay, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#ff0"; ctx.fill();
+        }
+        ctx.fillStyle = "#ff0";
+        ctx.font = "10px monospace";
+        ctx.fillText("e⁻ →", vmX, wireY + 15);
+
+        // Ions in solution (spawn periodically)
+        if (Math.random() < 0.05 * speed) {
+            galvState.ions.push({
+                x: anodeX + elW + Math.random() * 30,
+                y: elY + Math.random() * elH,
+                vx: (Math.random() + 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.3,
+                type: "anode",
+                life: 200
+            });
+        }
+
+        for (let i = galvState.ions.length - 1; i >= 0; i--) {
+            const ion = galvState.ions[i];
+            ion.x += ion.vx;
+            ion.y += ion.vy;
+            ion.vy += (Math.random() - 0.5) * 0.1;
+            ion.life--;
+            if (ion.life <= 0 || ion.x > anodeTankX + tankW) {
+                galvState.ions.splice(i, 1);
+                continue;
+            }
+            ctx.beginPath(); ctx.arc(ion.x, ion.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = anode.ionColor;
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "7px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(anodeKey + "²⁺", ion.x, ion.y - 6);
+        }
+
+        // Salt bridge
+        const sbX = anodeTankX + tankW - 5, sbW = cathodeTankX - anodeTankX - tankW + 10;
+        ctx.fillStyle = "rgba(200,200,100,0.3)";
+        ctx.fillRect(sbX, tankY + 30, sbW, 30);
+        ctx.strokeStyle = "#aa8";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sbX, tankY + 30, sbW, 30);
+        ctx.fillStyle = "#aa8";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Salt Bridge", sbX + sbW / 2, tankY + 25);
+
+        // Reactions text
+        ctx.fillStyle = "#f44336";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`${anodeKey} → ${anodeKey}²⁺ + 2e⁻  (oxidation)`, 50, H - 40);
+        ctx.fillStyle = "#4caf50";
+        ctx.fillText(`${cathodeKey}²⁺ + 2e⁻ → ${cathodeKey}  (reduction)`, 50, H - 20);
+
+        // Half-cell potentials
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(`E°(${anodeKey}) = ${anode.E0.toFixed(2)}V`, W - 20, H - 40);
+        ctx.fillText(`E°(${cathodeKey}) = ${cathode.E0.toFixed(2)}V`, W - 20, H - 20);
+        ctx.fillStyle = "#ff0";
+        ctx.fillText(`E°cell = ${cellEMF.toFixed(2)}V`, W - 20, H - 2);
+
+        overlay.innerHTML =
+            `<b style="color:#ffd700">Galvanic Cell</b><br>` +
+            `${anode.name}|${cathode.name} | E° = ${cellEMF.toFixed(2)}V<br>` +
+            `Oxidation at anode, reduction at cathode`;
+
+        animId = requestAnimationFrame(drawGalvanic);
+    }
+    bindSlider("galv-speed", "val-galv-speed");
+    document.getElementById("btn-galv-reset").addEventListener("click", initGalvanic);
+
+    // ── 83. Probability Distributions ───────────────────────
+    let pdState = {};
+    function initProbDist() {
+        cancelAnimationFrame(animId);
+        currentSim = "probdist";
+        pdState = { samples: [], needsResample: true };
+        drawProbDist();
+    }
+    function generateSamples(type, p1, p2, n) {
+        const samples = [];
+        for (let i = 0; i < n; i++) {
+            if (type === "normal") {
+                // Box-Muller
+                const u1 = Math.random(), u2 = Math.random();
+                samples.push(p1 + p2 * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2));
+            } else if (type === "poisson") {
+                const lambda = Math.max(0.1, p2);
+                let L = Math.exp(-lambda), k2 = 0, p = 1;
+                do { k2++; p *= Math.random(); } while (p > L);
+                samples.push(k2 - 1);
+            } else if (type === "binomial") {
+                const trials = Math.max(1, Math.floor(p2 * 10));
+                const prob = Math.max(0.01, Math.min(0.99, (p1 + 5) / 10));
+                let succ = 0;
+                for (let j = 0; j < trials; j++) { if (Math.random() < prob) succ++; }
+                samples.push(succ);
+            } else {
+                // Exponential
+                const lambda = Math.max(0.1, p2);
+                samples.push(-Math.log(Math.random()) / lambda);
+            }
+        }
+        return samples;
+    }
+    function drawProbDist() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const type = document.getElementById("sel-pd-type").value;
+        const p1 = parseFloat(document.getElementById("pd-p1").value);
+        const p2 = parseFloat(document.getElementById("pd-p2").value);
+        const n = parseInt(document.getElementById("pd-n").value);
+
+        if (pdState.needsResample) {
+            pdState.needsResample = false;
+            pdState.samples = generateSamples(type, p1, p2, n);
+        }
+
+        const samples = pdState.samples;
+        if (samples.length === 0) { animId = requestAnimationFrame(drawProbDist); return; }
+
+        const gx = 60, gy = 50, gw = W - 120, gh = H - 130;
+
+        // Histogram
+        const minVal = Math.min(...samples);
+        const maxVal = Math.max(...samples);
+        const range = maxVal - minVal || 1;
+        const numBins = 40;
+        const bins = new Array(numBins).fill(0);
+        for (const s of samples) {
+            const b = Math.min(numBins - 1, Math.max(0, Math.floor((s - minVal) / range * numBins)));
+            bins[b]++;
+        }
+        const maxBin = Math.max(...bins);
+
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        for (let i = 0; i < numBins; i++) {
+            const bh = (bins[i] / maxBin) * gh * 0.9;
+            const bx = gx + (i / numBins) * gw;
+            const bw = gw / numBins - 1;
+            const hue = (i / numBins) * 240;
+            ctx.fillStyle = `hsla(${hue}, 70%, 50%, 0.7)`;
+            ctx.fillRect(bx, gy + gh - bh, bw, bh);
+        }
+
+        // Theoretical PDF overlay
+        ctx.beginPath();
+        for (let px = 0; px < gw; px++) {
+            const x = minVal + (px / gw) * range;
+            let pdf = 0;
+            if (type === "normal") {
+                pdf = Math.exp(-0.5 * ((x - p1) / p2) ** 2) / (p2 * Math.sqrt(2 * Math.PI));
+            } else if (type === "exponential") {
+                const lam = Math.max(0.1, p2);
+                pdf = x >= 0 ? lam * Math.exp(-lam * x) : 0;
+            } else if (type === "poisson") {
+                const lam = Math.max(0.1, p2);
+                const k2 = Math.round(x);
+                if (k2 >= 0) {
+                    let logP = k2 * Math.log(lam) - lam;
+                    for (let j = 2; j <= k2; j++) logP -= Math.log(j);
+                    pdf = Math.exp(logP);
+                }
+            } else {
+                const trials = Math.max(1, Math.floor(p2 * 10));
+                const prob = Math.max(0.01, Math.min(0.99, (p1 + 5) / 10));
+                const k2 = Math.round(x);
+                if (k2 >= 0 && k2 <= trials) {
+                    let logC = 0;
+                    for (let j = 1; j <= k2; j++) logC += Math.log(trials - j + 1) - Math.log(j);
+                    pdf = Math.exp(logC + k2 * Math.log(prob) + (trials - k2) * Math.log(1 - prob));
+                }
+            }
+            const scaledPdf = pdf * n * (range / numBins);
+            const py = gy + gh - (scaledPdf / maxBin) * gh * 0.9;
+            if (px === 0) ctx.moveTo(gx + px, Math.max(gy, py));
+            else ctx.lineTo(gx + px, Math.max(gy, py));
+        }
+        ctx.strokeStyle = "#ff5722";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // X-axis labels
+        ctx.fillStyle = "#888";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        for (let i = 0; i <= 5; i++) {
+            const val = minVal + (i / 5) * range;
+            ctx.fillText(val.toFixed(1), gx + (i / 5) * gw, gy + gh + 15);
+        }
+
+        // Stats
+        const mean = samples.reduce((a, b) => a + b) / n;
+        const variance = samples.reduce((a, b) => a + (b - mean) ** 2, 0) / n;
+        const std = Math.sqrt(variance);
+        const median = [...samples].sort((a, b) => a - b)[Math.floor(n / 2)];
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "left";
+        const paramLabels = {
+            normal: `μ=${p1}, σ=${p2}`,
+            poisson: `λ=${p2.toFixed(1)}`,
+            binomial: `n=${Math.floor(p2 * 10)}, p=${((p1 + 5) / 10).toFixed(2)}`,
+            exponential: `λ=${p2.toFixed(1)}`
+        };
+        ctx.fillText(`${type.charAt(0).toUpperCase() + type.slice(1)} Distribution (${paramLabels[type]})`, gx, 30);
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.fillText(`Mean: ${mean.toFixed(3)} | Std: ${std.toFixed(3)} | Median: ${median.toFixed(3)} | N: ${n}`, gx, gy + gh + 40);
+
+        // Mean line
+        const meanX = gx + ((mean - minVal) / range) * gw;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = "#ffeb3b";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(meanX, gy); ctx.lineTo(meanX, gy + gh); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ffeb3b";
+        ctx.font = "10px monospace";
+        ctx.fillText("μ", meanX + 3, gy + 12);
+
+        overlay.innerHTML =
+            `<b style="color:#e040fb">Probability Distribution</b><br>` +
+            `Type: ${type} | N: ${n}<br>` +
+            `Mean: ${mean.toFixed(3)} | σ: ${std.toFixed(3)}`;
+
+        animId = requestAnimationFrame(drawProbDist);
+    }
+    bindSlider("pd-p1", "val-pd-p1", () => { pdState.needsResample = true; });
+    bindSlider("pd-p2", "val-pd-p2", () => { pdState.needsResample = true; });
+    bindSlider("pd-n", "val-pd-n", () => { pdState.needsResample = true; });
+    document.getElementById("sel-pd-type").addEventListener("change", () => { pdState.needsResample = true; });
+    document.getElementById("btn-pd-sample").addEventListener("click", () => { pdState.needsResample = true; });
+
+    // ── 84. Combustion Reactions ─────────────────────────────
+    let combState = {};
+    const fuels = {
+        methane:  { formula: "CH₄ + 2O₂ → CO₂ + 2H₂O", dH: -890, products: { CO2: 1, H2O: 2 }, color: "#4fc3f7" },
+        propane:  { formula: "C₃H₈ + 5O₂ → 3CO₂ + 4H₂O", dH: -2220, products: { CO2: 3, H2O: 4 }, color: "#66bb6a" },
+        hydrogen: { formula: "2H₂ + O₂ → 2H₂O", dH: -572, products: { CO2: 0, H2O: 2 }, color: "#e040fb" },
+        ethanol:  { formula: "C₂H₅OH + 3O₂ → 2CO₂ + 3H₂O", dH: -1367, products: { CO2: 2, H2O: 3 }, color: "#ff9800" }
+    };
+    function initCombustion() {
+        cancelAnimationFrame(animId);
+        currentSim = "combustion";
+        combState = { ignited: false, t: 0, particles: [], flames: [], products: [] };
+        drawCombustion();
+    }
+    function drawCombustion() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const fuelKey = document.getElementById("sel-comb-fuel").value;
+        const o2 = parseFloat(document.getElementById("comb-o2").value) / 100;
+        const temp = parseFloat(document.getElementById("comb-temp").value);
+        const fuel = fuels[fuelKey];
+
+        // Reaction chamber
+        const rx = 100, ry = 100, rw = 500, rh = 300;
+        ctx.strokeStyle = "#666";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.fillStyle = "rgba(30,30,30,0.5)";
+        ctx.fillRect(rx, ry, rw, rh);
+
+        if (combState.ignited) {
+            combState.t += 0.03;
+
+            // Spawn fuel molecules (left side)
+            if (Math.random() < 0.15) {
+                combState.particles.push({
+                    x: rx + 20, y: ry + 50 + Math.random() * (rh - 100),
+                    vx: 1 + Math.random() * 2, vy: (Math.random() - 0.5) * 1,
+                    type: "fuel", life: 150
+                });
+            }
+            // Spawn O2 molecules
+            if (Math.random() < 0.15 * o2) {
+                combState.particles.push({
+                    x: rx + rw - 20, y: ry + 50 + Math.random() * (rh - 100),
+                    vx: -1 - Math.random() * 2, vy: (Math.random() - 0.5) * 1,
+                    type: "o2", life: 150
+                });
+            }
+
+            // Check for reactions (fuel meets O2 near center)
+            const reactionZone = rx + rw / 2;
+            for (let i = combState.particles.length - 1; i >= 0; i--) {
+                const p = combState.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+
+                if (p.type === "fuel" && Math.abs(p.x - reactionZone) < 60) {
+                    // Find nearby O2
+                    for (let j = combState.particles.length - 1; j >= 0; j--) {
+                        const q = combState.particles[j];
+                        if (q.type === "o2" && Math.abs(p.x - q.x) < 40 && Math.abs(p.y - q.y) < 40) {
+                            // React!
+                            combState.particles.splice(Math.max(i, j), 1);
+                            combState.particles.splice(Math.min(i, j), 1);
+                            // Spawn flames
+                            for (let k = 0; k < 8; k++) {
+                                combState.flames.push({
+                                    x: (p.x + q.x) / 2,
+                                    y: (p.y + q.y) / 2,
+                                    vx: (Math.random() - 0.5) * 3,
+                                    vy: -Math.random() * 4 - 1,
+                                    life: 30 + Math.random() * 20,
+                                    maxLife: 50
+                                });
+                            }
+                            // Spawn products
+                            for (let k = 0; k < fuel.products.CO2; k++) {
+                                combState.products.push({
+                                    x: (p.x + q.x) / 2, y: (p.y + q.y) / 2,
+                                    vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random(),
+                                    type: "CO2", life: 120
+                                });
+                            }
+                            for (let k = 0; k < fuel.products.H2O; k++) {
+                                combState.products.push({
+                                    x: (p.x + q.x) / 2, y: (p.y + q.y) / 2,
+                                    vx: (Math.random() - 0.5) * 2, vy: -0.5 - Math.random(),
+                                    type: "H2O", life: 120
+                                });
+                            }
+                            i = Math.min(i, combState.particles.length);
+                            break;
+                        }
+                    }
+                }
+
+                if (p.life <= 0 || p.x < rx || p.x > rx + rw || p.y < ry || p.y > ry + rh) {
+                    combState.particles.splice(i, 1);
+                }
+            }
+        }
+
+        // Draw fuel molecules
+        for (const p of combState.particles) {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = p.type === "fuel" ? fuel.color : "#f44336";
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "7px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(p.type === "fuel" ? fuelKey.charAt(0).toUpperCase() : "O₂", p.x, p.y + 3);
+        }
+
+        // Draw flames
+        for (let i = combState.flames.length - 1; i >= 0; i--) {
+            const f = combState.flames[i];
+            f.x += f.vx;
+            f.y += f.vy;
+            f.vy -= 0.05;
+            f.life--;
+            if (f.life <= 0) { combState.flames.splice(i, 1); continue; }
+            const frac = f.life / f.maxLife;
+            const r = frac > 0.5 ? 255 : Math.floor(frac * 2 * 255);
+            const g = frac > 0.7 ? Math.floor((frac - 0.7) / 0.3 * 200) : Math.floor(frac * 100);
+            ctx.beginPath(); ctx.arc(f.x, f.y, 3 + frac * 5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${r},${g},0,${frac})`;
+            ctx.fill();
+        }
+
+        // Draw products
+        for (let i = combState.products.length - 1; i >= 0; i--) {
+            const p = combState.products[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--;
+            if (p.life <= 0) { combState.products.splice(i, 1); continue; }
+            const alpha = Math.min(1, p.life / 40);
+            ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = p.type === "CO2" ? `rgba(150,150,150,${alpha})` : `rgba(100,180,255,${alpha})`;
+            ctx.fill();
+            ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+            ctx.font = "6px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(p.type, p.x, p.y + 2);
+        }
+
+        // Labels
+        ctx.fillStyle = fuel.color;
+        ctx.font = "12px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Fuel →", rx + 5, ry - 10);
+        ctx.fillStyle = "#f44336";
+        ctx.textAlign = "right";
+        ctx.fillText("← O₂", rx + rw - 5, ry - 10);
+
+        // Reaction equation
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(fuel.formula, W / 2, H - 60);
+
+        // Energy info
+        ctx.fillStyle = "#ff9800";
+        ctx.font = "12px monospace";
+        ctx.fillText(`ΔH = ${fuel.dH} kJ/mol (exothermic)`, W / 2, H - 35);
+
+        const complete = o2 >= 0.95;
+        ctx.fillStyle = complete ? "#4caf50" : "#f44336";
+        ctx.fillText(complete ? "Complete combustion" : `Incomplete (${(o2 * 100).toFixed(0)}% O₂) — may produce CO`, W / 2, H - 15);
+
+        // Temperature gauge
+        ctx.fillStyle = "#333";
+        ctx.fillRect(660, 120, 30, 250);
+        const tempFrac = (temp - 200) / 1000;
+        const tempH = tempFrac * 250;
+        const tGrad = ctx.createLinearGradient(660, 370, 660, 120);
+        tGrad.addColorStop(0, "#00f");
+        tGrad.addColorStop(0.5, "#ff0");
+        tGrad.addColorStop(1, "#f00");
+        ctx.fillStyle = tGrad;
+        ctx.fillRect(660, 370 - tempH, 30, tempH);
+        ctx.strokeStyle = "#888";
+        ctx.strokeRect(660, 120, 30, 250);
+        ctx.fillStyle = "#fff";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${temp}°C`, 675, 115);
+
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Combustion</b><br>` +
+            `Fuel: ${fuelKey} | O₂: ${(o2 * 100).toFixed(0)}%<br>` +
+            `ΔH = ${fuel.dH} kJ/mol`;
+
+        animId = requestAnimationFrame(drawCombustion);
+    }
+    bindSlider("comb-o2", "val-comb-o2");
+    bindSlider("comb-temp", "val-comb-temp");
+    document.getElementById("btn-comb-ignite").addEventListener("click", () => {
+        combState.ignited = true;
+    });
+    document.getElementById("btn-comb-reset").addEventListener("click", initCombustion);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();
