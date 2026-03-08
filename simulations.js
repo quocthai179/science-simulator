@@ -97,6 +97,11 @@
             case "centripetal": initCentripetal();   break;
             case "faraday":     initFaraday();      break;
             case "chaosgame":   initChaosGame();    break;
+            case "interference":initInterference(); break;
+            case "idealgas":    initIdealGas();     break;
+            case "rutherford":  initRutherford();   break;
+            case "logistic":    initLogistic();     break;
+            case "heatcond":    initHeatCond();     break;
         }
     }
 
@@ -12203,6 +12208,641 @@
     bindSlider("cg-ratio", "val-cg-ratio");
     bindSlider("cg-pps", "val-cg-pps");
     document.getElementById("btn-cg-reset").addEventListener("click", initChaosGame);
+
+    // ── 70. Interference Patterns ──────────────────────────
+    let intState = {};
+    function initInterference() {
+        cancelAnimationFrame(animId);
+        currentSim = "interference";
+        intState = { t: 0, imgData: ctx.createImageData(canvas.width, canvas.height) };
+        drawInterference();
+    }
+    function drawInterference() {
+        const W = canvas.width, H = canvas.height;
+        const wl = parseFloat(document.getElementById("int-wl").value);
+        const sep = parseFloat(document.getElementById("int-sep").value);
+        const phaseDiff = parseFloat(document.getElementById("int-phase").value) * Math.PI / 180;
+        intState.t += 0.08;
+
+        const s1x = W / 2 - sep / 2, s1y = H / 2;
+        const s2x = W / 2 + sep / 2, s2y = H / 2;
+        const k = 2 * Math.PI / wl;
+
+        for (let y = 0; y < H; y += 2) {
+            for (let x = 0; x < W; x += 2) {
+                const d1 = Math.sqrt((x - s1x) ** 2 + (y - s1y) ** 2);
+                const d2 = Math.sqrt((x - s2x) ** 2 + (y - s2y) ** 2);
+                const v1 = Math.sin(k * d1 - intState.t);
+                const v2 = Math.sin(k * d2 - intState.t + phaseDiff);
+                const sum = (v1 + v2) / 2;
+
+                const r = sum > 0 ? Math.floor(sum * 200) : 0;
+                const b = sum < 0 ? Math.floor(-sum * 200) : 0;
+                const g = Math.floor(Math.abs(sum) * 80);
+
+                for (let dy = 0; dy < 2 && y + dy < H; dy++) {
+                    for (let dx = 0; dx < 2 && x + dx < W; dx++) {
+                        const idx = ((y + dy) * W + (x + dx)) * 4;
+                        intState.imgData.data[idx] = r;
+                        intState.imgData.data[idx + 1] = g;
+                        intState.imgData.data[idx + 2] = b;
+                        intState.imgData.data[idx + 3] = 255;
+                    }
+                }
+            }
+        }
+        ctx.putImageData(intState.imgData, 0, 0);
+
+        // Source markers
+        ctx.beginPath(); ctx.arc(s1x, s1y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff"; ctx.fill();
+        ctx.beginPath(); ctx.arc(s2x, s2y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("S₁", s1x, s1y - 12);
+        ctx.fillText("S₂", s2x, s2y - 12);
+
+        overlay.innerHTML =
+            `<b style="color:#e040fb">Wave Interference</b><br>` +
+            `λ: ${wl}px | Separation: ${sep}px<br>` +
+            `Phase diff: ${(phaseDiff * 180 / Math.PI).toFixed(0)}°`;
+
+        animId = requestAnimationFrame(drawInterference);
+    }
+    bindSlider("int-wl", "val-int-wl");
+    bindSlider("int-sep", "val-int-sep");
+    bindSlider("int-phase", "val-int-phase");
+
+    // ── 71. Ideal Gas Law ───────────────────────────────────
+    let igState = {};
+    function initIdealGas() {
+        cancelAnimationFrame(animId);
+        currentSim = "idealgas";
+        const n = parseInt(document.getElementById("ig-n").value);
+        const particles = [];
+        for (let i = 0; i < n; i++) {
+            particles.push({
+                x: 80 + Math.random() * 350,
+                y: 80 + Math.random() * 350,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4
+            });
+        }
+        igState = { particles, wallHits: 0, lastHitTime: Date.now(), pressure: 0, pHistory: [] };
+        drawIdealGas();
+    }
+    function drawIdealGas() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const n = parseInt(document.getElementById("ig-n").value);
+        const temp = parseFloat(document.getElementById("ig-temp").value);
+        const vol = parseFloat(document.getElementById("ig-vol").value);
+
+        // Adjust particle count
+        while (igState.particles.length < n) {
+            igState.particles.push({ x: 80 + Math.random() * (vol - 20), y: 80 + Math.random() * 350, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 });
+        }
+        while (igState.particles.length > n) igState.particles.pop();
+
+        const speed = Math.sqrt(temp / 300);
+        const boxX = 60, boxY = 60, boxW = vol, boxH = 400;
+
+        // Container
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+        // Piston (right wall)
+        ctx.fillStyle = "#666";
+        ctx.fillRect(boxX + boxW - 5, boxY, 10, boxH);
+        ctx.fillStyle = "#888";
+        ctx.fillRect(boxX + boxW + 5, boxY + boxH / 2 - 5, 30, 10);
+
+        // Update particles
+        let hits = 0;
+        for (const p of igState.particles) {
+            p.vx += (Math.random() - 0.5) * 0.1 * speed;
+            p.vy += (Math.random() - 0.5) * 0.1 * speed;
+            const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            const targetSpd = speed * 3;
+            if (spd > 0) {
+                const ratio = targetSpd / spd;
+                p.vx *= 0.99 + 0.01 * ratio;
+                p.vy *= 0.99 + 0.01 * ratio;
+            }
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < boxX + 5) { p.x = boxX + 5; p.vx *= -1; hits++; }
+            if (p.x > boxX + boxW - 5) { p.x = boxX + boxW - 5; p.vx *= -1; hits++; }
+            if (p.y < boxY + 5) { p.y = boxY + 5; p.vy *= -1; hits++; }
+            if (p.y > boxY + boxH - 5) { p.y = boxY + boxH - 5; p.vy *= -1; hits++; }
+
+            const hue = (Math.sqrt(p.vx * p.vx + p.vy * p.vy) / (speed * 5)) * 240;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${240 - Math.min(240, hue)}, 80%, 60%)`;
+            ctx.fill();
+        }
+
+        igState.wallHits += hits;
+        const now = Date.now();
+        if (now - igState.lastHitTime > 200) {
+            igState.pressure = igState.wallHits / ((now - igState.lastHitTime) / 1000);
+            igState.pHistory.push(igState.pressure);
+            if (igState.pHistory.length > 150) igState.pHistory.shift();
+            igState.wallHits = 0;
+            igState.lastHitTime = now;
+        }
+
+        // PV=nRT display
+        const R = 8.314;
+        const nMol = n / 100;
+        const theorP = nMol * R * temp / (vol / 100);
+
+        // Info panel
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(boxX + boxW + 40, 60, 300, 200);
+        ctx.fillStyle = "#fff";
+        ctx.font = "13px monospace";
+        ctx.textAlign = "left";
+        const ix = boxX + boxW + 55;
+        ctx.fillText("PV = nRT", ix, 85);
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText(`n = ${nMol.toFixed(2)} mol`, ix, 110);
+        ctx.fillText(`R = ${R} J/(mol·K)`, ix, 130);
+        ctx.fillText(`T = ${temp} K`, ix, 150);
+        ctx.fillText(`V ∝ ${vol} px`, ix, 170);
+        ctx.fillStyle = "#ff9800";
+        ctx.fillText(`P_theory ∝ ${theorP.toFixed(1)}`, ix, 195);
+        ctx.fillText(`P_measured ∝ ${igState.pressure.toFixed(0)}`, ix, 215);
+
+        // Pressure history graph
+        const gx = boxX + boxW + 40, gy = 290, gw = 300, gh = 150;
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+        ctx.fillStyle = "#888";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Pressure over time", gx + gw / 2, gy - 5);
+
+        if (igState.pHistory.length > 1) {
+            const maxP = Math.max(...igState.pHistory, 1);
+            ctx.beginPath();
+            for (let i = 0; i < igState.pHistory.length; i++) {
+                const px = gx + (i / igState.pHistory.length) * gw;
+                const py = gy + gh - (igState.pHistory[i] / maxP) * gh * 0.9;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = "#ff9800";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Speed distribution (mini)
+        const speeds = igState.particles.map(p => Math.sqrt(p.vx * p.vx + p.vy * p.vy));
+        const maxSpd = Math.max(...speeds, 1);
+        const bins = new Array(20).fill(0);
+        for (const s of speeds) {
+            const b = Math.min(19, Math.floor(s / maxSpd * 20));
+            bins[b]++;
+        }
+        const maxBin = Math.max(...bins, 1);
+        const dgx = gx, dgy = gy + gh + 30, dgw = gw, dgh = 80;
+        ctx.strokeStyle = "#444";
+        ctx.strokeRect(dgx, dgy, dgw, dgh);
+        ctx.fillStyle = "#888";
+        ctx.fillText("Speed Distribution", dgx + dgw / 2, dgy - 5);
+        for (let i = 0; i < 20; i++) {
+            const bh = (bins[i] / maxBin) * dgh * 0.9;
+            const bx = dgx + (i / 20) * dgw;
+            const bw2 = dgw / 20 - 1;
+            ctx.fillStyle = `hsl(${240 - (i / 20) * 240}, 70%, 50%)`;
+            ctx.fillRect(bx, dgy + dgh - bh, bw2, bh);
+        }
+
+        overlay.innerHTML =
+            `<b style="color:#ff9800">Ideal Gas Law</b><br>` +
+            `N: ${n} | T: ${temp}K | V: ${vol}<br>` +
+            `PV = nRT`;
+
+        animId = requestAnimationFrame(drawIdealGas);
+    }
+    bindSlider("ig-n", "val-ig-n");
+    bindSlider("ig-temp", "val-ig-temp");
+    bindSlider("ig-vol", "val-ig-vol");
+
+    // ── 72. Rutherford Scattering ───────────────────────────
+    let ruthState = {};
+    function initRutherford() {
+        cancelAnimationFrame(animId);
+        currentSim = "rutherford";
+        ruthState = { particles: [], histogram: new Array(18).fill(0) };
+        drawRutherford();
+    }
+    function fireRuthBeam() {
+        const spread = parseInt(document.getElementById("ruth-spread").value);
+        const energy = parseFloat(document.getElementById("ruth-e").value);
+        const speed = 2 + energy * 0.5;
+        for (let i = 0; i < 15; i++) {
+            const by = canvas.height / 2 + (Math.random() - 0.5) * spread * 30;
+            ruthState.particles.push({
+                x: -10,
+                y: by,
+                vx: speed,
+                vy: 0,
+                trail: [{ x: -10, y: by }],
+                alive: true
+            });
+        }
+    }
+    function drawRutherford() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const Z = parseInt(document.getElementById("ruth-z").value);
+        const energy = parseFloat(document.getElementById("ruth-e").value);
+        const nucX = W * 0.45, nucY = H / 2;
+        const forceFactor = Z * 2 / (energy * energy);
+
+        // Nucleus
+        const nucR = 8 + Z / 15;
+        const nucGrad = ctx.createRadialGradient(nucX, nucY, 2, nucX, nucY, nucR);
+        nucGrad.addColorStop(0, "#ffd700");
+        nucGrad.addColorStop(1, "#ff8f00");
+        ctx.beginPath();
+        ctx.arc(nucX, nucY, nucR, 0, Math.PI * 2);
+        ctx.fillStyle = nucGrad;
+        ctx.fill();
+        ctx.strokeStyle = "#ffca28";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`Z=${Z}`, nucX, nucY + nucR + 14);
+
+        // Update particles
+        for (const p of ruthState.particles) {
+            if (!p.alive) continue;
+            const dx = p.x - nucX, dy = p.y - nucY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < nucR) {
+                p.alive = false;
+                continue;
+            }
+            // Coulomb force (repulsive)
+            const force = forceFactor * 50 / (dist * dist);
+            p.vx += force * dx / dist;
+            p.vy += force * dy / dist;
+            p.x += p.vx;
+            p.y += p.vy;
+
+            p.trail.push({ x: p.x, y: p.y });
+            if (p.trail.length > 300) p.trail.shift();
+
+            if (p.x > W + 20 || p.x < -50 || p.y < -50 || p.y > H + 50) {
+                p.alive = false;
+                // Record scattering angle
+                const angle = Math.atan2(p.vy, p.vx) * 180 / Math.PI;
+                const bin = Math.min(17, Math.max(0, Math.floor((angle + 180) / 20)));
+                ruthState.histogram[bin]++;
+            }
+        }
+
+        // Draw trails
+        for (const p of ruthState.particles) {
+            if (p.trail.length < 2) continue;
+            ctx.beginPath();
+            for (let i = 0; i < p.trail.length; i++) {
+                if (i === 0) ctx.moveTo(p.trail[i].x, p.trail[i].y);
+                else ctx.lineTo(p.trail[i].x, p.trail[i].y);
+            }
+            ctx.strokeStyle = p.alive ? "rgba(0,230,118,0.6)" : "rgba(0,230,118,0.2)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Particle head
+            if (p.alive) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#00e676";
+                ctx.fill();
+            }
+        }
+
+        // Clean up dead particles
+        ruthState.particles = ruthState.particles.filter(p => p.alive || p.trail.length > 0);
+
+        // Scattering histogram
+        const hx = W - 220, hy = 40, hw = 200, hh = 200;
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(hx - 5, hy - 20, hw + 10, hh + 40);
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Scattering Angles", hx + hw / 2, hy - 5);
+
+        const maxHist = Math.max(...ruthState.histogram, 1);
+        for (let i = 0; i < 18; i++) {
+            const bh = (ruthState.histogram[i] / maxHist) * hh * 0.8;
+            const bx = hx + (i / 18) * hw;
+            const bw = hw / 18 - 1;
+            ctx.fillStyle = `hsl(${120 - (i - 9) * (i - 9) * 1.5}, 70%, 50%)`;
+            ctx.fillRect(bx, hy + hh - bh, bw, bh);
+        }
+        ctx.fillStyle = "#888";
+        ctx.font = "9px monospace";
+        ctx.fillText("-180°", hx, hy + hh + 12);
+        ctx.fillText("0°", hx + hw / 2, hy + hh + 12);
+        ctx.fillText("180°", hx + hw, hy + hh + 12);
+
+        // Formula
+        ctx.fillStyle = "#aaa";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("dσ/dΩ ∝ 1/sin⁴(θ/2)", 10, H - 20);
+
+        overlay.innerHTML =
+            `<b style="color:#00e676">Rutherford Scattering</b><br>` +
+            `Z: ${Z} | E: ${energy} MeV<br>` +
+            `Particles: ${ruthState.particles.filter(p => p.alive).length}`;
+
+        animId = requestAnimationFrame(drawRutherford);
+    }
+    bindSlider("ruth-z", "val-ruth-z");
+    bindSlider("ruth-e", "val-ruth-e");
+    bindSlider("ruth-spread", "val-ruth-spread");
+    document.getElementById("btn-ruth-fire").addEventListener("click", fireRuthBeam);
+    document.getElementById("btn-ruth-reset").addEventListener("click", initRutherford);
+
+    // ── 73. Logistic Map ────────────────────────────────────
+    let logState = {};
+    function initLogistic() {
+        cancelAnimationFrame(animId);
+        currentSim = "logistic";
+        logState = { needsRender: true };
+        drawLogistic();
+    }
+    function drawLogistic() {
+        const W = canvas.width, H = canvas.height;
+
+        if (logState.needsRender) {
+            logState.needsRender = false;
+            ctx.fillStyle = "#0a0a2e";
+            ctx.fillRect(0, 0, W, H);
+
+            const rMin = parseFloat(document.getElementById("log-rmin").value);
+            const rMax = parseFloat(document.getElementById("log-rmax").value);
+            const maxIter = parseInt(document.getElementById("log-iter").value);
+            const transient = 100;
+
+            const gx = 60, gy = 30, gw = W - 100, gh = H - 80;
+
+            // Axes
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(gx, gy, gw, gh);
+
+            ctx.fillStyle = "#888";
+            ctx.font = "11px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("r (growth rate)", gx + gw / 2, gy + gh + 20);
+
+            for (let i = 0; i <= 5; i++) {
+                const r = rMin + (i / 5) * (rMax - rMin);
+                const xx = gx + (i / 5) * gw;
+                ctx.fillText(r.toFixed(2), xx, gy + gh + 35);
+                ctx.strokeStyle = "rgba(100,100,100,0.2)";
+                ctx.beginPath(); ctx.moveTo(xx, gy); ctx.lineTo(xx, gy + gh); ctx.stroke();
+            }
+            for (let i = 0; i <= 4; i++) {
+                const yy = gy + (i / 4) * gh;
+                ctx.fillStyle = "#888";
+                ctx.textAlign = "right";
+                ctx.fillText(((4 - i) / 4).toFixed(2), gx - 5, yy + 4);
+                ctx.strokeStyle = "rgba(100,100,100,0.2)";
+                ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + gw, yy); ctx.stroke();
+            }
+
+            ctx.save();
+            ctx.translate(15, gy + gh / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = "#888";
+            ctx.textAlign = "center";
+            ctx.fillText("x (population)", 0, 0);
+            ctx.restore();
+
+            // Compute bifurcation diagram
+            const rSteps = gw * 2;
+            for (let col = 0; col < rSteps; col++) {
+                const r = rMin + (col / rSteps) * (rMax - rMin);
+                let x = 0.5;
+                // Transient
+                for (let i = 0; i < transient; i++) {
+                    x = r * x * (1 - x);
+                }
+                // Plot attractor
+                for (let i = 0; i < maxIter; i++) {
+                    x = r * x * (1 - x);
+                    const px = gx + (col / rSteps) * gw;
+                    const py = gy + gh - x * gh;
+                    const hue = ((r - rMin) / (rMax - rMin)) * 270;
+                    ctx.fillStyle = `hsla(${hue}, 80%, 60%, 0.15)`;
+                    ctx.fillRect(px, py, 1.5, 1.5);
+                }
+            }
+
+            // Key features labels
+            ctx.fillStyle = "rgba(255,255,255,0.5)";
+            ctx.font = "10px monospace";
+            ctx.textAlign = "center";
+            if (rMin < 3 && rMax > 3) {
+                const fx = gx + ((3 - rMin) / (rMax - rMin)) * gw;
+                ctx.fillText("Period-2", fx, gy + 15);
+            }
+            if (rMin < 3.57 && rMax > 3.57) {
+                const fx = gx + ((3.57 - rMin) / (rMax - rMin)) * gw;
+                ctx.fillText("Chaos", fx, gy + 15);
+            }
+
+            overlay.innerHTML =
+                `<b style="color:#e040fb">Logistic Map</b><br>` +
+                `x(n+1) = r·x(n)·(1-x(n))<br>` +
+                `r: [${rMin}, ${rMax}] | Iter: ${maxIter}`;
+        }
+
+        animId = requestAnimationFrame(drawLogistic);
+    }
+    bindSlider("log-rmin", "val-log-rmin", () => { logState.needsRender = true; });
+    bindSlider("log-rmax", "val-log-rmax", () => { logState.needsRender = true; });
+    bindSlider("log-iter", "val-log-iter", () => { logState.needsRender = true; });
+    document.getElementById("btn-log-redraw").addEventListener("click", () => { logState.needsRender = true; });
+
+    // ── 74. Heat Conduction ─────────────────────────────────
+    let hcState = {};
+    function initHeatCond() {
+        cancelAnimationFrame(animId);
+        currentSim = "heatcond";
+        const N = 200;
+        const temps = new Float64Array(N);
+        const leftT = parseFloat(document.getElementById("hc-left").value);
+        const rightT = parseFloat(document.getElementById("hc-right").value);
+        for (let i = 0; i < N; i++) {
+            temps[i] = leftT + (rightT - leftT) * (i / (N - 1));
+        }
+        hcState = { temps, N, history: [] };
+        drawHeatCond();
+    }
+    function drawHeatCond() {
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = "#0a0a2e";
+        ctx.fillRect(0, 0, W, H);
+
+        const k = parseFloat(document.getElementById("hc-k").value);
+        const leftT = parseFloat(document.getElementById("hc-left").value);
+        const rightT = parseFloat(document.getElementById("hc-right").value);
+        const N = hcState.N;
+        const temps = hcState.temps;
+
+        // Boundary conditions
+        temps[0] = leftT;
+        temps[N - 1] = rightT;
+
+        // Diffusion step (multiple per frame for speed)
+        for (let step = 0; step < 10; step++) {
+            const newTemps = new Float64Array(N);
+            newTemps[0] = leftT;
+            newTemps[N - 1] = rightT;
+            for (let i = 1; i < N - 1; i++) {
+                newTemps[i] = temps[i] + k * (temps[i - 1] - 2 * temps[i] + temps[i + 1]);
+            }
+            for (let i = 0; i < N; i++) temps[i] = newTemps[i];
+        }
+
+        // Save snapshot periodically
+        hcState.history.push([...temps]);
+        if (hcState.history.length > 50) hcState.history.shift();
+
+        // Bar visualization
+        const barX = 60, barY = 80, barW = W - 120, barH = 60;
+        for (let i = 0; i < N; i++) {
+            const t = temps[i];
+            const maxT = 200;
+            const frac = Math.max(0, Math.min(1, t / maxT));
+            // Blue -> Red colormap
+            const r = Math.floor(frac * 255);
+            const b = Math.floor((1 - frac) * 255);
+            const g = Math.floor(Math.sin(frac * Math.PI) * 100);
+            ctx.fillStyle = `rgb(${r},${g},${b})`;
+            const px = barX + (i / N) * barW;
+            const pw = barW / N + 1;
+            ctx.fillRect(px, barY, pw, barH);
+        }
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // Temperature labels
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${leftT}°`, barX - 25, barY + barH / 2 + 4);
+        ctx.fillText(`${rightT}°`, barX + barW + 25, barY + barH / 2 + 4);
+        ctx.fillText("Temperature Bar", barX + barW / 2, barY - 10);
+
+        // Temperature profile graph
+        const gx = 60, gy = 200, gw = barW, gh = 280;
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        // Grid
+        for (let i = 0; i <= 4; i++) {
+            const yy = gy + (i / 4) * gh;
+            ctx.strokeStyle = "rgba(100,100,100,0.2)";
+            ctx.beginPath(); ctx.moveTo(gx, yy); ctx.lineTo(gx + gw, yy); ctx.stroke();
+            ctx.fillStyle = "#888";
+            ctx.font = "10px monospace";
+            ctx.textAlign = "right";
+            ctx.fillText(((4 - i) / 4 * 200).toFixed(0) + "°", gx - 5, yy + 4);
+        }
+
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "center";
+        ctx.fillText("Position along bar", gx + gw / 2, gy + gh + 18);
+
+        // Historical profiles (faded)
+        for (let h = 0; h < hcState.history.length - 1; h++) {
+            const hist = hcState.history[h];
+            const alpha = 0.05 + 0.1 * (h / hcState.history.length);
+            ctx.beginPath();
+            for (let i = 0; i < N; i++) {
+                const px = gx + (i / N) * gw;
+                const py = gy + gh - (hist[i] / 200) * gh;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = `rgba(100,200,255,${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Current profile
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+            const px = gx + (i / N) * gw;
+            const py = gy + gh - (temps[i] / 200) * gh;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "#ff5722";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Steady-state line (analytical)
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(gx, gy + gh - (leftT / 200) * gh);
+        ctx.lineTo(gx + gw, gy + gh - (rightT / 200) * gh);
+        ctx.strokeStyle = "rgba(255,235,59,0.4)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#ff5722";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("Current", gx + gw - 80, gy + 15);
+        ctx.fillStyle = "rgba(255,235,59,0.6)";
+        ctx.fillText("Steady-state", gx + gw - 80, gy + 30);
+
+        const avgTemp = temps.reduce((a, b) => a + b) / N;
+        overlay.innerHTML =
+            `<b style="color:#ff5722">Heat Conduction</b><br>` +
+            `k: ${k} | T_left: ${leftT}° | T_right: ${rightT}°<br>` +
+            `Avg temp: ${avgTemp.toFixed(1)}° | ∂T/∂t = k·∂²T/∂x²`;
+
+        animId = requestAnimationFrame(drawHeatCond);
+    }
+    bindSlider("hc-k", "val-hc-k");
+    bindSlider("hc-left", "val-hc-left");
+    bindSlider("hc-right", "val-hc-right");
+    document.getElementById("btn-hc-pulse").addEventListener("click", () => {
+        if (currentSim !== "heatcond") return;
+        const mid = Math.floor(hcState.N / 2);
+        for (let i = mid - 10; i <= mid + 10; i++) {
+            if (i >= 0 && i < hcState.N) hcState.temps[i] += 100;
+        }
+    });
+    document.getElementById("btn-hc-reset").addEventListener("click", initHeatCond);
 
     // ── Start default simulation ────────────────────────────
     initProjectile();

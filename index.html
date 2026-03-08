@@ -82,6 +82,11 @@
         <button class="nav-btn" data-sim="centripetal">Centripetal Force</button>
         <button class="nav-btn" data-sim="faraday">Faraday's Law</button>
         <button class="nav-btn" data-sim="chaosgame">Chaos Game</button>
+        <button class="nav-btn" data-sim="interference">Interference</button>
+        <button class="nav-btn" data-sim="idealgas">Ideal Gas Law</button>
+        <button class="nav-btn" data-sim="rutherford">Rutherford Scattering</button>
+        <button class="nav-btn" data-sim="logistic">Logistic Map</button>
+        <button class="nav-btn" data-sim="heatcond">Heat Conduction</button>
     </nav>
 
     <main>
@@ -1355,6 +1360,92 @@
             </label>
             <div class="btn-row">
                 <button id="btn-cg-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Interference Controls -->
+        <div class="controls hidden" id="ctrl-interference">
+            <h3>Wave Interference</h3>
+            <p class="ctrl-hint">Two point sources create constructive and destructive interference patterns in 2D.</p>
+            <label>Wavelength: <span id="val-int-wl">40</span> px
+                <input type="range" id="int-wl" min="10" max="80" value="40">
+            </label>
+            <label>Source Separation: <span id="val-int-sep">200</span> px
+                <input type="range" id="int-sep" min="50" max="400" value="200">
+            </label>
+            <label>Phase Diff: <span id="val-int-phase">0</span>&deg;
+                <input type="range" id="int-phase" min="0" max="360" value="0">
+            </label>
+        </div>
+
+        <!-- Ideal Gas Law Controls -->
+        <div class="controls hidden" id="ctrl-idealgas">
+            <h3>Ideal Gas Law (PV=nRT)</h3>
+            <p class="ctrl-hint">Adjust pressure, volume, and temperature to see the ideal gas law in action.</p>
+            <label>Molecules: <span id="val-ig-n">100</span>
+                <input type="range" id="ig-n" min="20" max="300" value="100">
+            </label>
+            <label>Temperature: <span id="val-ig-temp">300</span> K
+                <input type="range" id="ig-temp" min="50" max="800" value="300">
+            </label>
+            <label>Volume (width): <span id="val-ig-vol">400</span> px
+                <input type="range" id="ig-vol" min="150" max="600" value="400">
+            </label>
+        </div>
+
+        <!-- Rutherford Scattering Controls -->
+        <div class="controls hidden" id="ctrl-rutherford">
+            <h3>Rutherford Scattering</h3>
+            <p class="ctrl-hint">Alpha particles deflected by a gold nucleus. Observe scattering angle vs impact parameter.</p>
+            <label>Nucleus Charge (Z): <span id="val-ruth-z">79</span>
+                <input type="range" id="ruth-z" min="1" max="100" value="79">
+            </label>
+            <label>Beam Energy: <span id="val-ruth-e">5</span> MeV
+                <input type="range" id="ruth-e" min="1" max="15" value="5" step="0.5">
+            </label>
+            <label>Beam Spread: <span id="val-ruth-spread">8</span>
+                <input type="range" id="ruth-spread" min="1" max="15" value="8">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ruth-fire">Fire Beam</button>
+                <button id="btn-ruth-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Logistic Map Controls -->
+        <div class="controls hidden" id="ctrl-logistic">
+            <h3>Logistic Map</h3>
+            <p class="ctrl-hint">Bifurcation diagram of x(n+1) = r·x(n)·(1-x(n)). Explore the route to chaos.</p>
+            <label>r Range Start: <span id="val-log-rmin">2.5</span>
+                <input type="range" id="log-rmin" min="0" max="3.5" value="2.5" step="0.01">
+            </label>
+            <label>r Range End: <span id="val-log-rmax">4.0</span>
+                <input type="range" id="log-rmax" min="3" max="4" value="4" step="0.01">
+            </label>
+            <label>Iterations: <span id="val-log-iter">200</span>
+                <input type="range" id="log-iter" min="50" max="500" value="200" step="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-log-redraw">Redraw</button>
+            </div>
+        </div>
+
+        <!-- Heat Conduction Controls -->
+        <div class="controls hidden" id="ctrl-heatcond">
+            <h3>Heat Conduction</h3>
+            <p class="ctrl-hint">1D heat equation simulation: watch temperature diffuse along a bar over time.</p>
+            <label>Conductivity: <span id="val-hc-k">0.5</span>
+                <input type="range" id="hc-k" min="0.05" max="1" value="0.5" step="0.05">
+            </label>
+            <label>Left Temp: <span id="val-hc-left">100</span>&deg;
+                <input type="range" id="hc-left" min="0" max="200" value="100">
+            </label>
+            <label>Right Temp: <span id="val-hc-right">0</span>&deg;
+                <input type="range" id="hc-right" min="0" max="200" value="0">
+            </label>
+            <div class="btn-row">
+                <button id="btn-hc-pulse">Add Heat Pulse</button>
+                <button id="btn-hc-reset">Reset</button>
             </div>
         </div>
 
