@@ -1,0 +1,219 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0e27;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    padding: 24px 16px 8px;
+    background: linear-gradient(135deg, #0d1137 0%, #141852 100%);
+    border-bottom: 1px solid #2a2f6e;
+}
+
+header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #00d4ff, #7b61ff, #ff6ec7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: #8888aa;
+    margin-top: 4px;
+    font-size: 0.95rem;
+}
+
+/* Navigation */
+#sim-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    flex-wrap: wrap;
+}
+
+.nav-btn {
+    padding: 10px 20px;
+    border: 1px solid #2a2f6e;
+    border-radius: 8px;
+    background: #12163d;
+    color: #9999bb;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.nav-btn:hover {
+    background: #1a1f55;
+    color: #ccccee;
+    border-color: #4a4f9e;
+}
+
+.nav-btn.active {
+    background: linear-gradient(135deg, #1a237e, #283593);
+    color: #ffffff;
+    border-color: #5c6bc0;
+    box-shadow: 0 0 12px rgba(92, 107, 192, 0.3);
+}
+
+/* Main Layout */
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 16px 32px;
+}
+
+.sim-container {
+    position: relative;
+    background: #0d1030;
+    border: 1px solid #1e2260;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #080b20;
+}
+
+#info-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(10, 14, 39, 0.85);
+    border: 1px solid #2a2f6e;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #aab;
+    pointer-events: none;
+    min-width: 160px;
+}
+
+/* Controls */
+.controls {
+    background: #10143a;
+    border: 1px solid #1e2260;
+    border-radius: 12px;
+    padding: 20px 24px;
+}
+
+.controls h3 {
+    font-size: 1.1rem;
+    color: #7b61ff;
+    margin-bottom: 14px;
+}
+
+.controls label {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 0.88rem;
+    color: #99a;
+}
+
+.controls label span {
+    color: #00d4ff;
+    font-weight: 600;
+}
+
+.controls input[type="range"] {
+    width: 100%;
+    margin-top: 4px;
+    accent-color: #5c6bc0;
+    height: 6px;
+}
+
+.controls input[type="checkbox"] {
+    accent-color: #5c6bc0;
+    transform: scale(1.2);
+    margin-left: 8px;
+}
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.btn-row button {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-row button:first-child {
+    background: linear-gradient(135deg, #1a73e8, #5c6bc0);
+    color: #fff;
+}
+
+.btn-row button:first-child:hover {
+    background: linear-gradient(135deg, #1e88e5, #7986cb);
+}
+
+.btn-row button:last-child {
+    background: #1a1d4a;
+    color: #99a;
+    border: 1px solid #2a2f6e;
+}
+
+.btn-row button:last-child:hover {
+    background: #22265a;
+    color: #ccc;
+}
+
+.controls select {
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px;
+    background: #1a1d4a;
+    color: #ccc;
+    border: 1px solid #2a2f6e;
+    border-radius: 6px;
+    font-size: 0.88rem;
+}
+
+.ctrl-hint {
+    font-size: 0.8rem;
+    color: #667;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+#gas-stats,
+#life-stats {
+    margin-top: 14px;
+    font-size: 0.85rem;
+    color: #8899aa;
+    line-height: 1.7;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    header h1 { font-size: 1.5rem; }
+    .nav-btn { padding: 8px 14px; font-size: 0.82rem; }
+    .controls { padding: 14px 16px; }
+}

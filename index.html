@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Science Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Science Simulator</h1>
+        <p class="subtitle">Interactive Physics, Chemistry &amp; Astronomy Visualizations</p>
+    </header>
+
+    <nav id="sim-nav">
+        <button class="nav-btn active" data-sim="projectile">Projectile Motion</button>
+        <button class="nav-btn" data-sim="pendulum">Pendulum</button>
+        <button class="nav-btn" data-sim="wave">Wave Interference</button>
+        <button class="nav-btn" data-sim="gas">Gas Particles</button>
+        <button class="nav-btn" data-sim="orbit">Orbital Mechanics</button>
+        <button class="nav-btn" data-sim="efield">Electric Field</button>
+        <button class="nav-btn" data-sim="spring">Spring Oscillator</button>
+        <button class="nav-btn" data-sim="doubleslit">Double Slit</button>
+        <button class="nav-btn" data-sim="life">Game of Life</button>
+        <button class="nav-btn" data-sim="emspectrum">EM Spectrum</button>
+        <button class="nav-btn" data-sim="lens">Lens Optics</button>
+        <button class="nav-btn" data-sim="nbody">N-Body Gravity</button>
+        <button class="nav-btn" data-sim="decay">Radioactive Decay</button>
+        <button class="nav-btn" data-sim="thermo">Thermodynamics</button>
+        <button class="nav-btn" data-sim="doppler">Doppler Effect</button>
+        <button class="nav-btn" data-sim="incline">Inclined Plane</button>
+        <button class="nav-btn" data-sim="circuit">RC Circuit</button>
+        <button class="nav-btn" data-sim="diffusion">Diffusion</button>
+        <button class="nav-btn" data-sim="pendwave">Pendulum Wave</button>
+        <button class="nav-btn" data-sim="buoyancy">Buoyancy</button>
+        <button class="nav-btn" data-sim="coulomb">Coulomb's Law</button>
+        <button class="nav-btn" data-sim="lissajous">Lissajous Curves</button>
+        <button class="nav-btn" data-sim="blackbody">Blackbody Radiation</button>
+        <button class="nav-btn" data-sim="collision">Elastic Collisions</button>
+        <button class="nav-btn" data-sim="mitosis">Cell Division</button>
+        <button class="nav-btn" data-sim="predprey">Predator-Prey</button>
+        <button class="nav-btn" data-sim="selection">Natural Selection</button>
+        <button class="nav-btn" data-sim="neuron">Action Potential</button>
+        <button class="nav-btn" data-sim="enzyme">Enzyme Kinetics</button>
+        <button class="nav-btn" data-sim="dna">DNA Replication</button>
+        <button class="nav-btn" data-sim="photosyn">Photosynthesis</button>
+        <button class="nav-btn" data-sim="hardywein">Hardy-Weinberg</button>
+        <button class="nav-btn" data-sim="foodweb">Food Web</button>
+        <button class="nav-btn" data-sim="membrane">Cell Membrane</button>
+        <button class="nav-btn" data-sim="respiration">Cell Respiration</button>
+        <button class="nav-btn" data-sim="magfield">Magnetic Field</button>
+        <button class="nav-btn" data-sim="chemeq">Chemical Equilibrium</button>
+        <button class="nav-btn" data-sim="epidemic">SIR Epidemic</button>
+        <button class="nav-btn" data-sim="bernoulli">Fluid Dynamics</button>
+        <button class="nav-btn" data-sim="gravlens">Gravitational Lensing</button>
+        <button class="nav-btn" data-sim="standing">Standing Waves</button>
+        <button class="nav-btn" data-sim="protein">Protein Folding</button>
+        <button class="nav-btn" data-sim="carbon">Carbon Cycle</button>
+        <button class="nav-btn" data-sim="spectral">Spectral Lines</button>
+        <button class="nav-btn" data-sim="redshift">Cosmic Redshift</button>
+        <button class="nav-btn" data-sim="qho">Quantum Oscillator</button>
+        <button class="nav-btn" data-sim="tectonic">Tectonic Plates</button>
+        <button class="nav-btn" data-sim="titration">Acid-Base Titration</button>
+        <button class="nav-btn" data-sim="lorenz">Lorenz Attractor</button>
+        <button class="nav-btn" data-sim="fourier">Fourier Series</button>
+        <button class="nav-btn" data-sim="galton">Galton Board</button>
+        <button class="nav-btn" data-sim="stressstrain">Stress-Strain</button>
+        <button class="nav-btn" data-sim="reactiondiff">Reaction-Diffusion</button>
+        <button class="nav-btn" data-sim="fluidflow">Fluid Flow</button>
+        <button class="nav-btn" data-sim="phasespace">Phase Space</button>
+        <button class="nav-btn" data-sim="radiocarbon">Radiocarbon Dating</button>
+        <button class="nav-btn" data-sim="mandelbrot">Mandelbrot Set</button>
+        <button class="nav-btn" data-sim="shm">SHM Comparison</button>
+        <button class="nav-btn" data-sim="vector">Vector Fields</button>
+        <button class="nav-btn" data-sim="capacitor">Capacitor</button>
+        <button class="nav-btn" data-sim="brachistochrone">Brachistochrone</button>
+        <button class="nav-btn" data-sim="brownian">Brownian Motion</button>
+        <button class="nav-btn" data-sim="wavepacket">Wave Packet</button>
+        <button class="nav-btn" data-sim="trebuchet">Trebuchet</button>
+        <button class="nav-btn" data-sim="kepler">Kepler's Laws</button>
+        <button class="nav-btn" data-sim="refraction">Refraction</button>
+        <button class="nav-btn" data-sim="centripetal">Centripetal Force</button>
+        <button class="nav-btn" data-sim="faraday">Faraday's Law</button>
+        <button class="nav-btn" data-sim="chaosgame">Chaos Game</button>
+        <button class="nav-btn" data-sim="interference">Interference</button>
+        <button class="nav-btn" data-sim="idealgas">Ideal Gas Law</button>
+        <button class="nav-btn" data-sim="rutherford">Rutherford Scattering</button>
+        <button class="nav-btn" data-sim="logistic">Logistic Map</button>
+        <button class="nav-btn" data-sim="heatcond">Heat Conduction</button>
+        <button class="nav-btn" data-sim="compton">Compton Scattering</button>
+        <button class="nav-btn" data-sim="harmonics">Harmonic Series</button>
+        <button class="nav-btn" data-sim="archimedes">Archimedes' Principle</button>
+        <button class="nav-btn" data-sim="hrdiagram">HR Diagram</button>
+        <button class="nav-btn" data-sim="coupled">Coupled Oscillators</button>
+        <button class="nav-btn" data-sim="juliaset">Julia Set</button>
+        <button class="nav-btn" data-sim="molorbital">Molecular Orbitals</button>
+        <button class="nav-btn" data-sim="galvanic">Galvanic Cell</button>
+        <button class="nav-btn" data-sim="probdist">Probability Distributions</button>
+        <button class="nav-btn" data-sim="combustion">Combustion</button>
+    </nav>
+
+    <main>
+        <div class="sim-container">
+            <canvas id="simCanvas" width="900" height="520"></canvas>
+            <div id="info-overlay"></div>
+        </div>
+
+        <!-- Projectile Motion Controls -->
+        <div class="controls" id="ctrl-projectile">
+            <h3>Projectile Motion</h3>
+            <label>Launch Angle: <span id="val-angle">45</span>&deg;
+                <input type="range" id="angle" min="5" max="85" value="45">
+            </label>
+            <label>Initial Velocity: <span id="val-velocity">50</span> m/s
+                <input type="range" id="velocity" min="10" max="100" value="50">
+            </label>
+            <label>Gravity: <span id="val-gravity">9.8</span> m/s&sup2;
+                <input type="range" id="gravity" min="1" max="25" value="9.8" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-launch">Launch</button>
+                <button id="btn-reset-proj">Reset</button>
+            </div>
+        </div>
+
+        <!-- Pendulum Controls -->
+        <div class="controls hidden" id="ctrl-pendulum">
+            <h3>Simple Pendulum</h3>
+            <label>Length: <span id="val-length">200</span> px
+                <input type="range" id="pendLength" min="80" max="350" value="200">
+            </label>
+            <label>Initial Angle: <span id="val-pendAngle">30</span>&deg;
+                <input type="range" id="pendAngle" min="5" max="80" value="30">
+            </label>
+            <label>Damping: <span id="val-damping">0.999</span>
+                <input type="range" id="damping" min="0.980" max="1.000" value="0.999" step="0.001">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pend-start">Start</button>
+                <button id="btn-pend-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Wave Controls -->
+        <div class="controls hidden" id="ctrl-wave">
+            <h3>Wave Interference</h3>
+            <label>Frequency 1: <span id="val-freq1">0.03</span>
+                <input type="range" id="freq1" min="0.01" max="0.08" value="0.03" step="0.005">
+            </label>
+            <label>Frequency 2: <span id="val-freq2">0.04</span>
+                <input type="range" id="freq2" min="0.01" max="0.08" value="0.04" step="0.005">
+            </label>
+            <label>Amplitude: <span id="val-amp">60</span>
+                <input type="range" id="amplitude" min="20" max="120" value="60">
+            </label>
+            <div class="btn-row">
+                <button id="btn-wave-toggle">Pause</button>
+            </div>
+        </div>
+
+        <!-- Gas Controls -->
+        <div class="controls hidden" id="ctrl-gas">
+            <h3>Ideal Gas Simulation</h3>
+            <label>Particles: <span id="val-particles">80</span>
+                <input type="range" id="numParticles" min="10" max="200" value="80">
+            </label>
+            <label>Temperature: <span id="val-temp">300</span> K
+                <input type="range" id="temperature" min="50" max="800" value="300">
+            </label>
+            <div class="btn-row">
+                <button id="btn-gas-reset">Reset</button>
+            </div>
+            <div id="gas-stats"></div>
+        </div>
+
+        <!-- Orbit Controls -->
+        <div class="controls hidden" id="ctrl-orbit">
+            <h3>Orbital Mechanics</h3>
+            <label>Planet Mass: <span id="val-pmass">1.0</span>x
+                <input type="range" id="planetMass" min="0.2" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Orbital Velocity: <span id="val-ovel">1.0</span>x
+                <input type="range" id="orbVel" min="0.3" max="2.0" value="1.0" step="0.05">
+            </label>
+            <label>Show Trail
+                <input type="checkbox" id="showTrail" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-orbit-reset">Reset</button>
+            </div>
+        </div>
+        <!-- Electric Field Controls -->
+        <div class="controls hidden" id="ctrl-efield">
+            <h3>Electric Field Visualization</h3>
+            <p class="ctrl-hint">Click on the canvas to place positive charges. Right-click (or hold Shift+click) to place negative charges.</p>
+            <label>Field Line Density: <span id="val-fieldDensity">12</span>
+                <input type="range" id="fieldDensity" min="4" max="24" value="12">
+            </label>
+            <label>Show Field Vectors
+                <input type="checkbox" id="showVectors" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-efield-clear">Clear Charges</button>
+            </div>
+        </div>
+
+        <!-- Spring Oscillator Controls -->
+        <div class="controls hidden" id="ctrl-spring">
+            <h3>Spring / Harmonic Oscillator</h3>
+            <label>Spring Constant (k): <span id="val-springK">0.03</span>
+                <input type="range" id="springK" min="0.005" max="0.08" value="0.03" step="0.005">
+            </label>
+            <label>Mass: <span id="val-springMass">1.0</span>
+                <input type="range" id="springMass" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Damping: <span id="val-springDamp">0.998</span>
+                <input type="range" id="springDamp" min="0.980" max="1.000" value="0.998" step="0.001">
+            </label>
+            <div class="btn-row">
+                <button id="btn-spring-start">Start</button>
+                <button id="btn-spring-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Double Slit Controls -->
+        <div class="controls hidden" id="ctrl-doubleslit">
+            <h3>Double Slit Experiment</h3>
+            <label>Wavelength: <span id="val-wavelength">16</span> px
+                <input type="range" id="wavelength" min="6" max="40" value="16">
+            </label>
+            <label>Slit Separation: <span id="val-slitSep">80</span> px
+                <input type="range" id="slitSep" min="30" max="180" value="80">
+            </label>
+            <label>Slit Width: <span id="val-slitWidth">10</span> px
+                <input type="range" id="slitWidth" min="4" max="30" value="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ds-toggle">Pause</button>
+                <button id="btn-ds-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Game of Life Controls -->
+        <div class="controls hidden" id="ctrl-life">
+            <h3>Conway's Game of Life</h3>
+            <p class="ctrl-hint">Click cells to toggle alive/dead while paused. Use presets or randomize to start.</p>
+            <label>Speed: <span id="val-lifeSpeed">5</span> gen/s
+                <input type="range" id="lifeSpeed" min="1" max="30" value="5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-life-toggle">Start</button>
+                <button id="btn-life-random">Randomize</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-life-glider">Glider Gun</button>
+                <button id="btn-life-clear">Clear</button>
+            </div>
+            <div id="life-stats"></div>
+        </div>
+
+        <!-- EM Spectrum Controls -->
+        <div class="controls hidden" id="ctrl-emspectrum">
+            <h3>Electromagnetic Spectrum</h3>
+            <label>Frequency (log Hz): <span id="val-emfreq">14.5</span>
+                <input type="range" id="emfreq" min="4" max="20" value="14.5" step="0.1">
+            </label>
+            <label>Show Photon Animation
+                <input type="checkbox" id="showPhoton" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-em-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Lens Optics Controls -->
+        <div class="controls hidden" id="ctrl-lens">
+            <h3>Lens Optics (Ray Tracing)</h3>
+            <label>Focal Length: <span id="val-focal">120</span> px
+                <input type="range" id="focal" min="40" max="250" value="120">
+            </label>
+            <label>Object Distance: <span id="val-objDist">250</span> px
+                <input type="range" id="objDist" min="60" max="400" value="250">
+            </label>
+            <label>Object Height: <span id="val-objHeight">80</span> px
+                <input type="range" id="objHeight" min="20" max="150" value="80">
+            </label>
+            <label>Lens Type
+                <select id="lensType">
+                    <option value="convex">Convex (Converging)</option>
+                    <option value="concave">Concave (Diverging)</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-lens-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- N-Body Gravity Controls -->
+        <div class="controls hidden" id="ctrl-nbody">
+            <h3>N-Body Gravitational Simulation</h3>
+            <p class="ctrl-hint">Watch bodies interact through gravity. Try different presets!</p>
+            <label>Time Step: <span id="val-nbStep">1.0</span>x
+                <input type="range" id="nbStep" min="0.2" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Show Trails
+                <input type="checkbox" id="nbTrails" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-nb-binary">Binary Star</button>
+                <button id="btn-nb-triple">Triple System</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-nb-cluster">Star Cluster</button>
+                <button id="btn-nb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Radioactive Decay Controls -->
+        <div class="controls hidden" id="ctrl-decay">
+            <h3>Radioactive Decay</h3>
+            <label>Half-Life: <span id="val-halflife">3.0</span> s
+                <input type="range" id="halflife" min="0.5" max="10" value="3.0" step="0.5">
+            </label>
+            <label>Initial Atoms: <span id="val-atoms">400</span>
+                <input type="range" id="atoms" min="50" max="800" value="400">
+            </label>
+            <div class="btn-row">
+                <button id="btn-decay-start">Start Decay</button>
+                <button id="btn-decay-reset">Reset</button>
+            </div>
+            <div id="decay-stats"></div>
+        </div>
+
+        <!-- Thermodynamics Controls -->
+        <div class="controls hidden" id="ctrl-thermo">
+            <h3>Heat Transfer Simulation</h3>
+            <p class="ctrl-hint">Two bodies exchange heat until thermal equilibrium. Watch temperature equalize.</p>
+            <label>Body A Temperature: <span id="val-tempA">800</span> K
+                <input type="range" id="tempA" min="100" max="1200" value="800">
+            </label>
+            <label>Body B Temperature: <span id="val-tempB">200</span> K
+                <input type="range" id="tempB" min="100" max="1200" value="200">
+            </label>
+            <label>Conductivity: <span id="val-conduct">0.05</span>
+                <input type="range" id="conduct" min="0.005" max="0.15" value="0.05" step="0.005">
+            </label>
+            <div class="btn-row">
+                <button id="btn-thermo-start">Start</button>
+                <button id="btn-thermo-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Doppler Effect Controls -->
+        <div class="controls hidden" id="ctrl-doppler">
+            <h3>Doppler Effect</h3>
+            <p class="ctrl-hint">A moving source emits waves. Observe compression ahead and stretching behind.</p>
+            <label>Source Speed: <span id="val-srcSpeed">2.0</span>
+                <input type="range" id="srcSpeed" min="0" max="5" value="2.0" step="0.1">
+            </label>
+            <label>Wave Speed: <span id="val-waveSpeed">5.0</span>
+                <input type="range" id="waveSpeed" min="2" max="10" value="5.0" step="0.5">
+            </label>
+            <label>Emission Rate: <span id="val-emitRate">8</span>
+                <input type="range" id="emitRate" min="3" max="20" value="8">
+            </label>
+            <div class="btn-row">
+                <button id="btn-doppler-toggle">Pause</button>
+                <button id="btn-doppler-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Inclined Plane Controls -->
+        <div class="controls hidden" id="ctrl-incline">
+            <h3>Inclined Plane / Forces</h3>
+            <label>Angle: <span id="val-incAngle">30</span>&deg;
+                <input type="range" id="incAngle" min="5" max="75" value="30">
+            </label>
+            <label>Mass: <span id="val-incMass">5.0</span> kg
+                <input type="range" id="incMass" min="1" max="20" value="5.0" step="0.5">
+            </label>
+            <label>Friction (&mu;): <span id="val-friction">0.3</span>
+                <input type="range" id="friction" min="0" max="1.0" value="0.3" step="0.05">
+            </label>
+            <div class="btn-row">
+                <button id="btn-inc-release">Release</button>
+                <button id="btn-inc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- RC Circuit Controls -->
+        <div class="controls hidden" id="ctrl-circuit">
+            <h3>RC Circuit (Charge / Discharge)</h3>
+            <label>Resistance (R): <span id="val-resistance">1000</span> &Omega;
+                <input type="range" id="resistance" min="100" max="5000" value="1000" step="100">
+            </label>
+            <label>Capacitance (C): <span id="val-capacitance">100</span> &mu;F
+                <input type="range" id="capacitance" min="10" max="500" value="100" step="10">
+            </label>
+            <label>Voltage (V): <span id="val-voltage">12</span> V
+                <input type="range" id="rcVoltage" min="3" max="24" value="12">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rc-charge">Charge</button>
+                <button id="btn-rc-discharge">Discharge</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-rc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Diffusion Controls -->
+        <div class="controls hidden" id="ctrl-diffusion">
+            <h3>Particle Diffusion</h3>
+            <p class="ctrl-hint">Watch particles diffuse from high concentration to low through a membrane.</p>
+            <label>Particles: <span id="val-diffParts">200</span>
+                <input type="range" id="diffParts" min="50" max="500" value="200">
+            </label>
+            <label>Membrane Permeability: <span id="val-perm">0.05</span>
+                <input type="range" id="perm" min="0.01" max="0.20" value="0.05" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-diff-start">Start</button>
+                <button id="btn-diff-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Pendulum Wave Controls -->
+        <div class="controls hidden" id="ctrl-pendwave">
+            <h3>Pendulum Wave</h3>
+            <p class="ctrl-hint">Pendulums of varying lengths create mesmerizing wave patterns.</p>
+            <label>Number of Pendulums: <span id="val-numPend">20</span>
+                <input type="range" id="numPend" min="8" max="36" value="20">
+            </label>
+            <label>Speed: <span id="val-pwSpeed">1.0</span>x
+                <input type="range" id="pwSpeed" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pw-toggle">Pause</button>
+                <button id="btn-pw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Buoyancy Controls -->
+        <div class="controls hidden" id="ctrl-buoyancy">
+            <h3>Buoyancy (Archimedes' Principle)</h3>
+            <label>Object Density: <span id="val-objDensity">500</span> kg/m&sup3;
+                <input type="range" id="objDensity" min="100" max="2000" value="500" step="50">
+            </label>
+            <label>Fluid Density: <span id="val-fluidDensity">1000</span> kg/m&sup3;
+                <input type="range" id="fluidDensity" min="500" max="2500" value="1000" step="50">
+            </label>
+            <label>Object Size: <span id="val-objSize">60</span> px
+                <input type="range" id="objSize" min="30" max="100" value="60">
+            </label>
+            <div class="btn-row">
+                <button id="btn-buoy-drop">Drop</button>
+                <button id="btn-buoy-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Coulomb's Law Controls -->
+        <div class="controls hidden" id="ctrl-coulomb">
+            <h3>Coulomb's Law</h3>
+            <p class="ctrl-hint">Drag charges to see how force changes with distance. Toggle charge signs.</p>
+            <label>Charge 1: <span id="val-q1">+3</span> &mu;C
+                <input type="range" id="q1" min="-5" max="5" value="3" step="1">
+            </label>
+            <label>Charge 2: <span id="val-q2">-2</span> &mu;C
+                <input type="range" id="q2" min="-5" max="5" value="-2" step="1">
+            </label>
+            <label>Separation: <span id="val-sep">200</span> px
+                <input type="range" id="sep" min="60" max="500" value="200">
+            </label>
+            <div class="btn-row">
+                <button id="btn-coulomb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Lissajous Controls -->
+        <div class="controls hidden" id="ctrl-lissajous">
+            <h3>Lissajous Curves</h3>
+            <label>Frequency A: <span id="val-lissA">3</span>
+                <input type="range" id="lissA" min="1" max="10" value="3">
+            </label>
+            <label>Frequency B: <span id="val-lissB">2</span>
+                <input type="range" id="lissB" min="1" max="10" value="2">
+            </label>
+            <label>Phase Shift: <span id="val-lissPhase">0</span>&deg;
+                <input type="range" id="lissPhase" min="0" max="360" value="0">
+            </label>
+            <div class="btn-row">
+                <button id="btn-liss-toggle">Pause</button>
+                <button id="btn-liss-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Blackbody Radiation Controls -->
+        <div class="controls hidden" id="ctrl-blackbody">
+            <h3>Blackbody Radiation</h3>
+            <label>Temperature: <span id="val-bbTemp">5500</span> K
+                <input type="range" id="bbTemp" min="500" max="15000" value="5500" step="100">
+            </label>
+            <label>Show Wien's Peak
+                <input type="checkbox" id="showWien" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-bb-compare">Compare Temps</button>
+                <button id="btn-bb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Elastic Collisions Controls -->
+        <div class="controls hidden" id="ctrl-collision">
+            <h3>Elastic Collisions (1D)</h3>
+            <label>Mass A: <span id="val-massA">3.0</span> kg
+                <input type="range" id="massA" min="0.5" max="10" value="3.0" step="0.5">
+            </label>
+            <label>Mass B: <span id="val-massB">1.0</span> kg
+                <input type="range" id="massB" min="0.5" max="10" value="1.0" step="0.5">
+            </label>
+            <label>Velocity A: <span id="val-velA">4.0</span> m/s
+                <input type="range" id="velA" min="0" max="10" value="4.0" step="0.5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-coll-start">Start</button>
+                <button id="btn-coll-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cell Division (Mitosis) Controls -->
+        <div class="controls hidden" id="ctrl-mitosis">
+            <h3>Cell Division (Mitosis)</h3>
+            <p class="ctrl-hint">Watch a cell progress through the stages of mitosis.</p>
+            <label>Speed: <span id="val-mitoSpeed">1.0</span>x
+                <input type="range" id="mitoSpeed" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-mito-start">Start Division</button>
+                <button id="btn-mito-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Predator-Prey Controls -->
+        <div class="controls hidden" id="ctrl-predprey">
+            <h3>Predator-Prey (Lotka-Volterra)</h3>
+            <label>Prey Birth Rate (&alpha;): <span id="val-alpha">1.1</span>
+                <input type="range" id="alpha" min="0.2" max="3.0" value="1.1" step="0.1">
+            </label>
+            <label>Predation Rate (&beta;): <span id="val-beta">0.4</span>
+                <input type="range" id="beta" min="0.1" max="1.5" value="0.4" step="0.05">
+            </label>
+            <label>Predator Death Rate (&gamma;): <span id="val-gamma">0.4</span>
+                <input type="range" id="gamma" min="0.1" max="1.5" value="0.4" step="0.05">
+            </label>
+            <label>Reproduction Rate (&delta;): <span id="val-delta">0.1</span>
+                <input type="range" id="delta" min="0.02" max="0.5" value="0.1" step="0.02">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pp-toggle">Pause</button>
+                <button id="btn-pp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Natural Selection Controls -->
+        <div class="controls hidden" id="ctrl-selection">
+            <h3>Natural Selection</h3>
+            <p class="ctrl-hint">Organisms with favorable traits survive and reproduce more. Watch evolution in action!</p>
+            <label>Mutation Rate: <span id="val-mutRate">0.05</span>
+                <input type="range" id="mutRate" min="0.01" max="0.20" value="0.05" step="0.01">
+            </label>
+            <label>Selection Pressure: <span id="val-selPress">0.5</span>
+                <input type="range" id="selPress" min="0.1" max="1.0" value="0.5" step="0.05">
+            </label>
+            <label>Environment
+                <select id="selEnv">
+                    <option value="dark">Dark Background</option>
+                    <option value="light">Light Background</option>
+                    <option value="mixed">Patchy</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-sel-toggle">Pause</button>
+                <button id="btn-sel-reset">Reset</button>
+            </div>
+            <div id="sel-stats"></div>
+        </div>
+
+        <!-- Neuron Action Potential Controls -->
+        <div class="controls hidden" id="ctrl-neuron">
+            <h3>Neuron Action Potential</h3>
+            <p class="ctrl-hint">Stimulate a neuron and watch the action potential propagate along the axon.</p>
+            <label>Stimulus Strength: <span id="val-stimulus">1.0</span>x
+                <input type="range" id="stimulus" min="0.2" max="2.0" value="1.0" step="0.1">
+            </label>
+            <label>Threshold: <span id="val-threshold">-55</span> mV
+                <input type="range" id="threshold" min="-65" max="-40" value="-55">
+            </label>
+            <div class="btn-row">
+                <button id="btn-neuron-fire">Fire!</button>
+                <button id="btn-neuron-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Enzyme Kinetics Controls -->
+        <div class="controls hidden" id="ctrl-enzyme">
+            <h3>Enzyme Kinetics (Michaelis-Menten)</h3>
+            <label>V_max: <span id="val-vmax">100</span>
+                <input type="range" id="vmax" min="20" max="200" value="100">
+            </label>
+            <label>K_m: <span id="val-km">50</span>
+                <input type="range" id="km" min="5" max="200" value="50">
+            </label>
+            <label>Substrate [S]: <span id="val-substrate">80</span>
+                <input type="range" id="substrate" min="1" max="300" value="80">
+            </label>
+            <label>Show Lineweaver-Burk
+                <input type="checkbox" id="showLB">
+            </label>
+            <div class="btn-row">
+                <button id="btn-enz-animate">Animate</button>
+                <button id="btn-enz-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- DNA Replication Controls -->
+        <div class="controls hidden" id="ctrl-dna">
+            <h3>DNA Replication</h3>
+            <p class="ctrl-hint">Watch the double helix unwind and replicate via leading and lagging strands.</p>
+            <label>Speed: <span id="val-dnaSpeed">1.0</span>x
+                <input type="range" id="dnaSpeed" min="0.3" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-dna-start">Start Replication</button>
+                <button id="btn-dna-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Photosynthesis Controls -->
+        <div class="controls hidden" id="ctrl-photosyn">
+            <h3>Photosynthesis</h3>
+            <p class="ctrl-hint">Light reactions in the thylakoid membrane produce ATP and NADPH.</p>
+            <label>Light Intensity: <span id="val-lightInt">70</span>%
+                <input type="range" id="lightInt" min="0" max="100" value="70">
+            </label>
+            <label>CO&sub2; Level: <span id="val-co2">50</span>%
+                <input type="range" id="co2" min="0" max="100" value="50">
+            </label>
+            <label>Temperature: <span id="val-photoTemp">25</span>&deg;C
+                <input type="range" id="photoTemp" min="5" max="45" value="25">
+            </label>
+            <div class="btn-row">
+                <button id="btn-photo-toggle">Pause</button>
+                <button id="btn-photo-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Hardy-Weinberg Controls -->
+        <div class="controls hidden" id="ctrl-hardywein">
+            <h3>Hardy-Weinberg Equilibrium</h3>
+            <p class="ctrl-hint">Model allele frequencies in a population. Watch genotype distributions shift.</p>
+            <label>Freq of allele p: <span id="val-pfreq">0.50</span>
+                <input type="range" id="pfreq" min="0.01" max="0.99" value="0.50" step="0.01">
+            </label>
+            <label>Population Size: <span id="val-hwPop">200</span>
+                <input type="range" id="hwPop" min="20" max="500" value="200">
+            </label>
+            <label>Generations to Simulate: <span id="val-hwGens">20</span>
+                <input type="range" id="hwGens" min="5" max="100" value="20">
+            </label>
+            <label>Genetic Drift (finite pop)
+                <input type="checkbox" id="hwDrift">
+            </label>
+            <div class="btn-row">
+                <button id="btn-hw-run">Run</button>
+                <button id="btn-hw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Food Web Controls -->
+        <div class="controls hidden" id="ctrl-foodweb">
+            <h3>Food Web / Energy Flow</h3>
+            <p class="ctrl-hint">Energy transfers between trophic levels. Only ~10% passes to the next level.</p>
+            <label>Sun Energy Input: <span id="val-sunEnergy">10000</span> kJ
+                <input type="range" id="sunEnergy" min="2000" max="20000" value="10000" step="500">
+            </label>
+            <label>Transfer Efficiency: <span id="val-efficiency">10</span>%
+                <input type="range" id="efficiency" min="5" max="25" value="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-fw-animate">Animate</button>
+                <button id="btn-fw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cell Membrane Transport Controls -->
+        <div class="controls hidden" id="ctrl-membrane">
+            <h3>Cell Membrane Transport</h3>
+            <label>External Concentration: <span id="val-extConc">High</span>
+                <select id="extConc">
+                    <option value="hypertonic">Hypertonic (High)</option>
+                    <option value="isotonic">Isotonic (Equal)</option>
+                    <option value="hypotonic">Hypotonic (Low)</option>
+                </select>
+            </label>
+            <label>Transport Type
+                <select id="transportType">
+                    <option value="osmosis">Osmosis</option>
+                    <option value="passive">Passive Diffusion</option>
+                    <option value="active">Active Transport</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-mem-toggle">Pause</button>
+                <button id="btn-mem-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cellular Respiration Controls -->
+        <div class="controls hidden" id="ctrl-respiration">
+            <h3>Cellular Respiration</h3>
+            <p class="ctrl-hint">Glucose is broken down to produce ATP through glycolysis, Krebs cycle, and ETC.</p>
+            <label>Glucose Input: <span id="val-glucoseIn">5</span> molecules
+                <input type="range" id="glucoseIn" min="1" max="10" value="5">
+            </label>
+            <label>Oxygen Available: <span id="val-o2avail">100</span>%
+                <input type="range" id="o2avail" min="0" max="100" value="100">
+            </label>
+            <div class="btn-row">
+                <button id="btn-resp-start">Start</button>
+                <button id="btn-resp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Magnetic Field Controls -->
+        <div class="controls hidden" id="ctrl-magfield">
+            <h3>Magnetic Field</h3>
+            <p class="ctrl-hint">Visualize the magnetic field around a current-carrying wire and solenoid.</p>
+            <label>Current (I): <span id="val-current">5.0</span> A
+                <input type="range" id="current" min="0.5" max="10" value="5.0" step="0.5">
+            </label>
+            <label>Field Mode
+                <select id="magMode">
+                    <option value="wire">Straight Wire</option>
+                    <option value="solenoid">Solenoid</option>
+                    <option value="loop">Current Loop</option>
+                </select>
+            </label>
+            <label>Show Compass Needles
+                <input type="checkbox" id="showCompass" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-mag-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Chemical Equilibrium Controls -->
+        <div class="controls hidden" id="ctrl-chemeq">
+            <h3>Chemical Equilibrium (Le Chatelier)</h3>
+            <p class="ctrl-hint">Disturb an equilibrium and watch it shift to restore balance.</p>
+            <label>Forward Rate (k&sub1;): <span id="val-kf">0.05</span>
+                <input type="range" id="kf" min="0.01" max="0.15" value="0.05" step="0.01">
+            </label>
+            <label>Reverse Rate (k&sub2;): <span id="val-kr">0.03</span>
+                <input type="range" id="kr" min="0.01" max="0.15" value="0.03" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-eq-addA">Add Reactant</button>
+                <button id="btn-eq-addB">Add Product</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-eq-toggle">Pause</button>
+                <button id="btn-eq-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- SIR Epidemic Controls -->
+        <div class="controls hidden" id="ctrl-epidemic">
+            <h3>SIR Epidemic Model</h3>
+            <p class="ctrl-hint">Simulate disease spread through a population using the SIR model.</p>
+            <label>Transmission Rate (&beta;): <span id="val-betaSIR">0.3</span>
+                <input type="range" id="betaSIR" min="0.05" max="1.0" value="0.3" step="0.05">
+            </label>
+            <label>Recovery Rate (&gamma;): <span id="val-gammaSIR">0.1</span>
+                <input type="range" id="gammaSIR" min="0.01" max="0.5" value="0.1" step="0.01">
+            </label>
+            <label>Population: <span id="val-sirPop">300</span>
+                <input type="range" id="sirPop" min="50" max="500" value="300">
+            </label>
+            <div class="btn-row">
+                <button id="btn-sir-toggle">Pause</button>
+                <button id="btn-sir-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Bernoulli / Fluid Dynamics Controls -->
+        <div class="controls hidden" id="ctrl-bernoulli">
+            <h3>Fluid Dynamics (Bernoulli's Principle)</h3>
+            <p class="ctrl-hint">Observe how fluid velocity and pressure change in a constricted pipe.</p>
+            <label>Flow Speed: <span id="val-flowSpeed">3.0</span>
+                <input type="range" id="flowSpeed" min="0.5" max="8" value="3.0" step="0.5">
+            </label>
+            <label>Constriction: <span id="val-constrict">0.5</span>
+                <input type="range" id="constrict" min="0.2" max="0.9" value="0.5" step="0.05">
+            </label>
+            <label>Fluid Density: <span id="val-flDensity">1.0</span> kg/m&sup3;
+                <input type="range" id="flDensity" min="0.5" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-bern-toggle">Pause</button>
+                <button id="btn-bern-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Gravitational Lensing Controls -->
+        <div class="controls hidden" id="ctrl-gravlens">
+            <h3>Gravitational Lensing</h3>
+            <p class="ctrl-hint">A massive object bends light from background stars, creating arcs and Einstein rings.</p>
+            <label>Lens Mass: <span id="val-lensMass">5.0</span>x
+                <input type="range" id="lensMass" min="1" max="15" value="5.0" step="0.5">
+            </label>
+            <label>Source Distance: <span id="val-srcDist">200</span>
+                <input type="range" id="srcDist" min="50" max="400" value="200">
+            </label>
+            <label>Show Light Paths
+                <input type="checkbox" id="showPaths" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-gl-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Standing Waves Controls -->
+        <div class="controls hidden" id="ctrl-standing">
+            <h3>Standing Waves</h3>
+            <label>Harmonic (n): <span id="val-harmonic">1</span>
+                <input type="range" id="harmonic" min="1" max="8" value="1">
+            </label>
+            <label>Amplitude: <span id="val-swAmp">80</span>
+                <input type="range" id="swAmp" min="20" max="120" value="80">
+            </label>
+            <label>Show Components
+                <input type="checkbox" id="showComponents">
+            </label>
+            <div class="btn-row">
+                <button id="btn-sw-toggle">Pause</button>
+                <button id="btn-sw-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Protein Folding Controls -->
+        <div class="controls hidden" id="ctrl-protein">
+            <h3>Protein Folding</h3>
+            <p class="ctrl-hint">Watch an amino acid chain fold into its 3D structure driven by hydrophobic interactions.</p>
+            <label>Chain Length: <span id="val-chainLen">30</span>
+                <input type="range" id="chainLen" min="10" max="60" value="30">
+            </label>
+            <label>Temperature: <span id="val-foldTemp">1.0</span>
+                <input type="range" id="foldTemp" min="0.1" max="3.0" value="1.0" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-prot-fold">Fold</button>
+                <button id="btn-prot-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Carbon Cycle Controls -->
+        <div class="controls hidden" id="ctrl-carbon">
+            <h3>Carbon Cycle</h3>
+            <p class="ctrl-hint">Track carbon as it moves through atmosphere, biosphere, oceans, and lithosphere.</p>
+            <label>CO&sub2; Emissions: <span id="val-emissions">50</span>%
+                <input type="range" id="emissions" min="0" max="100" value="50">
+            </label>
+            <label>Deforestation: <span id="val-deforest">20</span>%
+                <input type="range" id="deforest" min="0" max="100" value="20">
+            </label>
+            <label>Ocean Absorption: <span id="val-oceanAbs">30</span>%
+                <input type="range" id="oceanAbs" min="0" max="80" value="30">
+            </label>
+            <div class="btn-row">
+                <button id="btn-carb-toggle">Pause</button>
+                <button id="btn-carb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Spectral Lines Controls -->
+        <div class="controls hidden" id="ctrl-spectral">
+            <h3>Atomic Emission Spectra</h3>
+            <label>Element
+                <select id="element">
+                    <option value="hydrogen">Hydrogen</option>
+                    <option value="helium">Helium</option>
+                    <option value="neon">Neon</option>
+                    <option value="sodium">Sodium</option>
+                    <option value="mercury">Mercury</option>
+                </select>
+            </label>
+            <label>Show Energy Levels
+                <input type="checkbox" id="showELevels" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-spec-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Cosmic Redshift Controls -->
+        <div class="controls hidden" id="ctrl-redshift">
+            <h3>Cosmic Redshift</h3>
+            <p class="ctrl-hint">Galaxies moving away from us have their light shifted toward red (Hubble's Law).</p>
+            <label>Galaxy Recession Speed: <span id="val-recession">0.3</span>c
+                <input type="range" id="recession" min="0.01" max="0.9" value="0.3" step="0.01">
+            </label>
+            <label>Original Wavelength: <span id="val-origWL">500</span> nm
+                <input type="range" id="origWL" min="380" max="700" value="500">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rs-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Quantum Harmonic Oscillator Controls -->
+        <div class="controls hidden" id="ctrl-qho">
+            <h3>Quantum Harmonic Oscillator</h3>
+            <label>Energy Level (n): <span id="val-qn">0</span>
+                <input type="range" id="qn" min="0" max="8" value="0">
+            </label>
+            <label>Show Probability Density
+                <input type="checkbox" id="showProb" checked>
+            </label>
+            <label>Show Classical Turning Points
+                <input type="checkbox" id="showClassical" checked>
+            </label>
+            <div class="btn-row">
+                <button id="btn-qho-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Tectonic Plates Controls -->
+        <div class="controls hidden" id="ctrl-tectonic">
+            <h3>Tectonic Plates</h3>
+            <p class="ctrl-hint">Watch plates diverge, converge, and transform. Earthquakes occur at boundaries.</p>
+            <label>Plate Speed: <span id="val-plateSpeed">1.0</span>x
+                <input type="range" id="plateSpeed" min="0.2" max="3.0" value="1.0" step="0.1">
+            </label>
+            <label>Boundary Type
+                <select id="boundaryType">
+                    <option value="divergent">Divergent (Mid-Ocean Ridge)</option>
+                    <option value="convergent">Convergent (Subduction)</option>
+                    <option value="transform">Transform (Fault)</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-tect-toggle">Pause</button>
+                <button id="btn-tect-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Acid-Base Titration Controls -->
+        <div class="controls hidden" id="ctrl-titration">
+            <h3>Acid-Base Titration</h3>
+            <label>Acid Concentration: <span id="val-acidConc">0.1</span> M
+                <input type="range" id="acidConc" min="0.01" max="0.5" value="0.1" step="0.01">
+            </label>
+            <label>Base Concentration: <span id="val-baseConc">0.1</span> M
+                <input type="range" id="baseConc" min="0.01" max="0.5" value="0.1" step="0.01">
+            </label>
+            <label>Acid Type
+                <select id="acidType">
+                    <option value="strong">Strong Acid (HCl)</option>
+                    <option value="weak">Weak Acid (CH&#8323;COOH)</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-titr-add">Add Base Drop</button>
+                <button id="btn-titr-auto">Auto-Titrate</button>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+                <button id="btn-titr-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Lorenz Attractor Controls -->
+        <div class="controls hidden" id="ctrl-lorenz">
+            <h3>Lorenz Attractor (Chaos)</h3>
+            <p class="ctrl-hint">Deterministic yet unpredictable. Tiny changes in initial conditions lead to wildly different trajectories.</p>
+            <label>&sigma;: <span id="val-sigma">10</span>
+                <input type="range" id="sigma" min="1" max="20" value="10" step="0.5">
+            </label>
+            <label>&rho;: <span id="val-rho">28</span>
+                <input type="range" id="rho" min="1" max="50" value="28" step="0.5">
+            </label>
+            <label>&beta;: <span id="val-betaL">2.67</span>
+                <input type="range" id="betaL" min="0.5" max="5" value="2.67" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-lor-toggle">Pause</button>
+                <button id="btn-lor-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Fourier Series Controls -->
+        <div class="controls hidden" id="ctrl-fourier">
+            <h3>Fourier Series</h3>
+            <p class="ctrl-hint">Approximate any waveform by summing sine and cosine harmonics.</p>
+            <label>Waveform:
+                <select id="sel-fourier-wave">
+                    <option value="square">Square Wave</option>
+                    <option value="sawtooth">Sawtooth Wave</option>
+                    <option value="triangle">Triangle Wave</option>
+                </select>
+            </label>
+            <label>Harmonics: <span id="val-harmonics">5</span>
+                <input type="range" id="harmonics" min="1" max="50" value="5">
+            </label>
+            <label>Speed: <span id="val-four-speed">1</span>
+                <input type="range" id="four-speed" min="0.1" max="3" value="1" step="0.1">
+            </label>
+        </div>
+
+        <!-- Galton Board Controls -->
+        <div class="controls hidden" id="ctrl-galton">
+            <h3>Galton Board (CLT)</h3>
+            <p class="ctrl-hint">Balls fall through pegs to demonstrate the Central Limit Theorem and normal distribution.</p>
+            <label>Rows: <span id="val-galton-rows">10</span>
+                <input type="range" id="galton-rows" min="4" max="16" value="10">
+            </label>
+            <label>Ball Rate: <span id="val-galton-rate">5</span>/s
+                <input type="range" id="galton-rate" min="1" max="20" value="5">
+            </label>
+            <label>Bias: <span id="val-galton-bias">0.50</span>
+                <input type="range" id="galton-bias" min="0.2" max="0.8" value="0.5" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-galton-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Stress-Strain Controls -->
+        <div class="controls hidden" id="ctrl-stressstrain">
+            <h3>Stress-Strain Curve</h3>
+            <p class="ctrl-hint">Visualize material deformation under load: elastic region, yield point, and fracture.</p>
+            <label>Material:
+                <select id="sel-material">
+                    <option value="steel">Steel</option>
+                    <option value="aluminum">Aluminum</option>
+                    <option value="rubber">Rubber</option>
+                    <option value="glass">Glass (Brittle)</option>
+                </select>
+            </label>
+            <label>Load Rate: <span id="val-load-rate">1</span>
+                <input type="range" id="load-rate" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ss-toggle">Start Loading</button>
+                <button id="btn-ss-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Reaction-Diffusion Controls -->
+        <div class="controls hidden" id="ctrl-reactiondiff">
+            <h3>Reaction-Diffusion</h3>
+            <p class="ctrl-hint">Turing patterns emerge from two reacting chemicals diffusing at different rates.</p>
+            <label>Feed Rate: <span id="val-rd-feed">0.055</span>
+                <input type="range" id="rd-feed" min="0.01" max="0.08" value="0.055" step="0.001">
+            </label>
+            <label>Kill Rate: <span id="val-rd-kill">0.062</span>
+                <input type="range" id="rd-kill" min="0.04" max="0.075" value="0.062" step="0.001">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rd-reset">Reset</button>
+                <button id="btn-rd-seed">Add Seed</button>
+            </div>
+        </div>
+
+        <!-- Fluid Flow Controls -->
+        <div class="controls hidden" id="ctrl-fluidflow">
+            <h3>Fluid Flow</h3>
+            <p class="ctrl-hint">Visualize laminar and turbulent flow around obstacles using particle advection.</p>
+            <label>Flow Speed: <span id="val-flow-speed">3</span>
+                <input type="range" id="flow-speed" min="0.5" max="8" value="3" step="0.5">
+            </label>
+            <label>Obstacle:
+                <select id="sel-obstacle">
+                    <option value="circle">Circle</option>
+                    <option value="airfoil">Airfoil</option>
+                    <option value="square">Square</option>
+                </select>
+            </label>
+            <label>Viscosity: <span id="val-viscosity">0.5</span>
+                <input type="range" id="viscosity" min="0.1" max="1" value="0.5" step="0.05">
+            </label>
+            <div class="btn-row">
+                <button id="btn-flow-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Phase Space Controls -->
+        <div class="controls hidden" id="ctrl-phasespace">
+            <h3>Phase Space</h3>
+            <p class="ctrl-hint">Visualize the phase portrait of a damped pendulum: angle vs angular velocity.</p>
+            <label>Damping: <span id="val-ps-damp">0.1</span>
+                <input type="range" id="ps-damp" min="0" max="1" value="0.1" step="0.01">
+            </label>
+            <label>Drive Force: <span id="val-ps-drive">0</span>
+                <input type="range" id="ps-drive" min="0" max="2" value="0" step="0.05">
+            </label>
+            <label>Drive Freq: <span id="val-ps-freq">0.67</span>
+                <input type="range" id="ps-freq" min="0.1" max="2" value="0.67" step="0.01">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ps-clear">Clear Trails</button>
+                <button id="btn-ps-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Radiocarbon Dating Controls -->
+        <div class="controls hidden" id="ctrl-radiocarbon">
+            <h3>Radiocarbon Dating</h3>
+            <p class="ctrl-hint">Watch C-14 decay over millennia and estimate the age of archaeological samples.</p>
+            <label>Sample Age: <span id="val-rc-age">5000</span> years
+                <input type="range" id="rc-age" min="100" max="50000" value="5000" step="100">
+            </label>
+            <label>Initial C-14: <span id="val-rc-init">1000</span> atoms
+                <input type="range" id="rc-init" min="100" max="5000" value="1000" step="100">
+            </label>
+            <label>Speed: <span id="val-rc-speed">1</span>x
+                <input type="range" id="rc-speed" min="0.5" max="5" value="1" step="0.5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-rc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Mandelbrot Set Controls -->
+        <div class="controls hidden" id="ctrl-mandelbrot">
+            <h3>Mandelbrot Set</h3>
+            <p class="ctrl-hint">Explore the fractal boundary of the Mandelbrot set. Click to zoom in.</p>
+            <label>Max Iterations: <span id="val-mb-iter">100</span>
+                <input type="range" id="mb-iter" min="20" max="500" value="100" step="10">
+            </label>
+            <label>Color Scheme:
+                <select id="sel-mb-color">
+                    <option value="classic">Classic</option>
+                    <option value="fire">Fire</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="grayscale">Grayscale</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-mb-reset">Reset View</button>
+                <button id="btn-mb-zoomout">Zoom Out</button>
+            </div>
+        </div>
+
+        <!-- SHM Comparison Controls -->
+        <div class="controls hidden" id="ctrl-shm">
+            <h3>SHM Comparison</h3>
+            <p class="ctrl-hint">Compare spring, pendulum, and circular motion side by side to show SHM equivalence.</p>
+            <label>Frequency: <span id="val-shm-freq">1</span> Hz
+                <input type="range" id="shm-freq" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <label>Amplitude: <span id="val-shm-amp">80</span> px
+                <input type="range" id="shm-amp" min="20" max="150" value="80">
+            </label>
+            <label>Phase Offset: <span id="val-shm-phase">0</span>&deg;
+                <input type="range" id="shm-phase" min="0" max="360" value="0">
+            </label>
+        </div>
+
+        <!-- Vector Fields Controls -->
+        <div class="controls hidden" id="ctrl-vector">
+            <h3>Vector Fields</h3>
+            <p class="ctrl-hint">Visualize common vector fields: gradient, curl, divergence, and combinations.</p>
+            <label>Field Type:
+                <select id="sel-vf-type">
+                    <option value="radial">Radial (Source)</option>
+                    <option value="vortex">Vortex (Curl)</option>
+                    <option value="dipole">Dipole</option>
+                    <option value="saddle">Saddle Point</option>
+                </select>
+            </label>
+            <label>Strength: <span id="val-vf-str">5</span>
+                <input type="range" id="vf-str" min="1" max="15" value="5">
+            </label>
+            <label>Show Particles:
+                <select id="sel-vf-particles">
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-vf-reset">Reset Particles</button>
+            </div>
+        </div>
+
+        <!-- Capacitor Controls -->
+        <div class="controls hidden" id="ctrl-capacitor">
+            <h3>Capacitor Charging</h3>
+            <p class="ctrl-hint">Watch a parallel-plate capacitor charge and discharge through a resistor (RC circuit dynamics).</p>
+            <label>Capacitance: <span id="val-cap-c">100</span> &mu;F
+                <input type="range" id="cap-c" min="10" max="500" value="100" step="10">
+            </label>
+            <label>Resistance: <span id="val-cap-r">10</span> k&Omega;
+                <input type="range" id="cap-r" min="1" max="50" value="10">
+            </label>
+            <label>Voltage: <span id="val-cap-v">12</span> V
+                <input type="range" id="cap-v" min="3" max="24" value="12">
+            </label>
+            <div class="btn-row">
+                <button id="btn-cap-charge">Charge</button>
+                <button id="btn-cap-discharge">Discharge</button>
+                <button id="btn-cap-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Brachistochrone Controls -->
+        <div class="controls hidden" id="ctrl-brachistochrone">
+            <h3>Brachistochrone</h3>
+            <p class="ctrl-hint">Compare paths of fastest descent: straight line, parabola, and the optimal cycloid curve.</p>
+            <label>Gravity: <span id="val-bra-g">9.8</span> m/s&sup2;
+                <input type="range" id="bra-g" min="1" max="25" value="9.8" step="0.1">
+            </label>
+            <label>End Height: <span id="val-bra-h">300</span> px
+                <input type="range" id="bra-h" min="100" max="450" value="300">
+            </label>
+            <div class="btn-row">
+                <button id="btn-bra-go">Race!</button>
+                <button id="btn-bra-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Brownian Motion Controls -->
+        <div class="controls hidden" id="ctrl-brownian">
+            <h3>Brownian Motion</h3>
+            <p class="ctrl-hint">A large pollen grain buffeted by thousands of tiny water molecules, demonstrating random walks.</p>
+            <label>Temperature: <span id="val-bm-temp">300</span> K
+                <input type="range" id="bm-temp" min="50" max="800" value="300">
+            </label>
+            <label>Molecules: <span id="val-bm-count">200</span>
+                <input type="range" id="bm-count" min="50" max="500" value="200">
+            </label>
+            <label>Trail Length: <span id="val-bm-trail">200</span>
+                <input type="range" id="bm-trail" min="10" max="500" value="200">
+            </label>
+            <div class="btn-row">
+                <button id="btn-bm-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Wave Packet Controls -->
+        <div class="controls hidden" id="ctrl-wavepacket">
+            <h3>Wave Packet</h3>
+            <p class="ctrl-hint">Gaussian wave packet propagation showing dispersion and group vs phase velocity.</p>
+            <label>Central k: <span id="val-wp-k">5</span>
+                <input type="range" id="wp-k" min="1" max="15" value="5" step="0.5">
+            </label>
+            <label>Width (&sigma;): <span id="val-wp-sigma">30</span>
+                <input type="range" id="wp-sigma" min="10" max="80" value="30">
+            </label>
+            <label>Dispersion: <span id="val-wp-disp">0.5</span>
+                <input type="range" id="wp-disp" min="0" max="2" value="0.5" step="0.05">
+            </label>
+            <div class="btn-row">
+                <button id="btn-wp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Trebuchet Controls -->
+        <div class="controls hidden" id="ctrl-trebuchet">
+            <h3>Trebuchet Physics</h3>
+            <p class="ctrl-hint">Medieval siege engine: counterweight-powered arm launches a projectile via lever mechanics.</p>
+            <label>Counterweight: <span id="val-treb-cw">500</span> kg
+                <input type="range" id="treb-cw" min="100" max="2000" value="500" step="50">
+            </label>
+            <label>Arm Ratio: <span id="val-treb-ratio">3.5</span>
+                <input type="range" id="treb-ratio" min="2" max="6" value="3.5" step="0.1">
+            </label>
+            <label>Projectile Mass: <span id="val-treb-pm">10</span> kg
+                <input type="range" id="treb-pm" min="1" max="100" value="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-treb-fire">Fire!</button>
+                <button id="btn-treb-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Kepler's Laws Controls -->
+        <div class="controls hidden" id="ctrl-kepler">
+            <h3>Kepler's Laws</h3>
+            <p class="ctrl-hint">Elliptical orbits demonstrating equal areas in equal times and the period-radius relationship.</p>
+            <label>Eccentricity: <span id="val-kep-ecc">0.5</span>
+                <input type="range" id="kep-ecc" min="0" max="0.95" value="0.5" step="0.01">
+            </label>
+            <label>Semi-Major Axis: <span id="val-kep-a">180</span>
+                <input type="range" id="kep-a" min="80" max="230" value="180">
+            </label>
+            <label>Speed: <span id="val-kep-speed">1</span>x
+                <input type="range" id="kep-speed" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-kep-area">Show Swept Area</button>
+                <button id="btn-kep-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Refraction Controls -->
+        <div class="controls hidden" id="ctrl-refraction">
+            <h3>Snell's Law (Refraction)</h3>
+            <p class="ctrl-hint">Light bending at a boundary between two media. Observe total internal reflection.</p>
+            <label>n₁ (top): <span id="val-ref-n1">1.00</span>
+                <input type="range" id="ref-n1" min="1" max="2.5" value="1" step="0.01">
+            </label>
+            <label>n₂ (bottom): <span id="val-ref-n2">1.50</span>
+                <input type="range" id="ref-n2" min="1" max="2.5" value="1.5" step="0.01">
+            </label>
+            <label>Incident Angle: <span id="val-ref-angle">30</span>&deg;
+                <input type="range" id="ref-angle" min="0" max="89" value="30">
+            </label>
+        </div>
+
+        <!-- Centripetal Force Controls -->
+        <div class="controls hidden" id="ctrl-centripetal">
+            <h3>Centripetal Force</h3>
+            <p class="ctrl-hint">Object in circular motion with force vectors, velocity tangent, and acceleration toward center.</p>
+            <label>Radius: <span id="val-cent-r">150</span> px
+                <input type="range" id="cent-r" min="50" max="220" value="150">
+            </label>
+            <label>Angular Speed: <span id="val-cent-omega">2</span> rad/s
+                <input type="range" id="cent-omega" min="0.5" max="6" value="2" step="0.1">
+            </label>
+            <label>Mass: <span id="val-cent-m">5</span> kg
+                <input type="range" id="cent-m" min="1" max="20" value="5">
+            </label>
+            <div class="btn-row">
+                <button id="btn-cent-release">Release Object</button>
+                <button id="btn-cent-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Faraday's Law Controls -->
+        <div class="controls hidden" id="ctrl-faraday">
+            <h3>Faraday's Law</h3>
+            <p class="ctrl-hint">Move a magnet through a coil to induce EMF. Faster motion = greater voltage.</p>
+            <label>Coil Turns: <span id="val-far-turns">20</span>
+                <input type="range" id="far-turns" min="5" max="50" value="20">
+            </label>
+            <label>Magnet Strength: <span id="val-far-str">5</span>
+                <input type="range" id="far-str" min="1" max="10" value="5">
+            </label>
+            <label>Speed: <span id="val-far-speed">1</span>x
+                <input type="range" id="far-speed" min="0.2" max="4" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-far-mode">Auto Oscillate</button>
+                <button id="btn-far-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Chaos Game Controls -->
+        <div class="controls hidden" id="ctrl-chaosgame">
+            <h3>Chaos Game</h3>
+            <p class="ctrl-hint">Iteratively jump fractional distances toward random vertices to generate fractals.</p>
+            <label>Vertices: <span id="val-cg-verts">3</span>
+                <input type="range" id="cg-verts" min="3" max="8" value="3">
+            </label>
+            <label>Jump Ratio: <span id="val-cg-ratio">0.50</span>
+                <input type="range" id="cg-ratio" min="0.2" max="0.8" value="0.5" step="0.01">
+            </label>
+            <label>Points/Frame: <span id="val-cg-pps">50</span>
+                <input type="range" id="cg-pps" min="1" max="200" value="50">
+            </label>
+            <div class="btn-row">
+                <button id="btn-cg-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Interference Controls -->
+        <div class="controls hidden" id="ctrl-interference">
+            <h3>Wave Interference</h3>
+            <p class="ctrl-hint">Two point sources create constructive and destructive interference patterns in 2D.</p>
+            <label>Wavelength: <span id="val-int-wl">40</span> px
+                <input type="range" id="int-wl" min="10" max="80" value="40">
+            </label>
+            <label>Source Separation: <span id="val-int-sep">200</span> px
+                <input type="range" id="int-sep" min="50" max="400" value="200">
+            </label>
+            <label>Phase Diff: <span id="val-int-phase">0</span>&deg;
+                <input type="range" id="int-phase" min="0" max="360" value="0">
+            </label>
+        </div>
+
+        <!-- Ideal Gas Law Controls -->
+        <div class="controls hidden" id="ctrl-idealgas">
+            <h3>Ideal Gas Law (PV=nRT)</h3>
+            <p class="ctrl-hint">Adjust pressure, volume, and temperature to see the ideal gas law in action.</p>
+            <label>Molecules: <span id="val-ig-n">100</span>
+                <input type="range" id="ig-n" min="20" max="300" value="100">
+            </label>
+            <label>Temperature: <span id="val-ig-temp">300</span> K
+                <input type="range" id="ig-temp" min="50" max="800" value="300">
+            </label>
+            <label>Volume (width): <span id="val-ig-vol">400</span> px
+                <input type="range" id="ig-vol" min="150" max="600" value="400">
+            </label>
+        </div>
+
+        <!-- Rutherford Scattering Controls -->
+        <div class="controls hidden" id="ctrl-rutherford">
+            <h3>Rutherford Scattering</h3>
+            <p class="ctrl-hint">Alpha particles deflected by a gold nucleus. Observe scattering angle vs impact parameter.</p>
+            <label>Nucleus Charge (Z): <span id="val-ruth-z">79</span>
+                <input type="range" id="ruth-z" min="1" max="100" value="79">
+            </label>
+            <label>Beam Energy: <span id="val-ruth-e">5</span> MeV
+                <input type="range" id="ruth-e" min="1" max="15" value="5" step="0.5">
+            </label>
+            <label>Beam Spread: <span id="val-ruth-spread">8</span>
+                <input type="range" id="ruth-spread" min="1" max="15" value="8">
+            </label>
+            <div class="btn-row">
+                <button id="btn-ruth-fire">Fire Beam</button>
+                <button id="btn-ruth-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Logistic Map Controls -->
+        <div class="controls hidden" id="ctrl-logistic">
+            <h3>Logistic Map</h3>
+            <p class="ctrl-hint">Bifurcation diagram of x(n+1) = r·x(n)·(1-x(n)). Explore the route to chaos.</p>
+            <label>r Range Start: <span id="val-log-rmin">2.5</span>
+                <input type="range" id="log-rmin" min="0" max="3.5" value="2.5" step="0.01">
+            </label>
+            <label>r Range End: <span id="val-log-rmax">4.0</span>
+                <input type="range" id="log-rmax" min="3" max="4" value="4" step="0.01">
+            </label>
+            <label>Iterations: <span id="val-log-iter">200</span>
+                <input type="range" id="log-iter" min="50" max="500" value="200" step="10">
+            </label>
+            <div class="btn-row">
+                <button id="btn-log-redraw">Redraw</button>
+            </div>
+        </div>
+
+        <!-- Heat Conduction Controls -->
+        <div class="controls hidden" id="ctrl-heatcond">
+            <h3>Heat Conduction</h3>
+            <p class="ctrl-hint">1D heat equation simulation: watch temperature diffuse along a bar over time.</p>
+            <label>Conductivity: <span id="val-hc-k">0.5</span>
+                <input type="range" id="hc-k" min="0.05" max="1" value="0.5" step="0.05">
+            </label>
+            <label>Left Temp: <span id="val-hc-left">100</span>&deg;
+                <input type="range" id="hc-left" min="0" max="200" value="100">
+            </label>
+            <label>Right Temp: <span id="val-hc-right">0</span>&deg;
+                <input type="range" id="hc-right" min="0" max="200" value="0">
+            </label>
+            <div class="btn-row">
+                <button id="btn-hc-pulse">Add Heat Pulse</button>
+                <button id="btn-hc-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Compton Scattering Controls -->
+        <div class="controls hidden" id="ctrl-compton">
+            <h3>Compton Scattering</h3>
+            <p class="ctrl-hint">A photon scatters off a free electron, losing energy and shifting wavelength.</p>
+            <label>Photon Energy: <span id="val-comp-e">100</span> keV
+                <input type="range" id="comp-e" min="10" max="500" value="100" step="5">
+            </label>
+            <label>Scatter Angle: <span id="val-comp-theta">90</span>&deg;
+                <input type="range" id="comp-theta" min="0" max="180" value="90">
+            </label>
+            <div class="btn-row">
+                <button id="btn-comp-fire">Scatter!</button>
+                <button id="btn-comp-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Harmonic Series Controls -->
+        <div class="controls hidden" id="ctrl-harmonics">
+            <h3>Harmonic Series</h3>
+            <p class="ctrl-hint">Standing wave harmonics on a string: fundamental, overtones, and superposition.</p>
+            <label>Fundamental Freq: <span id="val-harm-f">1</span> Hz
+                <input type="range" id="harm-f" min="0.5" max="3" value="1" step="0.1">
+            </label>
+            <label>Harmonics Shown: <span id="val-harm-n">4</span>
+                <input type="range" id="harm-n" min="1" max="8" value="4">
+            </label>
+            <label>Amplitude Decay: <span id="val-harm-decay">0.7</span>
+                <input type="range" id="harm-decay" min="0.3" max="1" value="0.7" step="0.05">
+            </label>
+        </div>
+
+        <!-- Archimedes Controls -->
+        <div class="controls hidden" id="ctrl-archimedes">
+            <h3>Archimedes' Principle</h3>
+            <p class="ctrl-hint">Buoyant force equals the weight of displaced fluid. Adjust object density to sink or float.</p>
+            <label>Object Density: <span id="val-arch-rho">500</span> kg/m&sup3;
+                <input type="range" id="arch-rho" min="100" max="2000" value="500" step="10">
+            </label>
+            <label>Fluid Density: <span id="val-arch-fluid">1000</span> kg/m&sup3;
+                <input type="range" id="arch-fluid" min="500" max="3000" value="1000" step="50">
+            </label>
+            <label>Object Size: <span id="val-arch-size">60</span>
+                <input type="range" id="arch-size" min="30" max="100" value="60">
+            </label>
+        </div>
+
+        <!-- HR Diagram Controls -->
+        <div class="controls hidden" id="ctrl-hrdiagram">
+            <h3>HR Diagram</h3>
+            <p class="ctrl-hint">Hertzsprung-Russell diagram: stellar luminosity vs temperature. Watch a star evolve.</p>
+            <label>Star Mass: <span id="val-hr-mass">1</span> M&sun;
+                <input type="range" id="hr-mass" min="0.3" max="20" value="1" step="0.1">
+            </label>
+            <label>Speed: <span id="val-hr-speed">1</span>x
+                <input type="range" id="hr-speed" min="0.2" max="5" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-hr-evolve">Start Evolution</button>
+                <button id="btn-hr-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Coupled Oscillators Controls -->
+        <div class="controls hidden" id="ctrl-coupled">
+            <h3>Coupled Oscillators</h3>
+            <p class="ctrl-hint">Two masses connected by springs exchange energy through normal modes of oscillation.</p>
+            <label>Spring k₁: <span id="val-co-k1">2</span>
+                <input type="range" id="co-k1" min="0.5" max="5" value="2" step="0.1">
+            </label>
+            <label>Coupling k_c: <span id="val-co-kc">1</span>
+                <input type="range" id="co-kc" min="0" max="5" value="1" step="0.1">
+            </label>
+            <label>Initial Displace:
+                <select id="sel-co-init">
+                    <option value="left">Left only</option>
+                    <option value="symmetric">Symmetric</option>
+                    <option value="antisymmetric">Antisymmetric</option>
+                    <option value="random">Random</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-co-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Julia Set Controls -->
+        <div class="controls hidden" id="ctrl-juliaset">
+            <h3>Julia Set</h3>
+            <p class="ctrl-hint">Explore Julia sets by varying the complex constant c. Related to the Mandelbrot set.</p>
+            <label>Real(c): <span id="val-jul-cr">-0.70</span>
+                <input type="range" id="jul-cr" min="-1.5" max="1.5" value="-0.7" step="0.005">
+            </label>
+            <label>Imag(c): <span id="val-jul-ci">0.27</span>
+                <input type="range" id="jul-ci" min="-1.5" max="1.5" value="0.27" step="0.005">
+            </label>
+            <label>Max Iterations: <span id="val-jul-iter">150</span>
+                <input type="range" id="jul-iter" min="20" max="500" value="150" step="10">
+            </label>
+            <label>Color Scheme:
+                <select id="sel-jul-color">
+                    <option value="rainbow">Rainbow</option>
+                    <option value="ice">Ice</option>
+                    <option value="lava">Lava</option>
+                </select>
+            </label>
+            <div class="btn-row">
+                <button id="btn-jul-animate">Animate c</button>
+                <button id="btn-jul-reset">Reset Zoom</button>
+            </div>
+        </div>
+
+        <!-- Molecular Orbital Controls -->
+        <div class="controls hidden" id="ctrl-molorbital">
+            <h3>Molecular Orbitals</h3>
+            <p class="ctrl-hint">Visualize bonding and antibonding MOs from atomic orbital overlap (LCAO).</p>
+            <label>Bond Length: <span id="val-mo-dist">200</span> pm
+                <input type="range" id="mo-dist" min="80" max="350" value="200">
+            </label>
+            <label>Orbital Type:
+                <select id="sel-mo-type">
+                    <option value="s-s">s + s (σ bond)</option>
+                    <option value="p-p-sigma">p + p (σ bond)</option>
+                    <option value="p-p-pi">p + p (π bond)</option>
+                </select>
+            </label>
+            <label>Phase:
+                <select id="sel-mo-phase">
+                    <option value="bonding">Bonding (+/+)</option>
+                    <option value="antibonding">Antibonding (+/−)</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Galvanic Cell Controls -->
+        <div class="controls hidden" id="ctrl-galvanic">
+            <h3>Galvanic Cell</h3>
+            <p class="ctrl-hint">Electrochemistry: spontaneous redox reaction generating electric current between two half-cells.</p>
+            <label>Anode Metal:
+                <select id="sel-galv-anode">
+                    <option value="Zn">Zinc (Zn)</option>
+                    <option value="Fe">Iron (Fe)</option>
+                    <option value="Al">Aluminum (Al)</option>
+                </select>
+            </label>
+            <label>Cathode Metal:
+                <select id="sel-galv-cathode">
+                    <option value="Cu">Copper (Cu)</option>
+                    <option value="Ag">Silver (Ag)</option>
+                    <option value="Au">Gold (Au)</option>
+                </select>
+            </label>
+            <label>Speed: <span id="val-galv-speed">1</span>x
+                <input type="range" id="galv-speed" min="0.2" max="3" value="1" step="0.1">
+            </label>
+            <div class="btn-row">
+                <button id="btn-galv-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Probability Distributions Controls -->
+        <div class="controls hidden" id="ctrl-probdist">
+            <h3>Probability Distributions</h3>
+            <p class="ctrl-hint">Compare normal, Poisson, binomial, and exponential distributions side by side.</p>
+            <label>Distribution:
+                <select id="sel-pd-type">
+                    <option value="normal">Normal (Gaussian)</option>
+                    <option value="poisson">Poisson</option>
+                    <option value="binomial">Binomial</option>
+                    <option value="exponential">Exponential</option>
+                </select>
+            </label>
+            <label>Parameter 1: <span id="val-pd-p1">0</span>
+                <input type="range" id="pd-p1" min="-5" max="5" value="0" step="0.1">
+            </label>
+            <label>Parameter 2: <span id="val-pd-p2">1</span>
+                <input type="range" id="pd-p2" min="0.1" max="10" value="1" step="0.1">
+            </label>
+            <label>Samples: <span id="val-pd-n">500</span>
+                <input type="range" id="pd-n" min="50" max="2000" value="500" step="50">
+            </label>
+            <div class="btn-row">
+                <button id="btn-pd-sample">Resample</button>
+            </div>
+        </div>
+
+        <!-- Combustion Controls -->
+        <div class="controls hidden" id="ctrl-combustion">
+            <h3>Combustion Reactions</h3>
+            <p class="ctrl-hint">Visualize exothermic combustion: fuel + O₂ → CO₂ + H₂O + energy.</p>
+            <label>Fuel:
+                <select id="sel-comb-fuel">
+                    <option value="methane">Methane (CH₄)</option>
+                    <option value="propane">Propane (C₃H₈)</option>
+                    <option value="hydrogen">Hydrogen (H₂)</option>
+                    <option value="ethanol">Ethanol (C₂H₅OH)</option>
+                </select>
+            </label>
+            <label>O₂ Supply: <span id="val-comb-o2">100</span>%
+                <input type="range" id="comb-o2" min="20" max="100" value="100">
+            </label>
+            <label>Temperature: <span id="val-comb-temp">500</span>&deg;C
+                <input type="range" id="comb-temp" min="200" max="1200" value="500">
+            </label>
+            <div class="btn-row">
+                <button id="btn-comb-ignite">Ignite!</button>
+                <button id="btn-comb-reset">Reset</button>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="simulations.js"></script>
+</body>
+</html>
